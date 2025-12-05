@@ -1,0 +1,66 @@
+# Multi-Cloud Security Scanner - Python Dependencies
+
+# ============================================================================
+# Core Framework
+# ============================================================================
+fastapi==0.109.0               # Modern web framework for building APIs
+uvicorn[standard]==0.27.0      # ASGI server for FastAPI
+pydantic==2.5.3                # Data validation using Python type hints
+
+# ============================================================================
+# Database
+# ============================================================================
+psycopg2-binary==2.9.9         # PostgreSQL adapter for Python
+python-dotenv==1.0.0           # Load environment variables from .env file
+
+# ============================================================================
+# AWS SDK
+# ============================================================================
+boto3==1.34.34                 # Amazon Web Services SDK for Python
+botocore==1.34.34              # Low-level interface to AWS services
+
+# ============================================================================
+# GCP SDK
+# ============================================================================
+google-cloud-storage==2.14.0   # Google Cloud Storage client library
+google-auth==2.27.0            # Google authentication library
+google-api-python-client==2.116.0  # Google API client library
+google-cloud-compute==1.15.0   # Google Compute Engine client library
+
+# ============================================================================
+# OpenAI / AI Analysis
+# ============================================================================
+openai==1.10.0                 # OpenAI API client for GPT-4 analysis
+
+# ============================================================================
+# CLI & Display
+# ============================================================================
+tabulate==0.9.0                # Pretty-print tabular data
+click==8.1.7                   # Command-line interface creation toolkit
+
+# ============================================================================
+# Optional: Additional Tools
+# ============================================================================
+# Uncomment these if you want additional features
+
+# requests==2.31.0             # HTTP library for API calls
+# jinja2==3.1.3                # Template engine (for report generation)
+# rich==13.7.0                 # Rich text and beautiful formatting in terminal
+# pandas==2.2.0                # Data analysis (for advanced analytics)
+# matplotlib==3.8.2            # Plotting library (for visualization)
+# pytest==7.4.4                # Testing framework
+# black==24.1.1                # Code formatter
+# flake8==7.0.0                # Code linter
+
+# ============================================================================
+# Version Notes
+# ============================================================================
+# Python 3.10+ required
+# 
+# Tested on:
+# - Python 3.10.x
+# - Python 3.11.x
+# - Python 3.12.x
+#
+# To install: pip install -r requirements.txt
+# To upgrade: pip install --upgrade -r requirements.txt
