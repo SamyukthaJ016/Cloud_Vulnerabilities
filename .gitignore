@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+
+# Local env file (secrets)
+.env
+
+# Local SQL data / migrations (if you want to keep them out)
+sql/
+
+# Editor stuff (optional)
+.vscode/
