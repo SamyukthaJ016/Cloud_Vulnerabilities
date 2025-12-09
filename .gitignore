@@ -13,3 +13,4 @@ sql/
 
 # Editor stuff (optional)
 .vscode/
+gcp-service-account.json 

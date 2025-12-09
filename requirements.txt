@@ -64,3 +64,6 @@ click==8.1.7                   # Command-line interface creation toolkit
 #
 # To install: pip install -r requirements.txt
 # To upgrade: pip install --upgrade -r requirements.txt
+
+google-genai
+google-adk
