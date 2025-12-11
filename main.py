@@ -897,7 +897,7 @@ from mcp_aws_plugin import AWSPlugin
 from mcp_gcp_plugin import GCPPlugin
 from mcp_openai_plugin import OpenAIPlugin
 from ai_recommender import AIRecommendationEngine
-
+from fastapi.responses import HTMLResponse
 from database import (
     create_scan_record,
     store_resource,
@@ -1280,6 +1280,18 @@ User Question:
     reply = await run_gpt_agent(prompt)
     return AgentChatResponse(reply=reply)
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    """Serve the dashboard UI"""
+    with open("dashboard.html", "r") as f:
+        return f.read()
+
+# Optional: Make dashboard the default route
+@app.get("/", response_class=HTMLResponse)
+async def root_redirect():
+    """Redirect root to dashboard"""
+    with open("dashboard.html", "r") as f:
+        return f.read()
 
 # ------------------------------------------------------------
 # REPORTS
