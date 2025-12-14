@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudGuard - Multi-Cloud Security Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 32px;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        
+        .live-badge {
+            background: #10b981;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 8px 0;
+            color: white;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-trend {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+        
+        .trend-up { color: #10b981; }
+        .trend-down { color: #ef4444; }
+        
+        /* Charts Section - FIXED CONTAINER HEIGHTS */
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .chart-container {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            height: 350px; /* FIXED HEIGHT */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-header {
+            margin-bottom: 20px;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: white;
+        }
+        
+        .chart-subtitle {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        .chart-wrapper {
+            flex: 1;
+            min-height: 0; /* Important for flex child */
+            position: relative;
+        }
+        
+        /* Cloud Providers Grid */
+        .cloud-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .cloud-card {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .cloud-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cloud-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .cloud-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .aws-icon { background: rgba(255, 153, 0, 0.1); color: #ff9900; }
+        .gcp-icon { background: rgba(66, 133, 244, 0.1); color: #4285f4; }
+        .azure-icon { background: rgba(0, 120, 212, 0.1); color: #0078d4; }
+        .openai-icon { background: rgba(16, 163, 127, 0.1); color: #10a37f; }
+        
+        .cloud-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .cloud-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .metric {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .metric-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        
+        /* Vulnerabilities Section */
+        .vulnerabilities-section {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            margin-bottom: 32px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: white;
+        }
+        
+        .severity-filters {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .severity-filter {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            color: #94a3b8;
+        }
+        
+        .severity-filter.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+        }
+        
+        /* Vulnerability List */
+        .vulnerability-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .vulnerability-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .vulnerability-card:hover {
+            background: rgba(30, 41, 59, 0.8);
+            transform: translateX(4px);
+        }
+        
+        .vulnerability-card.critical { border-left-color: #ef4444; }
+        .vulnerability-card.high { border-left-color: #f97316; }
+        .vulnerability-card.medium { border-left-color: #eab308; }
+        .vulnerability-card.low { border-left-color: #3b82f6; }
+        
+        .vuln-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .vuln-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            flex: 1;
+        }
+        
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .severity-badge.critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        .severity-badge.high { background: rgba(251, 146, 60, 0.2); color: #fdba74; }
+        .severity-badge.medium { background: rgba(234, 179, 8, 0.2); color: #fde047; }
+        .severity-badge.low { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+        
+        .vuln-info {
+            display: flex;
+            gap: 24px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+        
+        .info-label {
+            color: #94a3b8;
+        }
+        
+        .tool-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(168, 85, 247, 0.2);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #c4b5fd;
+        }
+        
+        /* Cloud Badge */
+        .cloud-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(59, 130, 246, 0.1);
+            color: #93c5fd;
+        }
+        
+        .aws-badge { background: rgba(255, 153, 0, 0.1); color: #ff9900; }
+        .gcp-badge { background: rgba(66, 133, 244, 0.1); color: #4285f4; }
+        .azure-badge { background: rgba(0, 120, 212, 0.1); color: #0078d4; }
+        
+        /* Loading States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container { padding: 16px; }
+            .header { flex-direction: column; gap: 16px; padding: 20px; }
+            .charts-section { 
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .chart-container {
+                height: 300px; /* Smaller on mobile */
+                min-height: 300px;
+            }
+            .cloud-grid { grid-template-columns: 1fr; }
+            .vuln-info { flex-direction: column; gap: 12px; }
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            .severity-filters {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+        
+        /* Scan Progress */
+        .scan-progress {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            width: 320px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+        
+        .scan-progress.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .progress-title {
+            font-weight: 600;
+            color: white;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+        
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+        
+        .step-icon.pending { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+        .step-icon.active { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .step-icon.complete { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+        
+        .results-ready {
+            text-align: center;
+            padding: 20px;
+            background: rgba(34, 197, 94, 0.1);
+            border-radius: 12px;
+            margin-top: 16px;
+            animation: pulse 2s infinite;
+            cursor: pointer;
+        }
+        
+        /* No Data States */
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        
+        .no-data-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                🛡️ CloudGuard Security
+                <div class="status-indicator">
+                    <span class="live-badge">● LIVE</span>
+                    <span id="last-updated">Loading...</span>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="loadDashboard()">
+                    🔄 Refresh Dashboard
+                </button>
+                <button class="btn btn-primary" onclick="startNewScan()">
+                    🚀 New Security Scan
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Resources</div>
+                <div class="stat-value" id="total-resources">--</div>
+                <div class="stat-trend">
+                    <span>Across all clouds</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Vulnerabilities Found</div>
+                <div class="stat-value" id="total-findings">--</div>
+                <div class="stat-trend">
+                    <span id="critical-count">Loading...</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Security Score</div>
+                <div class="stat-value" id="security-score">--</div>
+                <div class="stat-trend">
+                    <span>Higher is better</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">Active Tools</div>
+                <div class="stat-value" id="active-tools">--</div>
+                <div class="stat-trend">
+                    <span>Vulnerability scanners</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section - FIXED HEIGHT CONTAINERS -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">📈 Security Trend Over Time</div>
+                    <div class="chart-subtitle">Vulnerabilities found in the last 30 days</div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div class="chart-title">☁️ Cloud Distribution</div>
+                    <div class="chart-subtitle">Resources and findings by cloud platform</div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="cloudChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cloud Providers Overview -->
+        <div class="cloud-grid" id="cloud-providers">
+            <!-- Dynamically populated -->
+            <div class="loading">Loading cloud providers...</div>
+        </div>
+
+        <!-- Vulnerabilities Section -->
+        <div class="vulnerabilities-section" id="vulnerabilities-section">
+            <div class="section-header">
+                <div class="section-title">🔍 Recent Security Findings</div>
+                <div class="severity-filters">
+                    <button class="severity-filter active" onclick="filterVulnerabilities('all')">All</button>
+                    <button class="severity-filter" onclick="filterVulnerabilities('critical')">Critical</button>
+                    <button class="severity-filter" onclick="filterVulnerabilities('high')">High</button>
+                    <button class="severity-filter" onclick="filterVulnerabilities('medium')">Medium</button>
+                </div>
+            </div>
+            
+            <div class="vulnerability-list" id="vulnerability-list">
+                <div class="loading pulse">Loading security findings...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scan Progress Modal -->
+    <div class="scan-progress" id="scan-progress">
+        <div class="progress-header">
+            <div class="progress-title">🔄 Scan in Progress</div>
+            <button onclick="hideScanProgress()">✕</button>
+        </div>
+        <div class="progress-steps">
+            <div class="progress-step">
+                <div class="step-icon active" id="step-cloud">1</div>
+                <span>Scanning cloud resources</span>
+            </div>
+            <div class="progress-step">
+                <div class="step-icon pending" id="step-vuln">2</div>
+                <span>Checking for vulnerabilities</span>
+            </div>
+            <div class="progress-step">
+                <div class="step-icon pending" id="step-analysis">3</div>
+                <span>AI security analysis</span>
+            </div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 33%"></div>
+        </div>
+        <div id="progress-message">Starting cloud scan...</div>
+        <div class="results-ready" id="results-ready" style="display: none;" onclick="scrollToResults()">
+            ✅ Scan Complete! Click to view results
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let trendChart, cloudChart;
+        let currentFilter = 'all';
+        let scanInProgress = false;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('CloudGuard Dashboard initializing...');
+            updateTimestamp();
+            loadDashboard();
+            
+            // Check for scan completion
+            checkForScanCompletion();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(() => {
+                updateTimestamp();
+                if (!scanInProgress) {
+                    loadDashboard();
+                }
+            }, 30000);
+        });
+
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit',
+                hour12: true 
+            };
+            document.getElementById('last-updated').textContent = 
+                `Last updated: ${now.toLocaleTimeString('en-US', options)}`;
+        }
+
+        async function loadDashboard() {
+            try {
+                console.log('Loading dashboard data...');
+                
+                // Show loading state
+                document.getElementById('total-resources').textContent = '...';
+                document.getElementById('total-findings').textContent = '...';
+                document.getElementById('security-score').textContent = '...';
+                document.getElementById('active-tools').textContent = '...';
+                
+                // Load all data in parallel
+                const [summaryRes, providersRes, findingsRes] = await Promise.all([
+                    fetch('/posture/dashboard'),
+                    fetch('/api/provider-breakdown'),
+                    fetch('/api/latest-findings?limit=20')
+                ]);
+                
+                const summary = await summaryRes.json();
+                const providers = await providersRes.json();
+                const findings = await findingsRes.json();
+                
+                // Update summary stats
+                document.getElementById('total-resources').textContent = 
+                    summary.total_resources || 0;
+                document.getElementById('total-findings').textContent = 
+                    summary.total_findings || 0;
+                document.getElementById('security-score').textContent = 
+                    Math.round(summary.security_score || 100);
+                document.getElementById('critical-count').innerHTML = 
+                    `${summary.total_findings || 0} total vulnerabilities`;
+                document.getElementById('active-tools').textContent = 
+                    Object.keys(summary.vulnerability_tools_available || {}).length;
+                
+                // Load charts with proper container sizing
+                await loadTrendChart();
+                await loadCloudChart(providers.data || []);
+                await loadCloudProviders(providers.data || []);
+                await loadVulnerabilities(findings.data || []);
+                
+                console.log('Dashboard loaded successfully');
+                
+            } catch (error) {
+                console.error('Dashboard load failed:', error);
+                showError('Failed to load dashboard data');
+            }
+        }
+
+        async function loadTrendChart() {
+            try {
+                const response = await fetch('/api/scan-history?days=30');
+                const data = await response.json();
+                
+                const ctx = document.getElementById('trendChart');
+                if (!ctx) return;
+                
+                // Destroy existing chart
+                if (trendChart) {
+                    trendChart.destroy();
+                }
+                
+                const chartData = data.data || [];
+                if (chartData.length === 0) {
+                    showNoData(ctx, 'No scan history available');
+                    return;
+                }
+                
+                const labels = chartData.map(d => {
+                    const date = new Date(d.date);
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                });
+                
+                // Create chart with responsive configuration
+                trendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Vulnerabilities',
+                                data: chartData.map(d => d.findings || 0),
+                                borderColor: '#f97316',
+                                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2,
+                                pointRadius: 3,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Critical Issues',
+                                data: chartData.map(d => d.critical || 0),
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2,
+                                pointRadius: 3,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, // Crucial for fixed container
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { 
+                                    color: '#94a3b8',
+                                    padding: 20,
+                                    font: { size: 12 }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                titleColor: '#f1f5f9',
+                                bodyColor: '#cbd5e1',
+                                borderColor: '#475569',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: true
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { 
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    drawBorder: false
+                                },
+                                ticks: { 
+                                    color: '#94a3b8',
+                                    padding: 8
+                                }
+                            },
+                            x: {
+                                grid: { 
+                                    color: 'rgba(148, 163, 184, 0.05)',
+                                    drawBorder: false
+                                },
+                                ticks: { 
+                                    color: '#94a3b8',
+                                    maxRotation: 45,
+                                    padding: 8
+                                }
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Failed to load trend chart:', error);
+                const ctx = document.getElementById('trendChart');
+                showNoData(ctx, 'Failed to load trend data');
+            }
+        }
+
+        async function loadCloudChart(providers) {
+            const ctx = document.getElementById('cloudChart');
+            if (!ctx) return;
+            
+            // Destroy existing chart
+            if (cloudChart) {
+                cloudChart.destroy();
+            }
+            
+            if (!providers || providers.length === 0) {
+                showNoData(ctx, 'No cloud provider data available');
+                return;
+            }
+            
+            const labels = providers.map(p => p.provider?.toUpperCase() || 'Unknown');
+            const resources = providers.map(p => p.resources || 0);
+            const findings = providers.map(p => p.findings || 0);
+            
+            // Colors for different clouds
+            const colors = {
+                'AWS': 'rgba(255, 153, 0, 0.8)',
+                'GCP': 'rgba(66, 133, 244, 0.8)',
+                'AZURE': 'rgba(0, 120, 212, 0.8)',
+                'OPENAI': 'rgba(16, 163, 127, 0.8)',
+                'UNKNOWN': 'rgba(148, 163, 184, 0.8)'
+            };
+            
+            const backgroundColors = labels.map(label => colors[label] || colors.UNKNOWN);
+            
+            cloudChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Resources',
+                            data: resources,
+                            backgroundColor: backgroundColors,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        },
+                        {
+                            label: 'Vulnerabilities',
+                            data: findings,
+                            backgroundColor: backgroundColors.map(c => c.replace('0.8', '0.4')),
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Crucial for fixed container
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { 
+                                color: '#94a3b8',
+                                padding: 20,
+                                font: { size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#f1f5f9',
+                            bodyColor: '#cbd5e1',
+                            borderColor: '#475569',
+                            borderWidth: 1,
+                            padding: 12
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { 
+                                color: 'rgba(148, 163, 184, 0.1)',
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                color: '#94a3b8',
+                                padding: 8
+                            }
+                        },
+                        x: {
+                            grid: { 
+                                color: 'rgba(148, 163, 184, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: { 
+                                color: '#94a3b8',
+                                padding: 8
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function loadCloudProviders(providers) {
+            const container = document.getElementById('cloud-providers');
+            
+            if (!providers || providers.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">☁️</div>
+                        <h3>No cloud providers scanned yet</h3>
+                        <p>Run a scan to see your cloud security posture</p>
+                    </div>`;
+                return;
+            }
+            
+            const cloudIcons = {
+                'aws': { icon: '☁️', class: 'aws-icon', color: '#ff9900' },
+                'gcp': { icon: '📊', class: 'gcp-icon', color: '#4285f4' },
+                'azure': { icon: '🔷', class: 'azure-icon', color: '#0078d4' },
+                'openai': { icon: '🤖', class: 'openai-icon', color: '#10a37f' }
+            };
+            
+            container.innerHTML = providers.map(provider => {
+                const cloud = provider.provider?.toLowerCase() || 'unknown';
+                const cloudInfo = cloudIcons[cloud] || { icon: '☁️', class: 'aws-icon', color: '#94a3b8' };
+                
+                return `
+                    <div class="cloud-card">
+                        <div class="cloud-header">
+                            <div class="cloud-icon ${cloudInfo.class}">
+                                ${cloudInfo.icon}
+                            </div>
+                            <div>
+                                <div class="cloud-name">${provider.provider?.toUpperCase() || 'UNKNOWN'}</div>
+                                <div style="color: #94a3b8; font-size: 0.9rem;">
+                                    ${provider.resources || 0} resources
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="cloud-metrics">
+                            <div class="metric">
+                                <div class="metric-value">${provider.resources || 0}</div>
+                                <div class="metric-label">Resources</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value" style="color: ${provider.findings > 0 ? '#ef4444' : '#10b981'}">
+                                    ${provider.findings || 0}
+                                </div>
+                                <div class="metric-label">Vulnerabilities</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">
+                                    ${provider.resources ? Math.round((provider.findings || 0) / provider.resources * 100) : 0}%
+                                </div>
+                                <div class="metric-label">Risk Ratio</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">
+                                    ${provider.security_score || 'N/A'}
+                                </div>
+                                <div class="metric-label">Security Score</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadVulnerabilities(findings) {
+            const container = document.getElementById('vulnerability-list');
+            
+            if (!findings || findings.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">🎉</div>
+                        <h3>No vulnerabilities found</h3>
+                        <p>Your cloud environment is secure!</p>
+                    </div>`;
+                return;
+            }
+            
+            // Group by cloud provider for better organization
+            const grouped = {};
+            findings.forEach(f => {
+                const cloud = f.cloud?.toUpperCase() || 'UNKNOWN';
+                if (!grouped[cloud]) grouped[cloud] = [];
+                grouped[cloud].push(f);
+            });
+            
+            container.innerHTML = Object.entries(grouped).map(([cloud, vulns]) => {
+                return `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="margin-bottom: 16px; color: #f1f5f9; font-size: 1.1rem;">
+                            ☁️ ${cloud} Cloud
+                            <span style="color: #94a3b8; font-size: 0.9rem; margin-left: 12px;">
+                                ${vulns.length} vulnerabilities found
+                            </span>
+                        </h3>
+                        
+                        ${vulns.map(v => {
+                            const severity = (v.severity || 'MEDIUM').toLowerCase();
+                            const cloudClass = cloud.toLowerCase().includes('aws') ? 'aws-badge' : 
+                                             cloud.toLowerCase().includes('gcp') ? 'gcp-badge' : 'cloud-badge';
+                            
+                            return `
+                                <div class="vulnerability-card ${severity}" onclick="toggleVulnDetails(this)">
+                                    <div class="vuln-header">
+                                        <div class="vuln-title">
+                                            ${v.description?.substring(0, 100) || 'Unknown vulnerability'}
+                                            ${v.description?.length > 100 ? '...' : ''}
+                                        </div>
+                                        <div class="severity-badge ${severity}">
+                                            ${v.severity || 'MEDIUM'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="vuln-info">
+                                        <div class="info-item">
+                                            <span class="info-label">Resource:</span>
+                                            <span class="cloud-badge ${cloudClass}">
+                                                ${v.resource_name || 'Unknown'}
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="info-item">
+                                            <span class="info-label">Detected by:</span>
+                                            <span class="tool-badge">
+                                                🔧 ${v.tool || 'Unknown Tool'}
+                                            </span>
+                                        </div>
+                                        
+                                    </div>
+                                    
+                                    <div class="vuln-details" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.1);">
+                                        <div style="color: #cbd5e1; font-size: 0.9rem;">
+                                            <strong>Full Description:</strong> ${v.description || 'No detailed description available.'}
+                                        </div>
+                                        <div style="margin-top: 8px; color: #94a3b8; font-size: 0.85rem;">
+                                            🔍 This vulnerability was detected by ${v.tool || 'security scanner'} in your ${cloud} environment.
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterVulnerabilities(severity) {
+            currentFilter = severity;
+            
+            // Update active button
+            document.querySelectorAll('.severity-filter').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show all cards
+            const cards = document.querySelectorAll('.vulnerability-card');
+            cards.forEach(card => {
+                if (severity === 'all' || card.classList.contains(severity)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function toggleVulnDetails(card) {
+            const details = card.querySelector('.vuln-details');
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function startNewScan() {
+            window.location.href = '/';
+        }
+
+        function showScanProgress() {
+            const progress = document.getElementById('scan-progress');
+            progress.classList.add('show');
+            scanInProgress = true;
+            
+            // Simulate progress
+            let progressPercent = 33;
+            const progressFill = document.getElementById('progress-fill');
+            const progressMessage = document.getElementById('progress-message');
+            
+            const interval = setInterval(() => {
+                progressPercent += Math.random() * 10;
+                if (progressPercent > 100) progressPercent = 100;
+                progressFill.style.width = progressPercent + '%';
+                
+                if (progressPercent >= 33) {
+                    document.getElementById('step-cloud').className = 'step-icon complete';
+                    document.getElementById('step-vuln').className = 'step-icon active';
+                    progressMessage.textContent = 'Scanning for vulnerabilities...';
+                }
+                
+                if (progressPercent >= 66) {
+                    document.getElementById('step-vuln').className = 'step-icon complete';
+                    document.getElementById('step-analysis').className = 'step-icon active';
+                    progressMessage.textContent = 'Running AI security analysis...';
+                }
+                
+                if (progressPercent >= 100) {
+                    clearInterval(interval);
+                    document.getElementById('step-analysis').className = 'step-icon complete';
+                    progressMessage.textContent = 'Scan complete!';
+                    document.getElementById('results-ready').style.display = 'block';
+                    
+                    // Load new data
+                    setTimeout(() => {
+                        loadDashboard();
+                        scrollToResults();
+                    }, 1000);
+                    
+                    // Auto-hide after 10 seconds
+                    setTimeout(() => {
+                        hideScanProgress();
+                        scanInProgress = false;
+                    }, 10000);
+                }
+            }, 1000);
+        }
+
+        function hideScanProgress() {
+            const progress = document.getElementById('scan-progress');
+            progress.classList.remove('show');
+            scanInProgress = false;
+        }
+
+        function scrollToResults() {
+            const section = document.getElementById('vulnerabilities-section');
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Highlight the section
+            section.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.5)';
+            setTimeout(() => {
+                section.style.boxShadow = 'none';
+            }, 2000);
+        }
+
+        function checkForScanCompletion() {
+            // Check URL for scan completion flag
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('scanComplete') === 'true') {
+                showScanProgress();
+                // Remove the parameter from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        function showError(message) {
+            const container = document.querySelector('.container');
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                background: rgba(239, 68, 68, 0.1);
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                color: #fca5a5;
+                padding: 16px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            `;
+            errorDiv.innerHTML = `
+                <span>⚠️</span>
+                <span>${message}</span>
+            `;
+            container.insertBefore(errorDiv, container.firstChild);
+            
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        function showNoData(canvas, message) {
+            const ctx = canvas.getContext('2d');
+            const container = canvas.parentElement;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Create a simple no-data message
+            container.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+                    <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">📊</div>
+                    <div style="font-size: 0.9rem; text-align: center;">${message}</div>
+                </div>
+            `;
+        }
+
+        // Expose functions globally for onclick handlers
+        window.loadDashboard = loadDashboard;
+        window.startNewScan = startNewScan;
+        window.filterVulnerabilities = filterVulnerabilities;
+        window.scrollToResults = scrollToResults;
+    </script>
+</body>
+</html>

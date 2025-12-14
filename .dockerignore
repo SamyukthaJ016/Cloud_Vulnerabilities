@@ -1,0 +1,137 @@
+# ============================================================================
+# .dockerignore - Exclude unnecessary files from Docker build context
+# ============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+htmlcov/
+
+# Documentation
+docs/_build/
+*.md
+LICENSE
+README.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Reports and logs (keep structure but not content)
+reports/*.html
+reports/*.json
+reports/*.pdf
+logs/*.log
+logs/*.txt
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Environment files (should use secrets management)
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Database dumps
+*.sql
+*.db
+*.sqlite
+*.sqlite3
+
+# Node modules (if any frontend tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Large files that shouldn't be in container
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.iso
+*.dmg
+
+# Backup files
+*.backup
+*.old
+
+# Configuration that should be mounted
+config/gcp-service-account.json
+config/*.pem
+config/secrets/
+
+# Test data
+tests/fixtures/*.large
+tests/data/*.csv

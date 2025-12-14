@@ -1,0 +1,421 @@
+# [file name]: backend/credentials/api.py
+
+"""
+Credentials API endpoints
+"""
+
+import os
+import json
+import logging
+import secrets
+from datetime import datetime
+from typing import Dict, List, Optional, Any
+
+from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
+from pydantic import BaseModel, Field, validator
+from starlette.responses import JSONResponse
+
+from backend.credentials.manager import credential_manager, CloudCredential
+
+logger = logging.getLogger("credentials_api")
+
+router = APIRouter(prefix="/api/credentials", tags=["credentials"])
+
+
+# Request/Response Models
+class CredentialBase(BaseModel):
+    """Base credential model"""
+    user_id: str = Field(default="anonymous")
+    credential_name: str = Field(default="default")
+    is_default: bool = Field(default=True)
+
+
+class AWSCredentialRequest(CredentialBase):
+    """AWS credential request model"""
+    cloud_provider: str = Field(default="aws")
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    aws_region: Optional[str] = Field(default="us-east-1")
+    aws_session_token: Optional[str] = None
+
+
+class OpenAICredentialRequest(CredentialBase):
+    """OpenAI credential request model"""
+    cloud_provider: str = Field(default="openai")
+    openai_api_key: str
+    openai_org_id: Optional[str] = None
+
+
+class GCPCredentialRequest(CredentialBase):
+    """GCP credential request model"""
+    cloud_provider: str = Field(default="gcp")
+    gcp_service_account_json: str  # JSON string
+    gcp_project_id: Optional[str] = None
+
+
+class AzureCredentialRequest(CredentialBase):
+    """Azure credential request model"""
+    cloud_provider: str = Field(default="azure")
+    azure_client_id: str
+    azure_client_secret: str
+    azure_tenant_id: str
+    azure_subscription_id: Optional[str] = None
+
+
+class CredentialResponse(BaseModel):
+    """Credential response model"""
+    id: int
+    user_id: str
+    cloud_provider: str
+    credential_name: str
+    is_default: bool
+    is_valid: bool
+    validation_status: str
+    validation_message: Optional[str]
+    last_used: Optional[datetime]
+    created_at: datetime
+
+
+class ValidationRequest(BaseModel):
+    """Credential validation request"""
+    credential_id: int
+    user_id: str = Field(default="anonymous")
+
+
+class ValidationResponse(BaseModel):
+    """Validation response"""
+    valid: bool
+    message: str
+    details: Dict[str, Any]
+
+
+class ScanSessionRequest(BaseModel):
+    """Scan session creation request"""
+    user_id: str = Field(default="anonymous")
+    aws_credential_id: Optional[int] = None
+    gcp_credential_id: Optional[int] = None
+    openai_credential_id: Optional[int] = None
+    azure_credential_id: Optional[int] = None
+    scan_config: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ScanSessionResponse(BaseModel):
+    """Scan session response"""
+    session_id: str
+    expires_at: datetime
+    credentials_available: List[str]
+
+
+# Helper function to get user ID from request
+def get_user_id(request: Request) -> str:
+    """Extract user ID from request"""
+    # In a real app, this would come from authentication
+    # For now, use session or generate anonymous ID
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        return f"user_{session_id}"
+    return "anonymous"
+
+
+@router.post("/aws", response_model=CredentialResponse)
+async def save_aws_credential(
+    request: AWSCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save AWS credentials"""
+    try:
+        # Override user_id from request with authenticated user
+        request.user_id = user_id
+        
+        # Create CloudCredential object
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            aws_access_key_id=request.aws_access_key_id,
+            aws_secret_access_key=request.aws_secret_access_key,
+            aws_region=request.aws_region,
+            aws_session_token=request.aws_session_token,
+            is_default=request.is_default
+        )
+        
+        # Save credential
+        credential_id = credential_manager.save_credential(credential)
+        
+        # Validate in background
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+        
+        # Return response
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,  # Will be updated after validation
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow()
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to save AWS credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/openai", response_model=CredentialResponse)
+async def save_openai_credential(
+    request: OpenAICredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save OpenAI credentials"""
+    try:
+        request.user_id = user_id
+        
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            openai_api_key=request.openai_api_key,
+            openai_org_id=request.openai_org_id,
+            is_default=request.is_default
+        )
+        
+        credential_id = credential_manager.save_credential(credential)
+        
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+        
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow()
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to save OpenAI credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/gcp", response_model=CredentialResponse)
+async def save_gcp_credential(
+    request: GCPCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save GCP credentials"""
+    try:
+        request.user_id = user_id
+        
+        # Validate JSON
+        try:
+            service_account_data = json.loads(request.gcp_service_account_json)
+            # Extract project_id from service account JSON if not provided
+            if not request.gcp_project_id:
+                request.gcp_project_id = service_account_data.get("project_id")
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON for service account")
+        
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            gcp_service_account_json=request.gcp_service_account_json,
+            gcp_project_id=request.gcp_project_id,
+            is_default=request.is_default
+        )
+        
+        credential_id = credential_manager.save_credential(credential)
+        
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+        
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow()
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save GCP credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/", response_model=List[CredentialResponse])
+async def get_credentials(
+    user_id: str = Depends(get_user_id),
+    provider: Optional[str] = None
+):
+    """Get all credentials for user"""
+    try:
+        credentials = credential_manager.get_all_user_credentials(user_id, provider)
+        
+        response = []
+        for cred in credentials:
+            response.append(CredentialResponse(
+                id=cred['id'],
+                user_id=cred['user_id'],
+                cloud_provider=cred['cloud_provider'],
+                credential_name=cred['credential_name'],
+                is_default=cred['is_default'],
+                is_valid=cred.get('is_valid', False),
+                validation_status=cred.get('validation_status', 'pending'),
+                validation_message=cred.get('validation_message'),
+                last_used=cred.get('last_used'),
+                created_at=cred.get('created_at', datetime.utcnow())
+            ))
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Failed to get credentials: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/validate", response_model=ValidationResponse)
+async def validate_credential(request: ValidationRequest):
+    """Validate a credential"""
+    try:
+        credential = credential_manager.get_credentials(
+            request.credential_id,
+            request.user_id
+        )
+        
+        if not credential:
+            raise HTTPException(status_code=404, detail="Credential not found")
+        
+        result = credential_manager.validate_credential(credential)
+        
+        return ValidationResponse(
+            valid=result['valid'],
+            message=result['message'],
+            details=result.get('details', {})
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to validate credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{credential_id}")
+async def delete_credential(
+    credential_id: int,
+    user_id: str = Depends(get_user_id)
+):
+    """Delete a credential"""
+    try:
+        success = credential_manager.delete_credential(credential_id, user_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Credential not found")
+        
+        return {"success": True, "message": "Credential deleted"}
+        
+    except Exception as e:
+        logger.error(f"Failed to delete credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/session", response_model=ScanSessionResponse)
+async def create_scan_session(request: ScanSessionRequest):
+    """Create a scan session with credentials"""
+    try:
+        credential_ids = {}
+        
+        if request.aws_credential_id:
+            credential_ids['aws'] = request.aws_credential_id
+        if request.gcp_credential_id:
+            credential_ids['gcp'] = request.gcp_credential_id
+        if request.openai_credential_id:
+            credential_ids['openai'] = request.openai_credential_id
+        if request.azure_credential_id:
+            credential_ids['azure'] = request.azure_credential_id
+        
+        session_id = credential_manager.create_session(
+            request.user_id,
+            credential_ids,
+            request.scan_config
+        )
+        
+        credentials_available = list(credential_ids.keys())
+        
+        return ScanSessionResponse(
+            session_id=session_id,
+            expires_at=datetime.utcnow(),
+            credentials_available=credentials_available
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to create scan session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/providers/status")
+async def get_providers_status(user_id: str = Depends(get_user_id)):
+    """Get status of all cloud providers for user"""
+    try:
+        credentials = credential_manager.get_all_user_credentials(user_id)
+        
+        providers = {
+            'aws': {'configured': False, 'valid': False, 'default_id': None},
+            'gcp': {'configured': False, 'valid': False, 'default_id': None},
+            'openai': {'configured': False, 'valid': False, 'default_id': None},
+            'azure': {'configured': False, 'valid': False, 'default_id': None}
+        }
+        
+        for cred in credentials:
+            provider = cred['cloud_provider']
+            if provider in providers:
+                providers[provider]['configured'] = True
+                providers[provider]['valid'] = cred.get('is_valid', False)
+                if cred.get('is_default'):
+                    providers[provider]['default_id'] = cred['id']
+        
+        return providers
+        
+    except Exception as e:
+        logger.error(f"Failed to get providers status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Test endpoint (for development)
+@router.post("/test/connection")
+async def test_connection():
+    """Test database connection for credentials"""
+    try:
+        # Try to get connection
+        conn = credential_manager._get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.close()
+        conn.close()
+        
+        return {"status": "connected", "message": "Database connection successful"}
+        
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
