@@ -14,3 +14,5 @@ sql/
 # Editor stuff (optional)
 .vscode/
 gcp-service-account.json 
+.DS_Store
+*.env
