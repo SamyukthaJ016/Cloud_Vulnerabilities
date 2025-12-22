@@ -6,7 +6,7 @@ Implements: discover_resources, check_config, assess_vulnerabilities
 import boto3
 import logging
 from typing import Dict, List, Any
-from datetime import datetime, timedelta,timezone
+from datetime import datetime, timedelta, timezone
 from backend.mcp.mcp_base import MCPPlugin, CloudResource, SecurityFinding, Severity
 
 logger = logging.getLogger("aws_mcp_plugin")
@@ -17,202 +17,151 @@ class AWSPlugin(MCPPlugin):
 
     def __init__(self, credentials: Dict[str, str]):
         super().__init__(credentials)
-        self.s3 = boto3.client(
-            's3',
-            aws_access_key_id=credentials.get('access_key_id'),
-            aws_secret_access_key=credentials.get('secret_access_key'),
-            region_name=credentials.get('region', 'us-east-1')
+
+        region = credentials.get("region", "us-east-1")
+
+        # ✅ FIX: create ONE boto3 session using user credentials
+        self.session = boto3.Session(
+            aws_access_key_id=credentials.get("access_key_id"),
+            aws_secret_access_key=credentials.get("secret_access_key"),
+            aws_session_token=credentials.get("session_token"),  # IMPORTANT
+            region_name=region
         )
-        self.iam = boto3.client(
-            'iam',
-            aws_access_key_id=credentials.get('access_key_id'),
-            aws_secret_access_key=credentials.get('secret_access_key')
-        )
-        self.ec2 = boto3.client(
-            'ec2',
-            aws_access_key_id=credentials.get('access_key_id'),
-            aws_secret_access_key=credentials.get('secret_access_key'),
-            region_name=credentials.get('region', 'us-east-1')
-        )
-        self.cloudtrail = boto3.client(
-            'cloudtrail',
-            aws_access_key_id=credentials.get('access_key_id'),
-            aws_secret_access_key=credentials.get('secret_access_key'),
-            region_name=credentials.get('region', 'us-east-1')
-        )
-        self.kms = boto3.client(
-            'kms',
-            aws_access_key_id=credentials.get('access_key_id'),
-            aws_secret_access_key=credentials.get('secret_access_key'),
-            region_name=credentials.get('region', 'us-east-1')
-        )
+
+        # ✅ Create clients FROM session (not boto3.client)
+        self.s3 = self.session.client("s3")
+        self.iam = self.session.client("iam")
+        self.ec2 = self.session.client("ec2")
+        self.cloudtrail = self.session.client("cloudtrail")
+        self.kms = self.session.client("kms")
+
+        # ✅ Optional sanity check (helps debugging)
+        try:
+            sts = self.session.client("sts")
+            identity = sts.get_caller_identity()
+            logger.info(f"✅ AWS authenticated as {identity.get('Arn')}")
+        except Exception as e:
+            logger.error(f"❌ AWS credential validation failed: {e}")
 
     def _get_provider_name(self) -> str:
         return "aws"
 
     async def discover_resources(self, account_id: str) -> List[CloudResource]:
-        """Tool 1: Discover all AWS resources"""
         logger.info(f"AWS: Discovering resources for account {account_id}")
         resources = []
 
-        # Discover S3 Buckets
         resources.extend(await self._discover_s3_buckets())
-        
-        # Discover IAM Users
         resources.extend(await self._discover_iam_users())
-        
-        # Discover EC2 Security Groups
         resources.extend(await self._discover_security_groups())
-        
-        # Discover CloudTrail
         resources.extend(await self._discover_cloudtrail())
-        
-        # Discover KMS Keys
         resources.extend(await self._discover_kms_keys())
 
         logger.info(f"AWS: Discovered {len(resources)} resources")
         return resources
+
     async def _discover_s3_buckets(self) -> List[CloudResource]:
-        """Discover S3 buckets with comprehensive public access detection"""
         resources = []
         try:
-            buckets = self.s3.list_buckets().get('Buckets', [])
+            buckets = self.s3.list_buckets().get("Buckets", [])
             for bucket in buckets:
-                name = bucket['Name']
-            
-            # Initialize public detection flags
+                name = bucket["Name"]
+
                 is_public = False
                 public_reasons = []
-            
-            # Method 1: Check Public Access Block
+
+                # --- Public Access Block ---
                 try:
                     pab = self.s3.get_public_access_block(Bucket=name)
-                    pab_config = pab.get('PublicAccessBlockConfiguration', {})
-                
-                # If ANY of these is False, bucket COULD be public
-                    block_public_acls = pab_config.get('BlockPublicAcls', False)
-                    ignore_public_acls = pab_config.get('IgnorePublicAcls', False)
-                    block_public_policy = pab_config.get('BlockPublicPolicy', False)
-                    restrict_public_buckets = pab_config.get('RestrictPublicBuckets', False)
-                
-                    if not (block_public_acls and ignore_public_acls and 
-                            block_public_policy and restrict_public_buckets):
+                    pab_config = pab.get("PublicAccessBlockConfiguration", {})
+                    block_public_acls = pab_config.get("BlockPublicAcls", False)
+                    ignore_public_acls = pab_config.get("IgnorePublicAcls", False)
+                    block_public_policy = pab_config.get("BlockPublicPolicy", False)
+                    restrict_public_buckets = pab_config.get("RestrictPublicBuckets", False)
+
+                    if not (block_public_acls and ignore_public_acls and block_public_policy and restrict_public_buckets):
                         public_reasons.append("Public Access Block not fully enabled")
-                    # Don't set is_public yet, need to check if actually exposed
-                
-                    pab_status = {
-                        'BlockPublicAcls': block_public_acls,
-                        'IgnorePublicAcls': ignore_public_acls,
-                        'BlockPublicPolicy': block_public_policy,
-                        'RestrictPublicBuckets': restrict_public_buckets
-                    }
+
+                    pab_status = pab_config
                 except self.s3.exceptions.NoSuchPublicAccessBlockConfiguration:
-                    # No public access block = potentially public
                     public_reasons.append("No Public Access Block configured")
                     pab_status = None
                 except Exception as e:
-                    logger.warning(f"Could not check Public Access Block for {name}: {e}")
+                    logger.warning(f"Could not check PAB for {name}: {e}")
                     pab_status = None
-            
-            # Method 2: Check ACL for AllUsers or AllAuthenticatedUsers
+
+                # --- ACL ---
                 try:
                     acl = self.s3.get_bucket_acl(Bucket=name)
-                    for grant in acl.get('Grants', []):
-                        grantee = grant.get('Grantee', {})
-                        uri = grantee.get('URI', '')
-                    
-                    # Check for public grants
-                        if 'AllUsers' in uri:
+                    for grant in acl.get("Grants", []):
+                        uri = grant.get("Grantee", {}).get("URI", "")
+                        if "AllUsers" in uri:
                             is_public = True
-                            public_reasons.append("ACL grants to AllUsers (anonymous public)")
-                        elif 'AllAuthenticatedUsers' in uri:
+                            public_reasons.append("ACL grants to AllUsers")
+                        elif "AllAuthenticatedUsers" in uri:
                             is_public = True
                             public_reasons.append("ACL grants to AllAuthenticatedUsers")
-                
-                    acl_info = acl.get('Grants', [])
+                    acl_info = acl.get("Grants", [])
                 except Exception as e:
                     logger.warning(f"Could not check ACL for {name}: {e}")
                     acl_info = None
-            
-            # Method 3: Check Bucket Policy for public statements
+
+                # --- Bucket Policy ---
                 policy = {}
                 try:
-                    policy_response = self.s3.get_bucket_policy(Bucket=name)
                     import json
-                    policy = json.loads(policy_response['Policy'])
-                
-                # Check if policy has public statements
-                    for statement in policy.get('Statement', []):
-                        principal = statement.get('Principal', {})
-                    
-                    # Check for wildcard principal
-                        if principal == '*' or principal == {'AWS': '*'}:
-                            effect = statement.get('Effect', '')
-                            if effect == 'Allow':
-                                is_public = True
-                                public_reasons.append("Bucket policy allows public access (Principal: *)")
-                    
-                    # Check for public principal in various formats
-                        if isinstance(principal, dict):
-                            aws_principal = principal.get('AWS', [])
-                            if aws_principal == '*' or (isinstance(aws_principal, list) and '*' in aws_principal):
-                                if statement.get('Effect') == 'Allow':
-                                    is_public = True
-                                    public_reasons.append("Bucket policy allows public AWS access")
+                    policy_response = self.s3.get_bucket_policy(Bucket=name)
+                    policy = json.loads(policy_response["Policy"])
+                    for stmt in policy.get("Statement", []):
+                        if stmt.get("Effect") == "Allow" and stmt.get("Principal") in ("*", {"AWS": "*"}):
+                            is_public = True
+                            public_reasons.append("Bucket policy allows public access")
                 except self.s3.exceptions.NoSuchBucketPolicy:
-                    pass  # No policy is fine
+                    pass
                 except Exception as e:
                     logger.warning(f"Could not check policy for {name}: {e}")
-            
-            # Get encryption
-                encryption = None
+
+                # --- Encryption ---
                 try:
                     encryption = self.s3.get_bucket_encryption(Bucket=name)
                 except self.s3.exceptions.ServerSideEncryptionConfigurationNotFoundError:
-                    pass  # No encryption
+                    encryption = None
                 except Exception as e:
                     logger.warning(f"Could not check encryption for {name}: {e}")
-            
-            # Get versioning
-                versioning = None
+                    encryption = None
+
+                # --- Versioning ---
                 try:
                     versioning = self.s3.get_bucket_versioning(Bucket=name)
-                except Exception as e:
-                    logger.warning(f"Could not check versioning for {name}: {e}")
-            
-            # Get logging
-                logging_enabled = False
-                try:
-                    logging_config = self.s3.get_bucket_logging(Bucket=name)
-                    logging_enabled = 'LoggingEnabled' in logging_config
-                except Exception as e:
-                    logger.warning(f"Could not check logging for {name}: {e}")
-            
-            # Log public detection
-                if is_public:
-                    logger.warning(f"🚨 PUBLIC BUCKET DETECTED: {name}")
-                    logger.warning(f"   Reasons: {', '.join(public_reasons)}")
-                elif public_reasons:
-                    logger.info(f"⚠️  Bucket {name} has potential public access (but not confirmed): {', '.join(public_reasons)}")
+                except Exception:
+                    versioning = None
 
-                resources.append(CloudResource(
-                    provider="aws",
-                    resource_type="s3_bucket",
-                    name=name,
-                    config={
-                        "policy": policy,
-                        "encryption": encryption,
-                        "versioning": versioning,
-                        "logging": logging_enabled,
-                        "public_access_block": pab_status,
-                        "acl": acl_info,
-                        "public_reasons": public_reasons if public_reasons else None
-                    },
-                    is_public=is_public
-                ))
+                # --- Logging ---
+                try:
+                    logging_cfg = self.s3.get_bucket_logging(Bucket=name)
+                    logging_enabled = "LoggingEnabled" in logging_cfg
+                except Exception:
+                    logging_enabled = False
+
+                resources.append(
+                    CloudResource(
+                        provider="aws",
+                        resource_type="s3_bucket",
+                        name=name,
+                        config={
+                            "policy": policy,
+                            "encryption": encryption,
+                            "versioning": versioning,
+                            "logging": logging_enabled,
+                            "public_access_block": pab_status,
+                            "acl": acl_info,
+                            "public_reasons": public_reasons or None,
+                        },
+                        is_public=is_public,
+                    )
+                )
         except Exception as e:
             logger.error(f"S3 discovery failed: {e}")
-    
+
         return resources
     # async def _discover_s3_buckets(self) -> List[CloudResource]:
     #     """Discover S3 buckets"""

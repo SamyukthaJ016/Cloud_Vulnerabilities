@@ -27,33 +27,30 @@ logger = logging.getLogger("credential_manager")
 
 @dataclass
 class CloudCredential:
-    """Cloud credential data class"""
-    user_id: str
-    cloud_provider: str  # 'aws', 'gcp', 'openai', 'azure'
-    credential_name: str
     
-    # AWS
+    user_id: str
+    cloud_provider: str
+    credential_name: str
+    id: Optional[int] = None 
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
-    aws_region: str = 'us-east-1'
+    aws_region: Optional[str] = "us-east-1"
     aws_session_token: Optional[str] = None
-    
-    # GCP
+
     gcp_service_account_json: Optional[str] = None
     gcp_project_id: Optional[str] = None
-    
-    # OpenAI
+
     openai_api_key: Optional[str] = None
     openai_org_id: Optional[str] = None
-    
-    # Azure
+
     azure_client_id: Optional[str] = None
     azure_client_secret: Optional[str] = None
     azure_tenant_id: Optional[str] = None
     azure_subscription_id: Optional[str] = None
-    
-    # Metadata
+
     is_default: bool = False
+    is_valid: bool = True
+
 
 
 class CredentialManager:
@@ -131,116 +128,6 @@ class CredentialManager:
         finally:
             cur.close()
             conn.close()
-    
-    # def save_credential(self, credential: CloudCredential) -> int:
-    #     """
-    #     Save encrypted credential to database
-    #     Returns credential ID
-    #     """
-    #     conn = self._get_connection()
-    #     cur = conn.cursor()
-        
-    #     try:
-    #         # Ensure user exists
-    #         self.ensure_user(credential.user_id)
-            
-    #         # Encrypt sensitive fields
-    #         encrypted_credential = asdict(credential)
-            
-    #         # Encrypt sensitive data
-    #         if credential.aws_secret_access_key:
-    #             encrypted_credential['aws_secret_access_key'] = self.encrypt(credential.aws_secret_access_key)
-    #         if credential.aws_access_key_id:
-    #             encrypted_credential['aws_access_key_id'] = self.encrypt(credential.aws_access_key_id)
-    #         if credential.aws_session_token:
-    #             encrypted_credential['aws_session_token'] = self.encrypt(credential.aws_session_token)
-    #         if credential.gcp_service_account_json:
-    #             encrypted_credential['gcp_service_account_json'] = self.encrypt(credential.gcp_service_account_json)
-    #         if credential.openai_api_key:
-    #             encrypted_credential['openai_api_key'] = self.encrypt(credential.openai_api_key)
-    #         if credential.azure_client_secret:
-    #             encrypted_credential['azure_client_secret'] = self.encrypt(credential.azure_client_secret)
-            
-    #         # Check if credential already exists
-    #         cur.execute(
-    #             """
-    #             SELECT id FROM cloud_credentials 
-    #             WHERE user_id = %s AND cloud_provider = %s AND credential_name = %s
-    #             """,
-    #             (credential.user_id, credential.cloud_provider, credential.credential_name)
-    #         )
-            
-    #         existing = cur.fetchone()
-            
-    #         if existing:
-    #             # Update existing credential
-    #             credential_id = existing[0]
-    #             update_fields = []
-    #             update_values = []
-                
-    #             for field, value in encrypted_credential.items():
-    #                 if value is not None and field not in ['user_id', 'cloud_provider', 'credential_name']:
-    #                     update_fields.append(f"{field} = %s")
-    #                     update_values.append(value)
-                
-    #             update_values.append(credential_id)
-                
-    #             update_query = f"""
-    #                 UPDATE cloud_credentials 
-    #                 SET {', '.join(update_fields)}, updated_at = NOW()
-    #                 WHERE id = %s
-    #             """
-                
-    #             cur.execute(update_query, update_values)
-                
-    #         else:
-    #             # Insert new credential
-    #             fields = list(encrypted_credential.keys())
-    #             placeholders = ['%s'] * len(fields)
-                
-    #             insert_query = f"""
-    #                 INSERT INTO cloud_credentials ({', '.join(fields)})
-    #                 VALUES ({', '.join(placeholders)})
-    #                 RETURNING id
-    #             """
-                
-    #             values = [encrypted_credential[field] for field in fields]
-    #             cur.execute(insert_query, values)
-    #             credential_id = cur.fetchone()[0]
-            
-    #         # If this is default, unset other defaults for this provider and user
-    #         if credential.is_default:
-    #             cur.execute(
-    #                 """
-    #                 UPDATE cloud_credentials 
-    #                 SET is_default = FALSE 
-    #                 WHERE user_id = %s 
-    #                 AND cloud_provider = %s 
-    #                 AND id != %s
-    #                 """,
-    #                 (credential.user_id, credential.cloud_provider, credential_id)
-    #             )
-            
-    #         # Log the action
-    #         self._log_audit(
-    #             credential_id,
-    #             credential.user_id,
-    #             'create' if not existing else 'update',
-    #             {'provider': credential.cloud_provider}
-    #         )
-            
-    #         conn.commit()
-    #         return credential_id
-            
-    #     except Exception as e:
-    #         conn.rollback()
-    #         logger.error(f"Failed to save credential: {e}")
-    #         raise
-            
-    #     finally:
-    #         cur.close()
-    #         conn.close()
-    # [file name]: backend/credentials/manager.py (updated save_credential method)
 
     def save_credential(self, credential: CloudCredential) -> int:
         """
@@ -419,30 +306,38 @@ class CredentialManager:
     #         cur.close()
     #         conn.close()
     
+    # [file name]: backend/credentials/manager.py (FIXED get_credentials method)
+
+# Replace the existing get_credentials method with this:
+
     def get_credentials(self, credential_id: int, user_id: str) -> Optional[CloudCredential]:
-        """Get and decrypt a specific credential by ID"""
+        """
+        🔥 FIXED: Get and decrypt a specific credential by ID
+        Returns CloudCredential object with decrypted sensitive fields
+        """
         conn = self._get_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
     
         try:
             cur.execute(
-            """
+                """
                 SELECT * FROM cloud_credentials 
                 WHERE id = %s AND user_id = %s
-            """,
+                """,
                 (credential_id, user_id)
             )
         
             row = cur.fetchone()
             if not row:
+                logger.warning(f"Credential {credential_id} not found for user {user_id}")
                 return None
         
-        # Decrypt sensitive fields
+        # Convert to dict
             credential_dict = dict(row)
         
-        # Decrypt fields
+        # 🔥 DECRYPT sensitive fields
             for field in ['aws_secret_access_key', 'aws_access_key_id', 'aws_session_token',
-                        'gcp_service_account_json', 'openai_api_key', 'azure_client_secret']:
+                     'gcp_service_account_json', 'openai_api_key', 'azure_client_secret']:
                 if credential_dict.get(field):
                     try:
                         credential_dict[field] = self.decrypt(credential_dict[field])
@@ -450,10 +345,9 @@ class CredentialManager:
                         logger.warning(f"Failed to decrypt field {field}: {e}")
                         credential_dict[field] = None
         
-        # Remove fields that aren't part of CloudCredential constructor
+        # 🔥 Remove fields that aren't part of CloudCredential constructor
             fields_to_remove = [
-                'id', 'created_at', 'updated_at', 'last_used',
-                'is_valid', 'validation_status', 'validation_message',
+                'created_at', 'updated_at', 'last_used', 'validation_status', 'validation_message',
                 'last_validated'
             ]
         
@@ -461,24 +355,57 @@ class CredentialManager:
                 if field in credential_dict:
                     del credential_dict[field]
         
-        # Update last used
+        # Update last used timestamp
             cur.execute(
                 "UPDATE cloud_credentials SET last_used = NOW() WHERE id = %s",
                 (credential_id,)
             )
-        
-        # Log usage
-            self._log_audit(
-                credential_id,
-                user_id,
-                'use',
-                {'provider': credential_dict['cloud_provider']}
-            )
-        
             conn.commit()
-        
+            logger.error(f"FINAL credential_dict keys: {list(credential_dict.keys())}")
+
         # Convert to CloudCredential object
-            return CloudCredential(**credential_dict)
+            return CloudCredential(
+                id=credential_dict["id"],
+                user_id=credential_dict["user_id"],
+                cloud_provider=credential_dict["cloud_provider"],
+                credential_name=credential_dict["credential_name"],
+
+                aws_access_key_id=self.decrypt(credential_dict["aws_access_key_id"])
+                    if credential_dict["aws_access_key_id"] else None,
+
+                 aws_secret_access_key=self.decrypt(credential_dict["aws_secret_access_key"])
+                    if credential_dict["aws_secret_access_key"] else None,
+
+                aws_region=credential_dict["aws_region"],
+                aws_session_token=credential_dict["aws_session_token"],
+
+                gcp_service_account_json=self.decrypt(credential_dict["gcp_service_account_json"])
+                    if credential_dict["gcp_service_account_json"] else None,
+
+                gcp_project_id=credential_dict["gcp_project_id"],
+
+                openai_api_key=self.decrypt(credential_dict["openai_api_key"])
+                    if credential_dict["openai_api_key"] else None,
+
+                openai_org_id=credential_dict["openai_org_id"],
+
+                azure_client_id=self.decrypt(credential_dict["azure_client_id"])
+                    if credential_dict["azure_client_id"] else None,
+
+                azure_client_secret=self.decrypt(credential_dict["azure_client_secret"])
+                    if credential_dict["azure_client_secret"] else None,
+
+                azure_tenant_id=credential_dict["azure_tenant_id"],
+                azure_subscription_id=credential_dict["azure_subscription_id"],
+
+                is_default=credential_dict["is_default"],
+                is_valid=credential_dict["is_valid"],
+            )
+
+        
+        except Exception as e:
+            logger.error(f"Failed to get credential {credential_id}: {e}")
+            return None
         
         finally:
             cur.close()

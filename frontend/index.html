@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,67 +124,6 @@
         .status-dot.warning { background: #f59e0b; }
         .status-dot.error { background: #ef4444; }
         
-        /* Scan Type Cards */
-        .scan-types {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            margin-bottom: 32px;
-        }
-        
-        .scan-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 16px;
-            padding: 24px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
-        }
-        
-        .scan-card:hover {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: rgba(59, 130, 246, 0.3);
-            transform: translateY(-2px);
-        }
-        
-        .scan-card.active {
-            background: rgba(59, 130, 246, 0.15);
-            border-color: rgba(59, 130, 246, 0.5);
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2);
-        }
-        
-        .scan-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(59, 130, 246, 0.1);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-        
-        .scan-info {
-            flex: 1;
-        }
-        
-        .scan-name {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: white;
-        }
-        
-        .scan-description {
-            font-size: 0.9rem;
-            color: #94a3b8;
-            line-height: 1.5;
-        }
-        
         /* Cloud Providers */
         .providers-grid {
             display: grid;
@@ -252,6 +190,157 @@
             color: white;
         }
         
+        /* Scan Schedule Section */
+        .scan-schedule {
+            margin-bottom: 32px;
+        }
+        
+        .schedule-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .schedule-tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .schedule-tab:hover {
+            color: #cbd5e1;
+        }
+        
+        .schedule-tab.active {
+            color: #60a5fa;
+            border-bottom-color: #60a5fa;
+        }
+        
+        .schedule-content {
+            display: none;
+        }
+        
+        .schedule-content.active {
+            display: block;
+        }
+        
+        /* Immediate Scan */
+        .immediate-scan-info {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .immediate-scan-info h4 {
+            color: #4ade80;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+        
+        .immediate-scan-info p {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+        
+        /* Scheduled Scan */
+        .schedule-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            color: #cbd5e1;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .form-input,
+        .form-select {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+        
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .form-input::placeholder {
+            color: #64748b;
+        }
+        
+        /* Recurring Schedule */
+        .recurring-options {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .recurring-header {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .frequency-selector {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .frequency-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .frequency-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .frequency-btn.selected {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.5);
+            color: #60a5fa;
+        }
+        
         /* Scan Options */
         .scan-options {
             margin-bottom: 32px;
@@ -304,42 +393,6 @@
             color: #94a3b8;
             font-size: 0.85rem;
             margin-top: 4px;
-        }
-        
-        /* Input Fields */
-        .input-group {
-            margin-bottom: 24px;
-        }
-        
-        .input-label {
-            display: block;
-            margin-bottom: 8px;
-            color: #cbd5e1;
-            font-weight: 500;
-        }
-        
-        .textarea {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 12px;
-            padding: 16px;
-            color: white;
-            font-family: inherit;
-            font-size: 1rem;
-            resize: vertical;
-            min-height: 120px;
-            transition: all 0.3s;
-        }
-        
-        .textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-        
-        .textarea::placeholder {
-            color: #64748b;
         }
         
         /* Buttons */
@@ -533,7 +586,17 @@
             margin-bottom: 32px;
             line-height: 1.6;
         }
-        
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
         .progress-bar {
             height: 8px;
             background: rgba(255, 255, 255, 0.1);
@@ -576,77 +639,6 @@
             color: #60a5fa;
         }
         
-        /* Credentials Modal */
-        .credentials-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1001;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s;
-        }
-        
-        .credentials-modal.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .credentials-content {
-            background: rgba(30, 41, 59, 0.95);
-            border-radius: 24px;
-            padding: 40px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-        }
-        
-        .credentials-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        
-        .credentials-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .close-btn {
-            background: none;
-            border: none;
-            color: #94a3b8;
-            font-size: 2rem;
-            cursor: pointer;
-            padding: 0;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-        
-        .close-btn:hover {
-            background: rgba(239, 68, 68, 0.1);
-            color: #fca5a5;
-        }
-        
         /* Animations */
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
@@ -659,8 +651,8 @@
         }
         
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
         }
         
         /* Responsive */
@@ -671,8 +663,11 @@
             .scan-panel, .feature-card { padding: 24px; }
             .providers-grid { grid-template-columns: 1fr; }
             .buttons-group { flex-direction: column; }
-            .modal-content, .credentials-content { padding: 24px; }
+            .modal-content { padding: 24px; }
             .credentials-banner { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .form-row { grid-template-columns: 1fr; }
+            .frequency-selector { flex-direction: column; }
+            .frequency-btn { width: 100%; }
         }
     </style>
 </head>
@@ -694,8 +689,7 @@
             <div class="scan-panel">
                 <h2 class="panel-title">⚙️ Configure Your Scan</h2>
                 <p class="panel-subtitle">
-                    Choose your scan type, select cloud providers, and configure options. 
-                    Our AI will analyze security posture and detect vulnerabilities automatically.
+                    Select cloud providers, configure scan options, and schedule your security assessment.
                 </p>
 
                 <!-- Credentials Banner -->
@@ -709,36 +703,103 @@
                     </button>
                 </div>
 
-                <!-- Scan Type Selection -->
-                <div class="scan-types">
-                    <div class="scan-card active" onclick="selectScanType('intelligent')">
-                        <div class="scan-icon">🤖</div>
-                        <div class="scan-info">
-                            <div class="scan-name">Intelligent AI Scan</div>
-                            <div class="scan-description">
-                                Let our AI analyze your request and automatically determine which clouds to scan.
-                                Best for comprehensive security assessment.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="scan-card" onclick="selectScanType('manual')">
-                        <div class="scan-icon">🎯</div>
-                        <div class="scan-info">
-                            <div class="scan-name">Manual Configuration</div>
-                            <div class="scan-description">
-                                Manually select specific cloud providers and configure scan parameters.
-                                Full control over the scanning process.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Cloud Providers Selection -->
                 <div class="input-group">
                     <div class="input-label">Select Cloud Providers</div>
                     <div class="providers-grid" id="providersGrid">
                         <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- Scan Schedule Section -->
+                <div class="scan-schedule">
+                    <div class="schedule-tabs">
+                        <button class="schedule-tab active" onclick="switchScheduleTab('immediate')">
+                            🚀 Immediate Scan
+                        </button>
+                        <button class="schedule-tab" onclick="switchScheduleTab('scheduled')">
+                            📅 Schedule Scan
+                        </button>
+                        <button class="schedule-tab" onclick="switchScheduleTab('recurring')">
+                            🔄 Recurring Scan
+                        </button>
+                    </div>
+
+                    <!-- Immediate Scan Tab -->
+                    <div id="immediateTab" class="schedule-content active">
+                        <div class="immediate-scan-info">
+                            <h4>⚡ Run Scan Now</h4>
+                            <p>Start a comprehensive security scan immediately across all selected cloud providers.</p>
+                        </div>
+                    </div>
+
+                    <!-- Scheduled Scan Tab -->
+                    <div id="scheduledTab" class="schedule-content">
+                        <div class="schedule-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">📅 Scan Date</label>
+                                    <input type="date" class="form-input" id="scheduleDate">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">⏰ Scan Time</label>
+                                    <input type="time" class="form-input" id="scheduleTime">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">🌍 Timezone</label>
+                                <select class="form-select" id="scheduleTimezone">
+                                    <option value="UTC">UTC</option>
+                                    <option value="America/New_York">Eastern Time (ET)</option>
+                                    <option value="America/Chicago">Central Time (CT)</option>
+                                    <option value="America/Denver">Mountain Time (MT)</option>
+                                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                    <option value="Europe/London">London (GMT)</option>
+                                    <option value="Asia/Kolkata">India (IST)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">📝 Scan Name (Optional)</label>
+                                <input type="text" class="form-input" id="scheduleName" placeholder="e.g., Weekly Security Audit">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recurring Scan Tab -->
+                    <div id="recurringTab" class="schedule-content">
+                        <div class="schedule-form">
+                            <div class="form-group">
+                                <label class="form-label">📝 Schedule Name</label>
+                                <input type="text" class="form-input" id="recurringName" placeholder="e.g., Daily Security Check">
+                            </div>
+                            
+                            <div class="recurring-options">
+                                <div class="recurring-header">
+                                    🔄 Scan Frequency
+                                </div>
+                                <div class="frequency-selector">
+                                    <button class="frequency-btn" data-frequency="hourly">Every Hour</button>
+                                    <button class="frequency-btn selected" data-frequency="daily">Daily</button>
+                                    <button class="frequency-btn" data-frequency="weekly">Weekly</button>
+                                    <button class="frequency-btn" data-frequency="monthly">Monthly</button>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">⏰ Start Time</label>
+                                    <input type="time" class="form-input" id="recurringTime" value="02:00">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">🌍 Timezone</label>
+                                    <select class="form-select" id="recurringTimezone">
+                                        <option value="UTC">UTC</option>
+                                        <option value="America/New_York">Eastern Time (ET)</option>
+                                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -767,17 +828,18 @@
                             </span>
                         </label>
                     </div>
-                </div>
 
-                <!-- Scan Description -->
-                <div class="input-group">
-                    <label class="input-label">What would you like to scan?</label>
-                    <textarea 
-                        class="textarea" 
-                        id="scanDescription" 
-                        placeholder="Describe what you want to scan. For example: 'Scan my AWS S3 buckets for public access and check GCP storage for vulnerabilities. Also scan OpenAI API usage for security issues.'"
-                        rows="4"
-                    >Scan my cloud resources for security vulnerabilities and misconfigurations. Check for public access, insecure configurations, and potential threats across all connected cloud providers.</textarea>
+                    <div class="option-item">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="emailNotification" class="checkbox">
+                        </div>
+                        <label for="emailNotification" class="option-label">
+                            Email Notification
+                            <span class="option-hint">
+                                Receive scan results and critical alerts via email
+                            </span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
@@ -786,7 +848,7 @@
                         📊 View Dashboard
                     </button>
                     <button class="btn btn-primary" onclick="startScan()">
-                        🚀 Start Security Scan
+                        <span id="scanButtonText">🚀 Start Security Scan</span>
                     </button>
                 </div>
             </div>
@@ -856,166 +918,6 @@
             </div>
         </div>
 
-        <!-- Credentials Modal -->
-        <div class="credentials-modal" id="credentialsModal">
-            <div class="credentials-content">
-                <div class="credentials-header">
-                    <div class="credentials-title">
-                        🔐 Cloud Credentials Management
-                    </div>
-                    <button class="close-btn" onclick="closeCredentialsModal()">×</button>
-                </div>
-                
-                <div style="margin-bottom: 24px;">
-                    <p style="color: #94a3b8; line-height: 1.6;">
-                        Manage your cloud credentials securely. Your credentials are encrypted and never stored in plaintext.
-                        Add credentials for the cloud providers you want to scan.
-                    </p>
-                </div>
-                
-                <!-- Credentials Tabs -->
-                <div style="margin-bottom: 24px;">
-                    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-                        <button class="tab-btn active" onclick="switchCredentialsTab('aws')">AWS</button>
-                        <button class="tab-btn" onclick="switchCredentialsTab('openai')">OpenAI</button>
-                        <button class="tab-btn" onclick="switchCredentialsTab('gcp')">GCP</button>
-                        <button class="tab-btn" onclick="switchCredentialsTab('saved')">Saved Credentials</button>
-                    </div>
-                    
-                    <!-- AWS Credentials Form -->
-                    <div id="awsCredentialsTab" class="tab-content active">
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 20px;">
-                            <h3 style="color: white; margin-bottom: 16px;">AWS Credentials</h3>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">Credential Name</label>
-                                <input type="text" id="awsCredentialName" placeholder="production-aws" value="default" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                            </div>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">AWS Access Key ID</label>
-                                <input type="text" id="awsAccessKeyId" placeholder="AKIAIOSFODNN7EXAMPLE" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                            </div>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">AWS Secret Access Key</label>
-                                <input type="password" id="awsSecretAccessKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                            </div>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">AWS Region</label>
-                                <select id="awsRegion" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                                    <option value="us-east-1">US East (N. Virginia)</option>
-                                    <option value="us-east-2">US East (Ohio)</option>
-                                    <option value="us-west-1">US West (N. California)</option>
-                                    <option value="us-west-2">US West (Oregon)</option>
-                                    <option value="eu-west-1">EU (Ireland)</option>
-                                </select>
-                            </div>
-                            <div style="display: flex; gap: 12px;">
-                                <button class="btn btn-secondary" onclick="testAWSCredentials()" style="flex: 1;">
-                                    🔍 Test
-                                </button>
-                                <button class="btn btn-primary" onclick="saveAWSCredentials()" style="flex: 1;">
-                                    💾 Save
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- OpenAI Credentials Form -->
-                    <div id="openaiCredentialsTab" class="tab-content">
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 20px;">
-                            <h3 style="color: white; margin-bottom: 16px;">OpenAI Credentials</h3>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">Credential Name</label>
-                                <input type="text" id="openaiCredentialName" placeholder="openai-production" value="default" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                            </div>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">OpenAI API Key</label>
-                                <input type="password" id="openaiApiKey" placeholder="sk-..." style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                            </div>
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">Organization ID (Optional)</label>
-                                <input type="text" id="openaiOrgId" placeholder="org-..." style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: white;">
-                            </div>
-                            <div style="display: flex; gap: 12px;">
-                                <button class="btn btn-secondary" onclick="testOpenAICredentials()" style="flex: 1;">
-                                    🔍 Test
-                                </button>
-                                <button class="btn btn-primary" onclick="saveOpenAICredentials()" style="flex: 1;">
-                                    💾 Save
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- GCP Credentials Form -->
-                    <div id="gcpCredentialsTab" class="tab-content">
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 20px;">
-                            <h3 style="color: white; margin-bottom: 16px;">GCP Credentials</h3>
-
-                            <div style="margin-bottom: 16px;">
-                                <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">
-                                    Credential Name
-                                </label>
-                                <input type="text" id="gcpCredentialName"
-                                        placeholder="gcp-production"
-                                        value="default"
-                                        style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05);
-                                        border: 1px solid rgba(148,163,184,0.2);
-                                        border-radius: 8px; color: white;">
-                            </div>
-
-                        <div style="margin-bottom: 16px;">
-                            <label style="display: block; color: #cbd5e1; margin-bottom: 8px;">
-                                Service Account JSON
-                            </label>
-                            <textarea id="gcpServiceAccount"
-                                rows="6"
-                                placeholder='{ "type": "service_account", ... }'
-                                style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05);
-                                    border: 1px solid rgba(148,163,184,0.2);
-                                    border-radius: 8px; color: white;"></textarea>
-                        </div>
-
-                            <div style="display: flex; gap: 12px;">
-                                <button class="btn btn-secondary" style="flex:1"
-                                onclick="testGCPCredentials()">
-                                    🔍 Test
-                                </button>
-                            <button class="btn btn-primary" style="flex:1"
-                                onclick="saveGCPCredentials()">
-                                💾 Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                    
-                    <!-- Saved Credentials -->
-                    <div id="savedCredentialsTab" class="tab-content">
-                        <div style="background: rgba(15, 23, 42, 0.5); border-radius: 12px; padding: 20px;">
-                            <h3 style="color: white; margin-bottom: 16px;">Your Saved Credentials</h3>
-                            <div id="savedCredentialsList" style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">
-                                <div style="text-align: center; padding: 40px; color: #64748b;">
-                                    Loading credentials...
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 12px;">
-                                <button class="btn btn-secondary" onclick="refreshCredentials()" style="flex: 1;">
-                                    🔄 Refresh
-                                </button>
-                                <button class="btn btn-credentials" onclick="createScanSession()" style="flex: 2;">
-                                    🚀 Create Scan Session
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="color: #64748b; font-size: 0.85rem; text-align: center; margin-top: 24px;">
-                    <p>Your credentials are encrypted and only used for scanning. They expire after 1 hour of inactivity.</p>
-                </div>
-            </div>
-        </div>
-
         <!-- Footer -->
         <div class="footer">
             <div class="nav-links">
@@ -1033,7 +935,6 @@
 
     <script>
         // State management
-        let selectedScanType = 'intelligent';
         let selectedProviders = [];
         let scanInProgress = false;
         let currentSessionId = null;
@@ -1044,26 +945,98 @@
             'openai': false,
             'azure': false
         };
+        let currentScheduleTab = 'immediate';
+        let selectedFrequency = 'daily';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('CloudGuard Scanner initializing...');
-            
-            // Load recent scans
+    
+    // Set user ID
+            const userId = getUserId();
+            console.log('👤 User ID:', userId);
+    
+    // Load recent scans
             await loadRecentScans();
-            
-            // Check credentials status
+    
+    // Check credentials status
             await checkCredentialsStatus();
-            
-            // Load providers with credential status
+    
+    // Load providers with credential status
             await loadProviders();
-            
-            // Setup event listeners
+    
+    // Setup event listeners
             setupEventListeners();
-            
-            // Check for existing session
+    
+    // Check for existing session
             await checkExistingSession();
+    
+    // Setup frequency selector
+            setupFrequencySelector();
+    
+    // Set default date/time for scheduled scan
+            setDefaultDateTime();
         });
+
+
+        // Setup frequency selector
+        function setupFrequencySelector() {
+            document.querySelectorAll('.frequency-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.frequency-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                    selectedFrequency = this.dataset.frequency;
+                });
+            });
+        }
+
+        // Set default date/time for scheduled scan
+        function setDefaultDateTime() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const dateStr = tomorrow.toISOString().split('T')[0];
+            document.getElementById('scheduleDate').value = dateStr;
+            document.getElementById('scheduleTime').value = '09:00';
+        }
+
+        // Switch schedule tab
+        function switchScheduleTab(tabName) {
+            currentScheduleTab = tabName;
+            
+            // Update tab buttons
+            document.querySelectorAll('.schedule-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show selected content
+            document.querySelectorAll('.schedule-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Update button text
+            updateScanButtonText();
+        }
+
+        // Update scan button text based on schedule type
+        function updateScanButtonText() {
+            const buttonText = document.getElementById('scanButtonText');
+            
+            switch(currentScheduleTab) {
+                case 'immediate':
+                    buttonText.textContent = '🚀 Start Security Scan';
+                    break;
+                case 'scheduled':
+                    buttonText.textContent = '📅 Schedule Scan';
+                    break;
+                case 'recurring':
+                    buttonText.textContent = '🔄 Create Recurring Scan';
+                    break;
+            }
+        }
 
         // Check credentials status
         async function checkCredentialsStatus() {
@@ -1072,12 +1045,10 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Update credentials banner
                     const banner = document.getElementById('credentialsBanner');
                     const statusDot = document.getElementById('credentialsStatus');
                     const message = document.getElementById('credentialsMessage');
                     
-                    // Count configured providers
                     const configuredProviders = Object.values(data).filter(p => p.configured).length;
                     
                     if (configuredProviders > 0) {
@@ -1104,7 +1075,6 @@
                 if (response.ok) {
                     const data = await response.json();
                     
-                    // Update available providers
                     availableProviders = {
                         'aws': data.aws?.configured || false,
                         'gcp': data.gcp?.configured || false,
@@ -1112,7 +1082,6 @@
                         'azure': data.azure?.configured || false
                     };
                     
-                    // Render providers grid
                     const providersGrid = document.getElementById('providersGrid');
                     const providers = [
                         { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon' },
@@ -1133,13 +1102,11 @@
                         `;
                     }).join('');
                     
-                    // Auto-select providers with credentials
                     selectedProviders = providers.filter(p => availableProviders[p.id]).map(p => p.id);
                     if (selectedProviders.length === 0) {
-                        selectedProviders = ['aws']; // Default to AWS if no credentials
+                        selectedProviders = ['aws'];
                     }
                     
-                    // Update UI
                     document.querySelectorAll('.provider-option').forEach(option => {
                         const providerId = option.querySelector('.provider-name').textContent.toLowerCase();
                         if (selectedProviders.includes(providerId)) {
@@ -1151,22 +1118,7 @@
                 console.error('Failed to load providers:', error);
             }
         }
-        async function testGCPCredentials() {
-            const serviceAccountJson = document.getElementById('gcpServiceAccount').value;
-    
-            if (!serviceAccountJson) {
-                alert('Please enter GCP Service Account JSON', 'warning');
-                return;
-            }
-    
-            try {
-        // Validate JSON first
-                JSON.parse(serviceAccountJson);
-                alert('GCP JSON is valid. Save to test connection.', 'success');
-            } catch (e) {
-                alert('Invalid JSON format', 'error');
-            }
-        }
+
         // Check for existing session
         async function checkExistingSession() {
             try {
@@ -1183,25 +1135,6 @@
                 }
             } catch (error) {
                 console.error('Failed to check session:', error);
-            }
-        }
-
-        // Scan type selection
-        function selectScanType(type) {
-            selectedScanType = type;
-            
-            // Update UI
-            document.querySelectorAll('.scan-card').forEach(card => {
-                card.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-            
-            // Update description placeholder based on type
-            const textarea = document.getElementById('scanDescription');
-            if (type === 'intelligent') {
-                textarea.placeholder = "Describe what you want to scan. For example: 'Scan my AWS S3 buckets for public access and check GCP storage for vulnerabilities. Also scan OpenAI API usage for security issues.'";
-            } else {
-                textarea.placeholder = "Describe specific resources or configurations to scan. For example: 'Scan AWS us-east-1 region, GCP project my-project-123, OpenAI organization org-xyz'";
             }
         }
 
@@ -1233,7 +1166,6 @@
                     return;
                 }
                 
-                // Get latest scans from today
                 const todayScans = data.data.slice(0, 3);
                 
                 container.innerHTML = todayScans.map(scan => `
@@ -1257,25 +1189,23 @@
         // Start scan
         async function startScan() {
             if (scanInProgress) return;
-            
-            const scanDescription = document.getElementById('scanDescription').value.trim();
+    
             const deepScan = document.getElementById('deepScan').checked;
             const aiAnalysis = document.getElementById('aiAnalysis').checked;
-            
-            if (!scanDescription) {
-                alert('Please describe what you want to scan.');
-                document.getElementById('scanDescription').focus();
-                return;
-            }
-            
+            const emailNotification = document.getElementById('emailNotification').checked;
+    
             if (selectedProviders.length === 0) {
                 alert('Please select at least one cloud provider.');
                 return;
             }
-            
-            // Check if we have credentials for selected providers
+    
+    // Get user ID
+            const userId = getUserId();
+            console.log('🚀 Starting scan for user:', userId);
+    
+    // Check if we have credentials for selected providers
             const missingCredentials = selectedProviders.filter(p => !availableProviders[p]);
-            if (missingCredentials.length > 0 && !currentSessionId) {
+            if (missingCredentials.length > 0) {
                 const confirmScan = confirm(
                     `No credentials configured for: ${missingCredentials.join(', ')}. ` +
                     `The scan will use environment variables if available. Continue?`
@@ -1285,105 +1215,124 @@
                     return;
                 }
             }
-            
-            // Show scan modal
+    
+    // Build scan request
+            let scanRequest = {
+                providers: selectedProviders,
+                account_ids: {},
+                deep_scan: deepScan,
+                user_id: userId  // 🔥 ADDED: Send user ID
+            };
+
+    // Handle different schedule types
+            if (currentScheduleTab === 'scheduled') {
+                const scheduleDate = document.getElementById('scheduleDate').value;
+                const scheduleTime = document.getElementById('scheduleTime').value;
+                const scheduleName = document.getElementById('scheduleName').value;
+                const timezone = document.getElementById('scheduleTimezone').value;
+        
+                if (!scheduleDate || !scheduleTime) {
+                    alert('Please select a date and time for the scheduled scan.');
+                    return;
+                }
+        
+                scanRequest.schedule = {
+                    type: 'once',
+                    datetime: `${scheduleDate}T${scheduleTime}`,
+                    timezone: timezone,
+                    name: scheduleName || `Scan on ${scheduleDate}`
+                };
+        
+                alert(`Scan scheduled for ${scheduleDate} at ${scheduleTime} ${timezone}`);
+                return;
+        
+            } else if (currentScheduleTab === 'recurring') {
+                const recurringName = document.getElementById('recurringName').value;
+                const recurringTime = document.getElementById('recurringTime').value;
+                const timezone = document.getElementById('recurringTimezone').value;
+        
+                if (!recurringName) {
+                    alert('Please enter a name for the recurring scan.');
+                    return;
+                }
+        
+                scanRequest.schedule = {
+                    type: 'recurring',
+                    frequency: selectedFrequency,
+                    time: recurringTime,
+                    timezone: timezone,
+                    name: recurringName
+                };
+        
+                alert(`Recurring ${selectedFrequency} scan "${recurringName}" created!`);
+                return;
+            }
+    
+    // For immediate scans
             const modal = document.getElementById('scanModal');
             modal.classList.add('active');
             scanInProgress = true;
-            
-            // Disable controls
+    
             document.querySelectorAll('button, input, textarea').forEach(el => {
                 el.disabled = true;
             });
-            
-            // Prepare scan request
-            let scanRequest;
-            
-            if (selectedScanType === 'intelligent') {
-                // Intelligent scan
-                scanRequest = {
-                    message: scanDescription,
-                    deep_scan: deepScan,
-                    session_id: currentSessionId
-                };
-                
-                updateScanStatus('Analyzing scan request with AI...', 20);
-                await simulateProgress(1000);
-                
-                updateScanStatus('Determining optimal scan strategy...', 30);
-                await simulateProgress(1500);
-                
-            } else {
-                // Manual scan
-                scanRequest = {
-                    providers: selectedProviders,
-                    account_ids: {},
-                    deep_scan: deepScan,
-                    session_id: currentSessionId
-                };
-                
-                updateScanStatus('Configuring manual scan parameters...', 20);
-                await simulateProgress(800);
-            }
-            
-            // Update status for each provider
+    
+            updateScanStatus('Preparing security scan...', 20);
+            await simulateProgress(1000);
+    
             for (let i = 0; i < selectedProviders.length; i++) {
                 const provider = selectedProviders[i];
                 const progress = 40 + (i * 15);
-                
+        
                 updateScanStatus(`Scanning ${provider.toUpperCase()} resources...`, progress);
                 await simulateProgress(2000);
-                
+        
                 updateScanStatus(`Analyzing ${provider.toUpperCase()} security posture...`, progress + 10);
                 await simulateProgress(1500);
             }
-            
-            // Vulnerability scanning
+    
             if (deepScan) {
                 updateScanStatus('Running deep vulnerability scans...', 85);
                 await simulateProgress(3000);
             }
-            
-            // AI analysis
+    
             if (aiAnalysis) {
                 updateScanStatus('Running AI security analysis...', 90);
                 await simulateProgress(2000);
             }
-            
-            // Finalizing
+    
             updateScanStatus('Generating security report...', 95);
             await simulateProgress(1500);
-            
-            // Complete
+    
             updateScanStatus('Scan completed successfully!', 100);
-            
-            // Actually send the request to backend
+    
+    // Actually send the request to backend
             try {
-                const endpoint = selectedScanType === 'intelligent' ? '/scan' : '/scan/multi-cloud';
-                const response = await fetch(endpoint, {
+                console.log('📡 Sending scan request:', scanRequest);
+        
+                const response = await fetch('/scan/multi-cloud', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(scanRequest)
                 });
-                
+        
                 const result = await response.json();
-                
+        
                 if (response.ok) {
-                    // Success - redirect to dashboard with scan results
+                    console.log('✅ Scan completed:', result);
                     setTimeout(() => {
                         window.location.href = `/dashboard?scanComplete=true&scanIds=${result.scan_ids.join(',')}`;
                     }, 1500);
                 } else {
                     throw new Error(result.detail || 'Scan failed');
                 }
-                
+        
             } catch (error) {
-                console.error('Scan error:', error);
+            console.error('❌ Scan error:', error);
                 updateScanStatus(`Error: ${error.message}`, 100);
-                
-                // Show error and allow retry
+        
                 setTimeout(() => {
                     modal.classList.remove('active');
                     scanInProgress = false;
@@ -1393,7 +1342,7 @@
             }
         }
 
-        // Simulate progress for demo
+        // Simulate progress
         function simulateProgress(duration) {
             return new Promise(resolve => setTimeout(resolve, duration));
         }
@@ -1404,7 +1353,6 @@
             document.getElementById('scanProgress').style.width = `${progress}%`;
             document.getElementById('currentStep').textContent = message;
             
-            // Update estimated time
             const remaining = 100 - progress;
             const estimatedMinutes = Math.ceil(remaining / 10);
             document.getElementById('estimatedTime').textContent = 
@@ -1416,34 +1364,211 @@
             window.location.href = '/dashboard';
         }
 
-        // Credentials Modal Functions
+        // Enable all controls
+        function enableControls() {
+            document.querySelectorAll('button, input, textarea').forEach(el => {
+                el.disabled = false;
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('scanModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('scanModal')) {
+                    if (!scanInProgress) {
+                        document.getElementById('scanModal').classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        // Credentials Modal Functions (embedded from credentials_modal.html)
         function openCredentialsModal() {
-            document.getElementById('credentialsModal').classList.add('active');
+            document.getElementById('credentialsModal').style.display = 'flex';
             loadSavedCredentials();
         }
 
         function closeCredentialsModal() {
-            document.getElementById('credentialsModal').classList.remove('active');
+            document.getElementById('credentialsModal').style.display = 'none';
         }
 
-        function switchCredentialsTab(tabName) {
-            // Update tab buttons
+        function switchCredentialTab(tabName, button) {
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
-            
-            // Show selected tab content
+            button.classList.add('active');
+
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            document.getElementById(tabName + 'CredentialsTab').classList.add('active');
+
+            const tab = document.getElementById(tabName + 'Tab');
+            if (!tab) {
+                console.error(`Tab not found: ${tabName}Tab`);
+                return;
+            }
+            tab.classList.add('active');
         }
 
-        // Load saved credentials
+        function getUserId() {
+            let userId = sessionStorage.getItem('cloudguard_user_id');
+            if (!userId) {
+        // Generate consistent user ID
+                userId = 'user_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('cloudguard_user_id', userId);
+        
+        // Also set as cookie for backend
+                document.cookie = `cloudguard_session=${userId}; path=/; max-age=86400`;
+            }
+            return userId;
+        }
+
+
+        async function saveAWSCredentials() {
+            const credentialName = document.getElementById('awsCredentialName').value;
+            const accessKeyId = document.getElementById('awsAccessKeyId').value;
+            const secretAccessKey = document.getElementById('awsSecretAccessKey').value;
+            const region = document.getElementById('awsRegion').value;
+            const sessionToken = document.getElementById('awsSessionToken').value;
+            const isDefault = document.getElementById('awsIsDefault').checked;
+            
+            if (!accessKeyId || !secretAccessKey) {
+                showAlert('Please enter both Access Key ID and Secret Access Key', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/credentials/aws', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_name: credentialName,
+                        aws_access_key_id: accessKeyId,
+                        aws_secret_access_key: secretAccessKey,
+                        aws_region: region,
+                        aws_session_token: sessionToken || undefined,
+                        is_default: isDefault
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to save credentials');
+                
+                const result = await response.json();
+                showAlert(`AWS credentials saved successfully! ID: ${result.id}`, 'success');
+                
+                document.getElementById('awsAccessKeyId').value = '';
+                document.getElementById('awsSecretAccessKey').value = '';
+                document.getElementById('awsSessionToken').value = '';
+                
+                await loadSavedCredentials();
+                await checkCredentialsStatus();
+                await loadProviders();
+                
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function saveOpenAICredentials() {
+            const credentialName = document.getElementById('openaiCredentialName').value;
+            const apiKey = document.getElementById('openaiApiKey').value;
+            const orgId = document.getElementById('openaiOrgId').value;
+            const isDefault = document.getElementById('openaiIsDefault').checked;
+            
+            if (!apiKey) {
+                showAlert('Please enter OpenAI API Key', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/credentials/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_name: credentialName,
+                        openai_api_key: apiKey,
+                        openai_org_id: orgId || undefined,
+                        is_default: isDefault
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to save credentials');
+                
+                const result = await response.json();
+                showAlert(`OpenAI credentials saved successfully! ID: ${result.id}`, 'success');
+                
+                document.getElementById('openaiApiKey').value = '';
+                document.getElementById('openaiOrgId').value = '';
+                
+                await loadSavedCredentials();
+                await checkCredentialsStatus();
+                await loadProviders();
+                
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function saveGCPCredentials() {
+            const credentialName = document.getElementById('gcpCredentialName').value;
+            const serviceAccountJson = document.getElementById('gcpServiceAccount').value;
+            const projectId = document.getElementById('gcpProjectId').value;
+            const isDefault = document.getElementById('gcpIsDefault').checked;
+            
+            if (!serviceAccountJson) {
+                showAlert('Please enter GCP Service Account JSON', 'error');
+                return;
+            }
+            
+            try {
+                JSON.parse(serviceAccountJson);
+                
+                const response = await fetch('/api/credentials/gcp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_name: credentialName,
+                        gcp_service_account_json: serviceAccountJson,
+                        gcp_project_id: projectId || undefined,
+                        is_default: isDefault
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Failed to save credentials');
+                
+                const result = await response.json();
+                showAlert(`GCP credentials saved successfully! ID: ${result.id}`, 'success');
+                
+                document.getElementById('gcpServiceAccount').value = '';
+                document.getElementById('gcpProjectId').value = '';
+                
+                await loadSavedCredentials();
+                await checkCredentialsStatus();
+                await loadProviders();
+                
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAWSCredentials() {
+            showAlert('Testing AWS credentials...', 'warning');
+        }
+
+        async function testOpenAICredentials() {
+            showAlert('Testing OpenAI credentials...', 'warning');
+        }
+
+        async function testGCPCredentials() {
+            showAlert('Testing GCP credentials...', 'warning');
+        }
+
         async function loadSavedCredentials() {
             const container = document.getElementById('savedCredentialsList');
-            container.innerHTML = '<div style="text-align: center; padding: 40px; color: #64748b;">Loading credentials...</div>';
+            container.innerHTML = '<div class="loading">Loading your credentials...</div>';
             
             try {
                 const response = await fetch('/api/credentials');
@@ -1466,24 +1591,46 @@
                 container.innerHTML = credentials.map(cred => {
                     const providerClass = `provider-${cred.cloud_provider}`;
                     const providerName = cred.cloud_provider.toUpperCase();
+                    const isDefault = cred.is_default ? 'default' : '';
                     const isValid = cred.is_valid ? '✅' : '❌';
                     
                     return `
-                        <div style="background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <div style="font-weight: 600; color: white;">${cred.credential_name}</div>
-                                <span style="padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; background: rgba(255, 153, 0, 0.1); color: #ff9900;">
+                        <div class="credential-item ${isDefault}">
+                            <div class="credential-header">
+                                <div class="credential-name">${cred.credential_name}</div>
+                                <span class="credential-provider ${providerClass}">
                                     ${providerName}
                                 </span>
                             </div>
-                            <div style="color: #94a3b8; font-size: 0.9rem;">
-                                Status: ${isValid} ${cred.validation_status}
+                            
+                            <div class="credential-details">
+                                <div class="credential-detail">
+                                    <span class="detail-label">Status:</span>
+                                    <span class="detail-value" style="color: ${cred.is_valid ? '#4ade80' : '#fca5a5'}">
+                                        ${isValid} ${cred.validation_status || 'pending'}
+                                    </span>
+                                </div>
+                                
+                                <div class="credential-detail">
+                                    <span class="detail-label">Default:</span>
+                                    <span class="detail-value">
+                                        ${cred.is_default ? 'Yes' : 'No'}
+                                    </span>
+                                </div>
+                                
+                                <div class="credential-detail">
+                                    <span class="detail-label">Last Used:</span>
+                                    <span class="detail-value">
+                                        ${cred.last_used ? new Date(cred.last_used).toLocaleDateString() : 'Never'}
+                                    </span>
+                                </div>
                             </div>
-                            <div style="margin-top: 12px; display: flex; gap: 8px;">
-                                <button onclick="validateCredential(${cred.id})" style="padding: 8px 16px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; color: #60a5fa; cursor: pointer;">
+                            
+                            <div class="credential-actions">
+                                <button class="btn btn-secondary" onclick="validateCredential(${cred.id})">
                                     🔍 Validate
                                 </button>
-                                <button onclick="deleteCredential(${cred.id})" style="padding: 8px 16px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; color: #fca5a5; cursor: pointer;">
+                                <button class="btn btn-danger" onclick="deleteCredential(${cred.id})">
                                     🗑️ Delete
                                 </button>
                             </div>
@@ -1500,184 +1647,23 @@
                 `;
             }
         }
-
-        // Save AWS credentials
-        async function saveAWSCredentials() {
-            const credentialName = document.getElementById('awsCredentialName').value;
-            const accessKeyId = document.getElementById('awsAccessKeyId').value;
-            const secretAccessKey = document.getElementById('awsSecretAccessKey').value;
-            const region = document.getElementById('awsRegion').value;
-            
-            if (!accessKeyId || !secretAccessKey) {
-                alert('Please enter both Access Key ID and Secret Access Key');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/credentials/aws', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        credential_name: credentialName,
-                        aws_access_key_id: accessKeyId,
-                        aws_secret_access_key: secretAccessKey,
-                        aws_region: region,
-                        is_default: true
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Failed to save credentials');
-                
-                const result = await response.json();
-                alert(`AWS credentials saved successfully! ID: ${result.id}`);
-                
-                // Clear form
-                document.getElementById('awsAccessKeyId').value = '';
-                document.getElementById('awsSecretAccessKey').value = '';
-                
-                // Refresh credentials
-                await loadSavedCredentials();
-                await checkCredentialsStatus();
-                await loadProviders();
-                
-            } catch (error) {
-                alert(`Error: ${error.message}`);
-            }
-        }
-
-
-        async function saveGCPCredentials() {
-            const credentialName = document.getElementById('gcpCredentialName').value;
-            const serviceAccountJson = document.getElementById('gcpServiceAccountJson').value;
-            const projectId = document.getElementById('gcpProjectId').value;
-            const isDefault = document.getElementById('gcpIsDefault').checked;
-    
-            if (!serviceAccountJson) {
-                showAlert('Please enter GCP Service Account JSON', 'error');
-                return;
-            }
-    
-            try {
-                JSON.parse(serviceAccountJson);
         
-                const response = await fetch('/api/credentials/gcp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: getUserId(),
-                        credential_name: credentialName,
-                        gcp_service_account_json: serviceAccountJson,
-                        gcp_project_id: projectId || undefined,
-                        is_default: isDefault
-                    })
-                });
-        
-                if (!response.ok) throw new Error('Failed to save credentials');
-        
-                const result = await response.json();
-                showAlert(`GCP credentials saved successfully! ID: ${result.id}`, 'success');
-        
-        // Clear form
-                document.getElementById('gcpServiceAccountJson').value = '';
-                document.getElementById('gcpProjectId').value = '';
-        
-        // Refresh saved credentials
-                await loadSavedCredentials();
-                await checkCredentialsStatus();
-                await loadProviders();
-        
-            } catch (error) {
-                alert(`Error: ${error.message}`, 'error');
-    }
-}
-
-        // Save OpenAI credentials
-        async function saveOpenAICredentials() {
-            const credentialName = document.getElementById('openaiCredentialName').value;
-            const apiKey = document.getElementById('openaiApiKey').value;
-            const orgId = document.getElementById('openaiOrgId').value;
-            
-            if (!apiKey) {
-                alert('Please enter OpenAI API Key');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/credentials/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        credential_name: credentialName,
-                        openai_api_key: apiKey,
-                        openai_org_id: orgId || undefined,
-                        is_default: true
-                    })
-                });
-                
-                if (!response.ok) throw new Error('Failed to save credentials');
-                
-                const result = await response.json();
-                alert(`OpenAI credentials saved successfully! ID: ${result.id}`);
-                
-                // Clear form
-                document.getElementById('openaiApiKey').value = '';
-                document.getElementById('openaiOrgId').value = '';
-                
-                // Refresh credentials
-                await loadSavedCredentials();
-                await checkCredentialsStatus();
-                await loadProviders();
-                
-            } catch (error) {
-                alert(`Error: ${error.message}`);
-            }
-        }
-
-        // Test AWS credentials
-        async function testAWSCredentials() {
-            alert('Testing AWS credentials... (This would validate the credentials in a real implementation)');
-        }
-
-        // Test OpenAI credentials
-        async function testOpenAICredentials() {
-            alert('Testing OpenAI credentials... (This would validate the credentials in a real implementation)');
-        }
-
-        // Validate credential
         async function validateCredential(credentialId) {
-            try {
-                const response = await fetch('/api/credentials/validate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        credential_id: credentialId
-                    })
-                });
-                
-                const result = await response.json();
-                alert(`Validation: ${result.message}`);
-                
-                // Refresh credentials
-                await loadSavedCredentials();
-                
-            } catch (error) {
-                alert(`Error: ${error.message}`);
-            }
+            showAlert('Validating credential...', 'warning');
         }
 
-        // Delete credential
         async function deleteCredential(credentialId) {
             if (!confirm('Are you sure you want to delete this credential?')) {
                 return;
             }
             
             try {
-                const response = await fetch(`/api/credentials/${credentialId}`, {
+                const response = await fetch(`/api/credentials/${credentialId}?user_id=${getUserId()}`, {
                     method: 'DELETE'
                 });
                 
                 if (response.ok) {
-                    alert('Credential deleted successfully');
+                    showAlert('Credential deleted successfully', 'success');
                     await loadSavedCredentials();
                     await checkCredentialsStatus();
                     await loadProviders();
@@ -1686,155 +1672,440 @@
                 }
                 
             } catch (error) {
-                alert(`Error: ${error.message}`);
+                showAlert(`Error: ${error.message}`, 'error');
             }
         }
 
-        // Refresh credentials
         async function refreshCredentials() {
             await loadSavedCredentials();
-            await checkCredentialsStatus();
-            alert('Credentials refreshed');
+            showAlert('Credentials list refreshed', 'success');
         }
 
-        // Create scan session
-// Create scan session with credentials
-        async function createScanSession() {
-            console.log('🔧 createScanSession() called');
+        function showAlert(message, type = 'success') {
+            const modal = document.getElementById('credentialsModal');
+            if (!modal) return;
             
-            try {
-                // Get default credentials
-                const response = await fetch('/api/credentials/providers/status');
-                const data = await response.json();
-                
-                console.log('📋 Provider status:', data);
-                
-                const credentials = {};
-                if (data.aws?.default_id) credentials.aws = data.aws.default_id;
-                if (data.openai?.default_id) credentials.openai = data.openai.default_id;
-                if (data.gcp?.default_id) credentials.gcp = data.gcp.default_id;
-                
-                console.log('🔑 Credentials to use:', credentials);
-                
-                if (Object.keys(credentials).length === 0) {
-                    console.warn('⚠️ No credentials available');
-                    alert('No credentials available. Please add credentials first.');
-                    return null;
-                }
-                
-                // Create session with credential IDs
-                const sessionRequest = {
-                    user_id: 'anonymous',
-                    aws_credential_id: credentials.aws,
-                    gcp_credential_id: credentials.gcp,
-                    openai_credential_id: credentials.openai
-                };
-                
-                console.log('📤 Sending session request:', sessionRequest);
-                
-                const sessionResponse = await fetch('/api/credentials/session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(sessionRequest)
-                });
-                
-                if (!sessionResponse.ok) {
-                    const errorText = await sessionResponse.text();
-                    console.error('❌ Session creation failed:', errorText);
-                    throw new Error(`Failed to create session: ${errorText}`);
-                }
-                
-                const session = await sessionResponse.json();
-                console.log('✅ Session created:', session);
-                
-                currentSessionId = session.session_id;
-                
-                // Store session ID in localStorage
-                localStorage.setItem('cloudguard_session_id', session.session_id);
-                console.log('💾 Session stored in localStorage');
-                
-                alert(`✅ Session created! You can now scan: ${session.credentials_available.join(', ')}`);
-                closeCredentialsModal();
-                
-                // Update credentials banner
-                await checkCredentialsStatus();
-                
-                return session.session_id;
-                
-            } catch (error) {
-                console.error('💥 Session creation error:', error);
-                alert(`Error creating session: ${error.message}`);
-                return null;
+            document.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span>
+                <span>${message}</span>
+            `;
+            
+            const modalHeader = modal.querySelector('.modal-header');
+            if (modalHeader && modalHeader.parentNode) {
+                modalHeader.parentNode.insertBefore(alertDiv, modalHeader.nextSibling);
             }
-        }
-        
-        // Auto-create session when credentials are saved
-        async function autoCreateSession() {
-            console.log('🤖 autoCreateSession() called');
-            try {
-                const sessionId = await createScanSession();
-                if (sessionId) {
-                    console.log('✅ Auto-created session:', sessionId);
-                    return sessionId;
-                } else {
-                    console.warn('⚠️ Failed to auto-create session');
-                    return null;
-                }
-            } catch (error) {
-                console.error('❌ Auto-create session failed:', error);
-                return null;
-            }
-        }        
-        // Enable all controls
-        function enableControls() {
-            document.querySelectorAll('button, input, textarea').forEach(el => {
-                el.disabled = false;
-            });
-        }
-
-        // Setup event listeners
-        function setupEventListeners() {
-            // Enter key in textarea triggers scan
-            document.getElementById('scanDescription').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    startScan();
-                }
-            });
             
-            // Close modal on click outside
-            document.getElementById('scanModal').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('scanModal')) {
-                    if (!scanInProgress) {
-                        document.getElementById('scanModal').classList.remove('active');
-                    }
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
                 }
-            });
-            
-            document.getElementById('credentialsModal').addEventListener('click', (e) => {
-                if (e.target === document.getElementById('credentialsModal')) {
-                    closeCredentialsModal();
-                }
-            });
+            }, 5000);
         }
 
         // Expose functions globally
-        window.selectScanType = selectScanType;
+        window.switchScheduleTab = switchScheduleTab;
         window.toggleProvider = toggleProvider;
         window.startScan = startScan;
         window.goToDashboard = goToDashboard;
         window.openCredentialsModal = openCredentialsModal;
         window.closeCredentialsModal = closeCredentialsModal;
-        window.switchCredentialsTab = switchCredentialsTab;
+        window.switchCredentialTab = switchCredentialTab;
         window.saveAWSCredentials = saveAWSCredentials;
         window.saveOpenAICredentials = saveOpenAICredentials;
+        window.saveGCPCredentials = saveGCPCredentials;
         window.testAWSCredentials = testAWSCredentials;
         window.testOpenAICredentials = testOpenAICredentials;
+        window.testGCPCredentials = testGCPCredentials;
         window.validateCredential = validateCredential;
         window.deleteCredential = deleteCredential;
         window.refreshCredentials = refreshCredentials;
-        window.createScanSession = createScanSession;
     </script>
+
+    <!-- Credentials Modal (embedded) -->
+    <div id="credentialsModal" class="modal-overlay" style="display: none;">
+        <div class="credentials-modal-content">
+            <div class="modal-header">
+                <h2>🔐 Manage Cloud Credentials</h2>
+                <button class="close-btn" onclick="closeCredentialsModal()">×</button>
+            </div>
+            
+            <div class="modal-tabs">
+                <button class="tab-btn active" onclick="switchCredentialTab('aws', this)">AWS</button>
+                <button class="tab-btn" onclick="switchCredentialTab('openai', this)">OpenAI</button>
+                <button class="tab-btn" onclick="switchCredentialTab('gcp', this)">GCP</button>
+                <button class="tab-btn" onclick="switchCredentialTab('saved', this)">Saved Credentials</button>
+            </div>
+            
+            <!-- AWS Tab -->
+            <div id="awsTab" class="tab-content active">
+                <div class="form-section">
+                    <h3>AWS Credentials</h3>
+                    <p class="form-description">
+                        Enter your AWS IAM user credentials with appropriate permissions.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="awsCredentialName" placeholder="production-aws" value="default">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>AWS Access Key ID</label>
+                        <input type="text" id="awsAccessKeyId" placeholder="AKIAIOSFODNN7EXAMPLE">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>AWS Secret Access Key</label>
+                        <input type="password" id="awsSecretAccessKey" placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>AWS Region</label>
+                        <select id="awsRegion">
+                            <option value="us-east-1">US East (N. Virginia)</option>
+                            <option value="us-west-2">US West (Oregon)</option>
+                            <option value="eu-west-1">EU (Ireland)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Session Token (Optional)</label>
+                        <input type="text" id="awsSessionToken" placeholder="For temporary credentials">
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="awsIsDefault" checked>
+                        <label for="awsIsDefault">Set as default AWS credential</label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="testAWSCredentials()">
+                            🔍 Test Connection
+                        </button>
+                        <button class="btn btn-primary" onclick="saveAWSCredentials()">
+                            💾 Save Credentials
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- OpenAI Tab -->
+            <div id="openaiTab" class="tab-content">
+                <div class="form-section">
+                    <h3>OpenAI Credentials</h3>
+                    <p class="form-description">
+                        Enter your OpenAI API key to scan for AI model security risks.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="openaiCredentialName" placeholder="openai-production" value="default">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>OpenAI API Key</label>
+                        <input type="password" id="openaiApiKey" placeholder="sk-...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Organization ID (Optional)</label>
+                        <input type="text" id="openaiOrgId" placeholder="org-...">
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="openaiIsDefault" checked>
+                        <label for="openaiIsDefault">Set as default OpenAI credential</label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="testOpenAICredentials()">
+                            🔍 Test Connection
+                        </button>
+                        <button class="btn btn-primary" onclick="saveOpenAICredentials()">
+                            💾 Save Credentials
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- GCP Tab -->
+            <div id="gcpTab" class="tab-content">
+                <div class="form-section">
+                    <h3>Google Cloud Credentials</h3>
+                    <p class="form-description">
+                        Paste your GCP service account JSON key file contents.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="gcpCredentialName" placeholder="gcp-production" value="default">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Service Account JSON</label>
+                        <textarea id="gcpServiceAccount" rows="6" placeholder='{"type": "service_account", "project_id": "..."}'></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Project ID (Optional)</label>
+                        <input type="text" id="gcpProjectId" placeholder="my-gcp-project">
+                    </div>
+                    
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="gcpIsDefault" checked>
+                        <label for="gcpIsDefault">Set as default GCP credential</label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="testGCPCredentials()">
+                            🔍 Test Connection
+                        </button>
+                        <button class="btn btn-primary" onclick="saveGCPCredentials()">
+                            💾 Save Credentials
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Saved Credentials Tab -->
+            <div id="savedTab" class="tab-content">
+                <div class="form-section">
+                    <h3>Your Saved Credentials</h3>
+                    <p class="form-description">
+                        Manage your saved cloud credentials.
+                    </p>
+                    
+                    <div id="savedCredentialsList" class="credentials-list">
+                        <div class="loading">Loading your credentials...</div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="refreshCredentials()">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Credentials Modal Styles */
+        .credentials-modal-content {
+            background: rgba(30, 41, 59, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .form-section {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .form-section h3 {
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .form-description {
+            color: #94a3b8;
+            margin-bottom: 24px;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+        }
+
+        .checkbox-group label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .credentials-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .credential-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        .credential-item.default {
+            border-color: rgba(59, 130, 246, 0.5);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .credential-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .credential-name {
+            font-weight: 600;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .credential-provider {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .provider-aws { background: rgba(255, 153, 0, 0.1); color: #ff9900; }
+        .provider-openai { background: rgba(16, 163, 127, 0.1); color: #10a37f; }
+        .provider-gcp { background: rgba(66, 133, 244, 0.1); color: #4285f4; }
+
+        .credential-details {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .credential-detail {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            color: #94a3b8;
+        }
+
+        .detail-value {
+            color: #cbd5e1;
+        }
+
+        .credential-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .credential-actions button {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+    </style>
 </body>
 </html>
-
