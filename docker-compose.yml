@@ -256,7 +256,7 @@ services:
     restart: unless-stopped
     profiles:
       - scanning
-    ccommand: ["python", "backend/scripts/scheduled_scan.py"]
+    command: ["python", "backend/scripts/scheduled_scan.py"]
 
 
   # ==========================================================================
