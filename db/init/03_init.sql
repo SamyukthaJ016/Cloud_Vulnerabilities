@@ -1,102 +1,63 @@
--- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- =============================================================================
+-- 03_init.sql
+-- Purpose:
+-- - Extensions
+-- - Compatibility helpers
+-- - Safe post-schema additions
+-- MUST NOT redefine core tables
+-- =============================================================================
 
--- -- ---------------------------------------------------
--- -- DROP OLD TABLES
--- -- ---------------------------------------------------
-
--- -- ---------------------------------------------------
--- -- SCANS
--- -- ---------------------------------------------------
--- CREATE TABLE scans (
---     id SERIAL PRIMARY KEY,
---     account_id VARCHAR(255) NOT NULL,
---     cloud VARCHAR(50) NOT NULL,
---     status VARCHAR(50) DEFAULT 'running',
---     started_at TIMESTAMP DEFAULT NOW(),
---     completed_at TIMESTAMP,
---     duration_seconds INTEGER,
---     error_message TEXT,
---     scan_metadata JSONB
--- );
-
--- CREATE INDEX idx_scans_cloud ON scans (cloud);
--- CREATE INDEX idx_scans_status ON scans (status);
--- CREATE INDEX idx_scans_started_at_desc ON scans (started_at DESC);
-
--- -- ---------------------------------------------------
--- -- RESOURCES
--- -- ---------------------------------------------------
--- CREATE TABLE resources (
---     id SERIAL PRIMARY KEY,
---     scan_id INTEGER NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
---     cloud VARCHAR(50) NOT NULL,
---     type VARCHAR(100) NOT NULL,
---     name VARCHAR(255) NOT NULL,
---     config JSONB,
---     public BOOLEAN DEFAULT FALSE
--- );
-
--- CREATE INDEX idx_resources_scan_id ON resources (scan_id);
--- CREATE INDEX idx_resources_cloud ON resources (cloud);
--- CREATE INDEX idx_resources_public ON resources (public);
-
--- -- ---------------------------------------------------
--- -- FINDINGS
--- -- ---------------------------------------------------
--- CREATE TABLE findings (
---     id SERIAL PRIMARY KEY,
---     scan_id INTEGER NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
---     resource_id INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
---     severity VARCHAR(20),
---     description TEXT,
---     validated_by VARCHAR(50),
---     created_at TIMESTAMP DEFAULT NOW()
--- );
-
--- CREATE INDEX idx_findings_severity ON findings (severity);
--- CREATE INDEX idx_findings_resource_id ON findings (resource_id);
-
--- -- ---------------------------------------------------
--- -- VULNERABILITIES
--- -- ---------------------------------------------------
--- CREATE TABLE vulnerabilities (
---     id SERIAL PRIMARY KEY,
---     scan_id INTEGER NOT NULL REFERENCES scans(id) ON DELETE CASCADE,
---     resource_id INTEGER NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
---     vuln_id VARCHAR(100),
---     title VARCHAR(500),
---     severity VARCHAR(20),
---     description TEXT,
---     affected_package VARCHAR(255),
---     fixed_version VARCHAR(100),
---     cvss_score NUMERIC(4,2),
---     tool VARCHAR(50),
---     reference_urls JSONB,
---     created_at TIMESTAMP DEFAULT NOW()
--- );
-
--- CREATE INDEX idx_vulns_severity ON vulnerabilities (severity);
--- CREATE INDEX idx_vulns_cvss ON vulnerabilities (cvss_score DESC);
--- CREATE INDEX idx_vulns_scan_id ON vulnerabilities (scan_id);
-
-
-BEGIN;
-
--- ===================================================
+-- ---------------------------------------------------
 -- EXTENSIONS
--- ===================================================
+-- ---------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ===================================================
--- SEED DATA
--- ===================================================
-INSERT INTO user_profiles (user_id, email, name)
-VALUES ('anonymous', 'anonymous@cloudguard.local', 'Anonymous User')
-ON CONFLICT (user_id) DO NOTHING;
+-- ---------------------------------------------------
+-- OPTIONAL: COMPATIBILITY VIEWS (for old backend code)
+-- ---------------------------------------------------
 
-COMMIT;
+-- Example: backward compatibility for old column name
+-- (Only keep if your backend expects this)
+-- CREATE OR REPLACE VIEW scans_compat AS
+-- SELECT
+--     id,
+--     account_id,
+--     cloud,
+--     status,
+--     started_at,
+--     completed_at,
+--     metadata AS scan_metadata
+-- FROM scans;
+
+-- ---------------------------------------------------
+-- OPTIONAL: SAFE INDEX ADDITIONS
+-- (Only if missing in 02_schema.sql)
+-- ---------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_scans_account_id
+ON scans(account_id);
+
+
+-- CREATE INDEX IF NOT EXISTS idx_scans_account_id
+--     ON scans(account_id);
+
+-- ---------------------------------------------------
+-- OPTIONAL: FUTURE SAFE MIGRATIONS
+-- (Examples – keep commented until needed)
+-- ---------------------------------------------------
+
+-- ALTER TABLE resources
+-- ADD COLUMN IF NOT EXISTS external_id VARCHAR(255);
+
+-- ALTER TABLE findings
+-- ADD COLUMN IF NOT EXISTS source_rule_id VARCHAR(255);
+
+-- ---------------------------------------------------
+-- NO TABLE CREATION HERE
+-- NO DROPS HERE
+-- NO FOREIGN KEYS HERE
+-- ---------------------------------------------------
 
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Initial seed data loaded successfully';
+    RAISE NOTICE '✅ 03_init.sql applied successfully (safe mode)';
 END $$;
