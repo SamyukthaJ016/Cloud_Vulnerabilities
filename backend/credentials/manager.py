@@ -60,39 +60,29 @@ class CredentialManager:
         self.db_url = db_url or os.getenv("DATABASE_URL")
         if not self.db_url:
             raise ValueError("DATABASE_URL environment variable is required")
-        
-        # Initialize encryption
-        self.encryption_key = self._get_encryption_key()
-        self.cipher = Fernet(self.encryption_key)
-    
+
+        # DEV MODE: encryption disabled
+        self.encryption_key = None
+        self.cipher = None
+
     def _get_encryption_key(self) -> bytes:
-        """Get or generate encryption key from environment"""
-        key_env = os.getenv("ENCRYPTION_KEY")
-        
-        if key_env:
-            # Use existing key
-            return base64.urlsafe_b64decode(key_env)
-        else:
-            # Generate new key (for development only)
-            logger.warning("Generating new encryption key - set ENCRYPTION_KEY environment variable for production")
-            key = Fernet.generate_key()
-            print(f"🔐 Generated encryption key: {base64.urlsafe_b64encode(key).decode()}")
-            print(f"🔐 Add to .env: ENCRYPTION_KEY={base64.urlsafe_b64encode(key).decode()}")
-            return key
+        """
+        DEV MODE: no encryption key needed.
+        Kept only for compatibility if called somewhere.
+        """
+        return b""
     
     def encrypt(self, text: str) -> str:
-        """Encrypt sensitive text"""
+        """DEV MODE: no encryption, store as plain text"""
         if not text:
             return ""
-        encrypted = self.cipher.encrypt(text.encode())
-        return base64.urlsafe_b64encode(encrypted).decode()
-    
+        return text
+
     def decrypt(self, encrypted_text: str) -> str:
-        """Decrypt sensitive text"""
+        """DEV MODE: no decryption, value is already plain text"""
         if not encrypted_text:
             return ""
-        encrypted = base64.urlsafe_b64decode(encrypted_text)
-        return self.cipher.decrypt(encrypted).decode()
+        return encrypted_text
     
     def _get_connection(self):
         """Get database connection"""

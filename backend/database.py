@@ -37,8 +37,9 @@ def get_conn():
         if _DB_CONN is None or _DB_CONN.closed:
             logger.info("Connecting to database...")
             _DB_CONN = psycopg2.connect(db_url)
-            _DB_CONN.autocommit = False
+            _DB_CONN.autocommit = True   # 🔁 yahan True karo
             logger.info("✅ Database connected")
+
 
         return _DB_CONN
 
