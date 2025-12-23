@@ -67,21 +67,21 @@ def json_serial(obj):
 # -------------------------------------------------------------------
 # Scans
 # -------------------------------------------------------------------
-def create_scan_record(account_id, cloud):
-    conn = ensure_connection()  # CHANGED: Use ensure_connection
+def create_scan_record(account_id, cloud, aws_credential_id=None):
+    conn = ensure_connection()
     cur = conn.cursor()
     try:
         cur.execute(
             """
-            INSERT INTO scans (account_id, cloud, status)
-            VALUES (%s, %s, 'running')
+            INSERT INTO scans (account_id, cloud, status, aws_credential_id)
+            VALUES (%s, %s, 'running', %s)
             RETURNING id
             """,
-            (account_id, cloud),
+            (account_id, cloud, aws_credential_id),
         )
         scan_id = cur.fetchone()[0]
         conn.commit()
-        logger.info(f"Created scan record: {scan_id}")
+        logger.info(f"Created scan record: {scan_id} (aws_cred_id={aws_credential_id})")
         return scan_id
     except Exception as e:
         conn.rollback()

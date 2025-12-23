@@ -1411,16 +1411,16 @@
         }
 
         function getUserId() {
-            let userId = sessionStorage.getItem('cloudguard_user_id');
-            if (!userId) {
-        // Generate consistent user ID
-                userId = 'user_' + Math.random().toString(36).substr(2, 9);
-                sessionStorage.setItem('cloudguard_user_id', userId);
+        //     let userId = sessionStorage.getItem('cloudguard_user_id');
+        //     if (!userId) {
+        // // Generate consistent user ID
+        //         userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        //         sessionStorage.setItem('cloudguard_user_id', userId);
         
-        // Also set as cookie for backend
-                document.cookie = `cloudguard_session=${userId}; path=/; max-age=86400`;
-            }
-            return userId;
+        // // Also set as cookie for backend
+        //         document.cookie = `cloudguard_session=${userId}; path=/; max-age=86400`;
+        //     }
+            return 'anonymous';
         }
 
 

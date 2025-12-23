@@ -370,37 +370,26 @@ class CredentialManager:
                 cloud_provider=credential_dict["cloud_provider"],
                 credential_name=credential_dict["credential_name"],
 
-                aws_access_key_id=self.decrypt(credential_dict["aws_access_key_id"])
-                    if credential_dict["aws_access_key_id"] else None,
-
-                 aws_secret_access_key=self.decrypt(credential_dict["aws_secret_access_key"])
-                    if credential_dict["aws_secret_access_key"] else None,
-
+                aws_access_key_id=credential_dict["aws_access_key_id"],
+                aws_secret_access_key=credential_dict["aws_secret_access_key"],
                 aws_region=credential_dict["aws_region"],
                 aws_session_token=credential_dict["aws_session_token"],
 
-                gcp_service_account_json=self.decrypt(credential_dict["gcp_service_account_json"])
-                    if credential_dict["gcp_service_account_json"] else None,
-
+                gcp_service_account_json=credential_dict["gcp_service_account_json"],
                 gcp_project_id=credential_dict["gcp_project_id"],
 
-                openai_api_key=self.decrypt(credential_dict["openai_api_key"])
-                    if credential_dict["openai_api_key"] else None,
-
+                openai_api_key=credential_dict["openai_api_key"],
                 openai_org_id=credential_dict["openai_org_id"],
 
-                azure_client_id=self.decrypt(credential_dict["azure_client_id"])
-                    if credential_dict["azure_client_id"] else None,
-
-                azure_client_secret=self.decrypt(credential_dict["azure_client_secret"])
-                    if credential_dict["azure_client_secret"] else None,
-
+                azure_client_id=credential_dict["azure_client_id"],
+                azure_client_secret=credential_dict["azure_client_secret"],
                 azure_tenant_id=credential_dict["azure_tenant_id"],
                 azure_subscription_id=credential_dict["azure_subscription_id"],
 
                 is_default=credential_dict["is_default"],
                 is_valid=credential_dict["is_valid"],
             )
+
 
         
         except Exception as e:

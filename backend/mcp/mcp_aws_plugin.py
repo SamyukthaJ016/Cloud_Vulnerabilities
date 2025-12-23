@@ -106,6 +106,7 @@ class AWSPlugin(MCPPlugin):
                     acl_info = None
 
                 # --- Bucket Policy ---
+                # --- Bucket Policy ---
                 policy = {}
                 try:
                     import json
@@ -115,10 +116,13 @@ class AWSPlugin(MCPPlugin):
                         if stmt.get("Effect") == "Allow" and stmt.get("Principal") in ("*", {"AWS": "*"}):
                             is_public = True
                             public_reasons.append("Bucket policy allows public access")
-                except self.s3.exceptions.NoSuchBucketPolicy:
-                    pass
                 except Exception as e:
-                    logger.warning(f"Could not check policy for {name}: {e}")
+                    msg = str(e)
+                    if "NoSuchBucketPolicy" in msg or "NoSuchBucket" in msg:
+                        pass
+                    else:
+                        logger.warning(f"Could not check policy for {name}: {e}")
+
 
                 # --- Encryption ---
                 try:
