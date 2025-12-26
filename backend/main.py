@@ -2618,6 +2618,42 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
 
             logger.info("✅ CloudFox MCP server initialized")
 
+def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
+    """Convert raw MCP response dict to ScanResult object"""
+    if isinstance(data, ScanResult):
+        return data
+
+    resources_data = data.get("resources", [])
+    resources = [CloudResource(**r) if isinstance(r, dict) else r for r in resources_data]
+    
+    findings_data = data.get("findings", [])
+    findings = []
+    for f in findings_data:
+        if isinstance(f, dict):
+            # Handle nested resource
+            if isinstance(f.get("resource"), dict):
+                f["resource"] = CloudResource(**f["resource"])
+            
+            # Handle severity enum
+            if isinstance(f.get("severity"), str):
+                try:
+                    f["severity"] = Severity(f["severity"])
+                except:
+                    f["severity"] = Severity.MEDIUM
+            
+            findings.append(SecurityFinding(**f))
+        else:
+            findings.append(f)
+
+    return ScanResult(
+        provider=provider,
+        account_id=data.get("account_id", "unknown"),
+        resources=resources,
+        findings=findings,
+        scan_duration=data.get("scan_duration", 0.0),
+        errors=data.get("errors", [])
+    )
+
 async def run_gpt_agent(prompt: str) -> str:
     try:
         response = openai_client.chat.completions.create(
@@ -2635,6 +2671,7 @@ async def run_gpt_agent(prompt: str) -> str:
     except Exception as e:
         logger.error("GPT Agent error: %s", e)
         return f"Agent error: {e}"
+
 async def run_multi_cloud_scan_internal(
     providers: list[str],
     account_ids: dict[str, str],
@@ -2646,9 +2683,18 @@ async def run_multi_cloud_scan_internal(
     logger.info(f"👤 User ID: {user_id}")
 
     # ✅ STEP 1: Initialize plugins with user credentials
-    init_ctx = initialize_plugins_with_user_credentials(user_id)
-    providers_initialized = init_ctx["providers"]
-    aws_cred_id = init_ctx["aws_credential_id"]
+    await initialize_mcp_servers_for_user(user_id, providers)
+    
+    # Get initialized providers from registry
+    initialized_list = mcp_registry.list_providers()
+    providers_initialized = {p: True for p in initialized_list}
+    
+    # Get AWS credential ID if available
+    aws_cred_id = None
+    if "aws" in providers_initialized:
+        aws_plugin = mcp_registry.get_plugin("aws")
+        if aws_plugin and hasattr(aws_plugin, "config"):
+            aws_cred_id = aws_plugin.config.get("credential_id")
     
     logger.info(f"DEBUG aws_cred_id in internal: {aws_cred_id}")
     logger.info(f"✅ Initialized providers: {list(providers_initialized.keys())}")
@@ -2675,7 +2721,10 @@ async def run_multi_cloud_scan_internal(
             logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
 
             # Scan using the registry (which now has the user's credentials)
-            result = await mcp_registry.scan(provider, account_id)
+            raw_result = await mcp_registry.scan(provider, account_id)
+            
+            # Convert dict to ScanResult
+            result = _mcp_to_scan_result(provider, raw_result)
 
             # Deep scan if requested
             if deep_scan:
@@ -3416,12 +3465,27 @@ async def get_provider_breakdown():
             """)
             results = cur.fetchall()
         
+        data = []
+        for provider, resources, findings in results:
+            # Calculate security score per provider
+            if resources > 0:
+                risk_ratio = findings / resources
+                # Simple scoring: start at 100, deduct based on risk ratio
+                # Capped at 0
+                score = max(0, 100 - (risk_ratio * 100))
+            else:
+                score = 100
+                
+            data.append({
+                "provider": provider,
+                "resources": resources,
+                "findings": findings,
+                "security_score": round(score, 1)
+            })
+            
         return {
             "status": "success",
-            "data": [
-                {"provider": provider, "resources": resources, "findings": findings}
-                for provider, resources, findings in results
-            ]
+            "data": data
         }
     except Exception as e:
         logger.exception("Failed to get provider breakdown")

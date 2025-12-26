@@ -78,12 +78,16 @@ async def run_due_schedules():
                         cur.execute(
                             """
                             UPDATE scan_schedules
-                            SET last_run_at = NOW(),
-                                next_run_at = %s,
+                            SET next_run_at = %s,
                                 schedule = jsonb_set(
-                                    schedule,
-                                    '{last_run_scan_ids}',
-                                    to_jsonb(%s::text[]),
+                                    jsonb_set(
+                                        schedule,
+                                        '{last_run_scan_ids}',
+                                        to_jsonb(%s::text[]),
+                                        true
+                                    ),
+                                    '{last_run_at}',
+                                    to_jsonb(NOW()::text),
                                     true
                                 )
                             WHERE id = %s
@@ -97,7 +101,6 @@ async def run_due_schedules():
                             """
                             UPDATE scan_schedules
                             SET status = 'completed',
-                            last_run_at = NOW(),
                             schedule = jsonb_set(
                                 jsonb_set(
                                     schedule,
@@ -172,13 +175,12 @@ def _mark_schedule_failed(schedule_id: int, error_message: str):
                 UPDATE scan_schedules
                 SET status = 'failed',
                     schedule = jsonb_set(
-                        schedule,
-                        '{last_error}',
-                        to_jsonb(%s::text),
-                        true
-                    ),
-                    schedule = jsonb_set(
-                        schedule,
+                        jsonb_set(
+                            schedule,
+                            '{last_error}',
+                            to_jsonb(%s::text),
+                            true
+                        ),
                         '{last_error_at}',
                         to_jsonb(%s::text),
                         true
