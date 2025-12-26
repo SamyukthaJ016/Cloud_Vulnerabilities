@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Any
 from dataclasses import dataclass
 from enum import Enum
-
+from backend.mcp_servers.base_server import MCPMessage,mcp_server_manager
 
 class Severity(Enum):
     """Risk severity levels"""
@@ -209,10 +209,40 @@ class MCPRegistry:
         """List all registered providers"""
         return list(self._plugins.keys())
     
-    async def scan(self, provider: str, account_id: str) -> ScanResult:
-        """Execute scan using the appropriate plugin"""
-        plugin = self.get_plugin(provider)
-        return await plugin.full_scan(account_id)
+    
+
+    async def scan(
+        self,
+        provider: str,
+        account_id: str,
+        options: dict | None = None,
+    ):
+        """
+        Dispatch scan to MCP server via MCPServerManager
+        """
+        options = options or {}
+
+        tool_name = f"{provider}/full_scan"
+
+        message = MCPMessage(
+            method="tools/call",
+            params={
+                "name": tool_name,
+                "arguments": {
+                    "account_id": account_id,
+                    **options,
+                },
+            },
+        )
+
+    
+        response = await mcp_server_manager.send_request(provider, message)
+
+        if response.error:
+            raise RuntimeError(response.error)
+
+        return response.result
+
 
 
 # Global registry instance

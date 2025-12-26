@@ -216,6 +216,7 @@ class CredentialManager:
                 )
         
         # Now log the audit AFTER the credential is saved
+            conn.commit()
             if credential_id:
                 self._log_audit(
                     credential_id,
@@ -224,7 +225,7 @@ class CredentialManager:
                     {'provider': credential.cloud_provider}
                 )
         
-            conn.commit()
+            
             return credential_id
         
         except Exception as e:
