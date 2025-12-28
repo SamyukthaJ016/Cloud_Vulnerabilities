@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudGuard - Multi-Cloud Security Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #0f172a;
@@ -15,13 +20,13 @@
             min-height: 100vh;
             line-height: 1.6;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 24px;
         }
-        
+
         /* Header */
         .header {
             display: flex;
@@ -34,7 +39,7 @@
             margin-bottom: 24px;
             border: 1px solid rgba(148, 163, 184, 0.1);
         }
-        
+
         .logo {
             font-size: 1.8rem;
             font-weight: 700;
@@ -45,7 +50,7 @@
             align-items: center;
             gap: 12px;
         }
-        
+
         .status-indicator {
             display: flex;
             align-items: center;
@@ -53,7 +58,7 @@
             font-size: 0.9rem;
             color: #94a3b8;
         }
-        
+
         .live-badge {
             background: #10b981;
             color: white;
@@ -65,13 +70,13 @@
             align-items: center;
             gap: 6px;
         }
-        
+
         /* Action Buttons */
         .action-buttons {
             display: flex;
             gap: 12px;
         }
-        
+
         .btn {
             padding: 12px 24px;
             border-radius: 12px;
@@ -81,23 +86,23 @@
             transition: all 0.3s ease;
             font-size: 0.95rem;
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
         }
-        
+
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             color: #e2e8f0;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
-        
+
         /* Stats Cards */
         .stats-grid {
             display: grid;
@@ -105,7 +110,7 @@
             gap: 20px;
             margin-bottom: 32px;
         }
-        
+
         .stat-card {
             background: rgba(30, 41, 59, 0.7);
             border-radius: 16px;
@@ -113,26 +118,26 @@
             border: 1px solid rgba(148, 163, 184, 0.1);
             transition: all 0.3s ease;
         }
-        
+
         .stat-card:hover {
             border-color: rgba(59, 130, 246, 0.3);
             transform: translateY(-3px);
         }
-        
+
         .stat-value {
             font-size: 2.5rem;
             font-weight: 700;
             margin: 8px 0;
             color: white;
         }
-        
+
         .stat-label {
             font-size: 0.9rem;
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
+
         .stat-trend {
             display: flex;
             align-items: center;
@@ -140,10 +145,15 @@
             font-size: 0.85rem;
             margin-top: 8px;
         }
-        
-        .trend-up { color: #10b981; }
-        .trend-down { color: #ef4444; }
-        
+
+        .trend-up {
+            color: #10b981;
+        }
+
+        .trend-down {
+            color: #ef4444;
+        }
+
         /* Charts Section */
         .charts-section {
             display: grid;
@@ -151,7 +161,7 @@
             gap: 24px;
             margin-bottom: 32px;
         }
-        
+
         .chart-container {
             background: rgba(30, 41, 59, 0.7);
             border-radius: 16px;
@@ -161,30 +171,30 @@
             display: flex;
             flex-direction: column;
         }
-        
+
         .chart-header {
             margin-bottom: 20px;
             flex-shrink: 0;
         }
-        
+
         .chart-title {
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 8px;
             color: white;
         }
-        
+
         .chart-subtitle {
             color: #94a3b8;
             font-size: 0.9rem;
         }
-        
+
         .chart-wrapper {
             flex: 1;
             min-height: 0;
             position: relative;
         }
-        
+
         /* Cloud Providers Grid */
         .cloud-grid {
             display: grid;
@@ -192,7 +202,7 @@
             gap: 20px;
             margin-bottom: 32px;
         }
-        
+
         .cloud-card {
             background: rgba(30, 41, 59, 0.7);
             border-radius: 16px;
@@ -200,19 +210,19 @@
             border: 1px solid rgba(148, 163, 184, 0.1);
             transition: all 0.3s ease;
         }
-        
+
         .cloud-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
-        
+
         .cloud-header {
             display: flex;
             align-items: center;
             gap: 12px;
             margin-bottom: 16px;
         }
-        
+
         .cloud-icon {
             width: 48px;
             height: 48px;
@@ -222,43 +232,58 @@
             justify-content: center;
             font-size: 1.5rem;
         }
-        
-        .aws-icon { background: rgba(255, 153, 0, 0.1); color: #ff9900; }
-        .gcp-icon { background: rgba(66, 133, 244, 0.1); color: #4285f4; }
-        .azure-icon { background: rgba(0, 120, 212, 0.1); color: #0078d4; }
-        .openai-icon { background: rgba(16, 163, 127, 0.1); color: #10a37f; }
-        
+
+        .aws-icon {
+            background: rgba(255, 153, 0, 0.1);
+            color: #ff9900;
+        }
+
+        .gcp-icon {
+            background: rgba(66, 133, 244, 0.1);
+            color: #4285f4;
+        }
+
+        .azure-icon {
+            background: rgba(0, 120, 212, 0.1);
+            color: #0078d4;
+        }
+
+        .openai-icon {
+            background: rgba(16, 163, 127, 0.1);
+            color: #10a37f;
+        }
+
         .cloud-name {
             font-size: 1.1rem;
             font-weight: 600;
             color: white;
         }
-        
+
         .cloud-metrics {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
             margin-top: 16px;
         }
-        
+
         .metric {
             text-align: center;
             padding: 12px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 12px;
         }
-        
+
         .metric-value {
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 4px;
         }
-        
+
         .metric-label {
             font-size: 0.85rem;
             color: #94a3b8;
         }
-        
+
         /* Vulnerabilities Section */
         .vulnerabilities-section {
             background: rgba(30, 41, 59, 0.7);
@@ -267,25 +292,25 @@
             border: 1px solid rgba(148, 163, 184, 0.1);
             margin-bottom: 32px;
         }
-        
+
         .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 24px;
         }
-        
+
         .section-title {
             font-size: 1.3rem;
             font-weight: 700;
             color: white;
         }
-        
+
         .severity-filters {
             display: flex;
             gap: 8px;
         }
-        
+
         .severity-filter {
             padding: 6px 16px;
             border-radius: 20px;
@@ -297,20 +322,20 @@
             border: 1px solid rgba(148, 163, 184, 0.1);
             color: #94a3b8;
         }
-        
+
         .severity-filter.active {
             background: rgba(59, 130, 246, 0.2);
             border-color: rgba(59, 130, 246, 0.5);
             color: #60a5fa;
         }
-        
+
         /* Vulnerability List */
         .vulnerability-list {
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
-        
+
         .vulnerability-card {
             background: rgba(15, 23, 42, 0.5);
             border-radius: 12px;
@@ -318,31 +343,42 @@
             border-left: 4px solid;
             transition: all 0.3s ease;
         }
-        
+
         .vulnerability-card:hover {
             background: rgba(30, 41, 59, 0.8);
             transform: translateX(4px);
         }
-        
-        .vulnerability-card.critical { border-left-color: #ef4444; }
-        .vulnerability-card.high { border-left-color: #f97316; }
-        .vulnerability-card.medium { border-left-color: #eab308; }
-        .vulnerability-card.low { border-left-color: #3b82f6; }
-        
+
+        .vulnerability-card.critical {
+            border-left-color: #ef4444;
+        }
+
+        .vulnerability-card.high {
+            border-left-color: #f97316;
+        }
+
+        .vulnerability-card.medium {
+            border-left-color: #eab308;
+        }
+
+        .vulnerability-card.low {
+            border-left-color: #3b82f6;
+        }
+
         .vuln-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 12px;
         }
-        
+
         .vuln-title {
             font-size: 1.1rem;
             font-weight: 600;
             color: white;
             flex: 1;
         }
-        
+
         .severity-badge {
             padding: 4px 12px;
             border-radius: 20px;
@@ -351,19 +387,34 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        
-        .severity-badge.critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
-        .severity-badge.high { background: rgba(251, 146, 60, 0.2); color: #fdba74; }
-        .severity-badge.medium { background: rgba(234, 179, 8, 0.2); color: #fde047; }
-        .severity-badge.low { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
-        
+
+        .severity-badge.critical {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .severity-badge.high {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fdba74;
+        }
+
+        .severity-badge.medium {
+            background: rgba(234, 179, 8, 0.2);
+            color: #fde047;
+        }
+
+        .severity-badge.low {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
         .vuln-info {
             display: flex;
             gap: 24px;
             margin-top: 12px;
             flex-wrap: wrap;
         }
-        
+
         .info-item {
             display: flex;
             align-items: center;
@@ -371,11 +422,11 @@
             font-size: 0.9rem;
             color: #cbd5e1;
         }
-        
+
         .info-label {
             color: #94a3b8;
         }
-        
+
         .tool-badge {
             display: inline-flex;
             align-items: center;
@@ -387,7 +438,7 @@
             font-weight: 600;
             color: #c4b5fd;
         }
-        
+
         /* Cloud Badge */
         .cloud-badge {
             display: inline-flex;
@@ -400,11 +451,22 @@
             background: rgba(59, 130, 246, 0.1);
             color: #93c5fd;
         }
-        
-        .aws-badge { background: rgba(255, 153, 0, 0.1); color: #ff9900; }
-        .gcp-badge { background: rgba(66, 133, 244, 0.1); color: #4285f4; }
-        .azure-badge { background: rgba(0, 120, 212, 0.1); color: #0078d4; }
-        
+
+        .aws-badge {
+            background: rgba(255, 153, 0, 0.1);
+            color: #ff9900;
+        }
+
+        .gcp-badge {
+            background: rgba(66, 133, 244, 0.1);
+            color: #4285f4;
+        }
+
+        .azure-badge {
+            background: rgba(0, 120, 212, 0.1);
+            color: #0078d4;
+        }
+
         /* AI Remediation Section */
         .ai-remediation {
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
@@ -413,7 +475,7 @@
             padding: 20px;
             margin-top: 16px;
         }
-        
+
         .ai-header {
             display: flex;
             align-items: center;
@@ -423,32 +485,32 @@
             font-weight: 600;
             font-size: 1rem;
         }
-        
+
         .ai-priority {
             display: flex;
             gap: 20px;
             margin-bottom: 16px;
             font-size: 0.9rem;
         }
-        
+
         .ai-priority span {
             color: #c4b5fd;
         }
-        
+
         .ai-priority strong {
             color: #e9d5ff;
         }
-        
+
         .ai-steps {
             margin-bottom: 16px;
         }
-        
+
         .ai-step {
             display: flex;
             gap: 12px;
             margin-bottom: 12px;
         }
-        
+
         .step-number {
             width: 24px;
             height: 24px;
@@ -462,13 +524,13 @@
             color: #c4b5fd;
             flex-shrink: 0;
         }
-        
+
         .step-text {
             color: #e9d5ff;
             font-size: 0.9rem;
             flex: 1;
         }
-        
+
         .code-block {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(139, 92, 246, 0.2);
@@ -477,7 +539,7 @@
             margin: 16px 0;
             overflow-x: auto;
         }
-        
+
         .code-block pre {
             color: #c4b5fd;
             font-size: 0.85rem;
@@ -485,36 +547,36 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        
+
         .validation-text {
             color: #c4b5fd;
             font-size: 0.9rem;
             margin-bottom: 12px;
         }
-        
+
         .validation-text strong {
             color: #e9d5ff;
         }
-        
+
         .references {
             color: #c4b5fd;
             font-size: 0.9rem;
         }
-        
+
         .references strong {
             color: #e9d5ff;
         }
-        
+
         .references ul {
             list-style: disc;
             margin-left: 24px;
             margin-top: 8px;
         }
-        
+
         .references li {
             margin-bottom: 4px;
         }
-        
+
         .toggle-btn {
             background: rgba(139, 92, 246, 0.2);
             border: 1px solid rgba(139, 92, 246, 0.3);
@@ -530,36 +592,44 @@
             transition: all 0.3s;
             margin-top: 12px;
         }
-        
+
         .toggle-btn:hover {
             background: rgba(139, 92, 246, 0.3);
         }
-        
+
         .expanded-content {
             display: none;
         }
-        
+
         .expanded-content.show {
             display: block;
         }
-        
+
         /* Loading States */
         .loading {
             text-align: center;
             padding: 40px;
             color: #64748b;
         }
-        
+
         .pulse {
             animation: pulse 2s infinite;
         }
-        
+
         @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.6;
+            }
         }
-        
+
         /* Scan Progress */
         .scan-progress {
             position: fixed;
@@ -576,24 +646,24 @@
             opacity: 0;
             transition: all 0.5s ease;
         }
-        
+
         .scan-progress.show {
             transform: translateY(0);
             opacity: 1;
         }
-        
+
         .progress-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
         }
-        
+
         .progress-title {
             font-weight: 600;
             color: white;
         }
-        
+
         .progress-bar {
             height: 8px;
             background: rgba(255, 255, 255, 0.1);
@@ -601,28 +671,28 @@
             overflow: hidden;
             margin: 16px 0;
         }
-        
+
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #3b82f6, #8b5cf6);
             border-radius: 4px;
             transition: width 0.5s ease;
         }
-        
+
         .progress-steps {
             display: flex;
             flex-direction: column;
             gap: 8px;
             margin-top: 12px;
         }
-        
+
         .progress-step {
             display: flex;
             align-items: center;
             gap: 12px;
             font-size: 0.9rem;
         }
-        
+
         .step-icon {
             width: 24px;
             height: 24px;
@@ -632,11 +702,22 @@
             justify-content: center;
             font-size: 0.8rem;
         }
-        
-        .step-icon.pending { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
-        .step-icon.active { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-        .step-icon.complete { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
-        
+
+        .step-icon.pending {
+            background: rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+        }
+
+        .step-icon.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .step-icon.complete {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
         .results-ready {
             text-align: center;
             padding: 20px;
@@ -646,39 +727,57 @@
             animation: pulse 2s infinite;
             cursor: pointer;
         }
-        
+
         /* No Data States */
         .no-data {
             text-align: center;
             padding: 60px 20px;
             color: #64748b;
         }
-        
+
         .no-data-icon {
             font-size: 3rem;
             margin-bottom: 16px;
             opacity: 0.5;
         }
-        
+
         /* Responsive */
         @media (max-width: 768px) {
-            .container { padding: 16px; }
-            .header { flex-direction: column; gap: 16px; padding: 20px; }
-            .charts-section { 
+            .container {
+                padding: 16px;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                padding: 20px;
+            }
+
+            .charts-section {
                 grid-template-columns: 1fr;
                 gap: 16px;
             }
+
             .chart-container {
                 height: 300px;
                 min-height: 300px;
             }
-            .cloud-grid { grid-template-columns: 1fr; }
-            .vuln-info { flex-direction: column; gap: 12px; }
+
+            .cloud-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .vuln-info {
+                flex-direction: column;
+                gap: 12px;
+            }
+
             .section-header {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 12px;
             }
+
             .severity-filters {
                 width: 100%;
                 justify-content: space-between;
@@ -686,6 +785,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -719,7 +819,7 @@
                     <span>Across all clouds</span>
                 </div>
             </div>
-            
+
             <div class="stat-card">
                 <div class="stat-label">Vulnerabilities Found</div>
                 <div class="stat-value" id="total-findings">--</div>
@@ -727,7 +827,7 @@
                     <span id="critical-count">Loading...</span>
                 </div>
             </div>
-            
+
             <div class="stat-card">
                 <div class="stat-label">Security Score</div>
                 <div class="stat-value" id="security-score">--</div>
@@ -735,7 +835,7 @@
                     <span>Higher is better</span>
                 </div>
             </div>
-            
+
             <div class="stat-card">
                 <div class="stat-label">Active Tools</div>
                 <div class="stat-value" id="active-tools">--</div>
@@ -756,7 +856,7 @@
                     <canvas id="trendChart"></canvas>
                 </div>
             </div>
-            
+
             <div class="chart-container">
                 <div class="chart-header">
                     <div class="chart-title">☁️ Cloud Distribution</div>
@@ -784,7 +884,7 @@
                     <button class="severity-filter" onclick="filterVulnerabilities('medium')">Medium</button>
                 </div>
             </div>
-            
+
             <div class="vulnerability-list" id="vulnerability-list">
                 <div class="loading pulse">Loading security findings...</div>
             </div>
@@ -795,7 +895,8 @@
     <div class="scan-progress" id="scan-progress">
         <div class="progress-header">
             <div class="progress-title">🔄 Scan in Progress</div>
-            <button onclick="hideScanProgress()" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem;">✕</button>
+            <button onclick="hideScanProgress()"
+                style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem;">✕</button>
         </div>
         <div class="progress-steps">
             <div class="progress-step">
@@ -1026,7 +1127,7 @@ def get_openai_key():
             updateTimestamp();
             loadDashboard();
             checkForScanCompletion();
-            
+
             setInterval(() => {
                 updateTimestamp();
                 if (!scanInProgress) {
@@ -1037,53 +1138,54 @@ def get_openai_key():
 
         function updateTimestamp() {
             const now = new Date();
-            const options = { 
-                hour: '2-digit', 
-                minute: '2-digit', 
+            const options = {
+                hour: '2-digit',
+                minute: '2-digit',
                 second: '2-digit',
-                hour12: true 
+                hour12: true
             };
-            document.getElementById('last-updated').textContent = 
+            document.getElementById('last-updated').textContent =
                 `Last updated: ${now.toLocaleTimeString('en-US', options)}`;
         }
 
         async function loadDashboard() {
             try {
                 console.log('Loading dashboard data...');
-                
+
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
                 document.getElementById('security-score').textContent = '...';
                 document.getElementById('active-tools').textContent = '...';
-                
+
                 const [summaryRes, providersRes, findingsRes] = await Promise.all([
                     fetch('/posture/dashboard'),
                     fetch('/api/provider-breakdown'),
                     fetch('/api/latest-findings?limit=20')
                 ]);
-                
+
                 const summary = await summaryRes.json();
                 const providers = await providersRes.json();
                 const findings = await findingsRes.json();
-                
-                document.getElementById('total-resources').textContent = 
+
+                document.getElementById('total-resources').textContent =
                     summary.total_resources || 0;
-                document.getElementById('total-findings').textContent = 
+                document.getElementById('total-findings').textContent =
                     summary.total_findings || 0;
-                document.getElementById('security-score').textContent = 
+                document.getElementById('security-score').textContent =
                     Math.round(summary.security_score || 100);
-                document.getElementById('critical-count').innerHTML = 
+                document.getElementById('critical-count').innerHTML =
                     `${summary.total_findings || 0} total vulnerabilities`;
-                document.getElementById('active-tools').textContent = 
+                document.getElementById('active-tools').textContent =
                     Object.keys(summary.vulnerability_tools_available || {}).length;
-                
+
                 await loadTrendChart();
                 await loadCloudChart(providers.data || []);
                 await loadCloudProviders(providers.data || []);
+
                 await loadVulnerabilities(findings.data || []);
-                
+
                 console.log('Dashboard loaded successfully');
-                
+
             } catch (error) {
                 console.error('Dashboard load failed:', error);
                 showError('Failed to load dashboard data');
@@ -1094,9 +1196,9 @@ def get_openai_key():
             const desc = vuln.description?.toLowerCase() || '';
             const resourceName = vuln.resource_name?.toLowerCase() || '';
             const tool = vuln.tool?.toLowerCase() || '';
-            
+
             let type = 'vulnerability';
-            
+
             if (desc.includes('s3') || desc.includes('bucket')) {
                 type = 's3';
             } else if (desc.includes('iam') || desc.includes('access key') || desc.includes('mfa')) {
@@ -1110,7 +1212,7 @@ def get_openai_key():
             } else if (['trivy', 'grype', 'safety', 'npm_audit'].includes(tool)) {
                 type = 'vulnerability';
             }
-            
+
             const template = remediationTemplates[type];
             return {
                 ...template,
@@ -1133,25 +1235,25 @@ def get_openai_key():
             try {
                 const response = await fetch('/api/scan-history?days=30');
                 const data = await response.json();
-                
+
                 const ctx = document.getElementById('trendChart');
                 if (!ctx) return;
-                
+
                 if (trendChart) {
                     trendChart.destroy();
                 }
-                
+
                 const chartData = data.data || [];
                 if (chartData.length === 0) {
                     showNoData(ctx, 'No scan history available');
                     return;
                 }
-                
+
                 const labels = chartData.map(d => {
                     const date = new Date(d.date);
                     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 });
-                
+
                 trendChart = new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -1187,7 +1289,7 @@ def get_openai_key():
                         plugins: {
                             legend: {
                                 position: 'top',
-                                labels: { 
+                                labels: {
                                     color: '#94a3b8',
                                     padding: 20,
                                     font: { size: 12 }
@@ -1206,21 +1308,21 @@ def get_openai_key():
                         scales: {
                             y: {
                                 beginAtZero: true,
-                                grid: { 
+                                grid: {
                                     color: 'rgba(148, 163, 184, 0.1)',
                                     drawBorder: false
                                 },
-                                ticks: { 
+                                ticks: {
                                     color: '#94a3b8',
                                     padding: 8
                                 }
                             },
                             x: {
-                                grid: { 
+                                grid: {
                                     color: 'rgba(148, 163, 184, 0.05)',
                                     drawBorder: false
                                 },
-                                ticks: { 
+                                ticks: {
                                     color: '#94a3b8',
                                     maxRotation: 45,
                                     padding: 8
@@ -1229,7 +1331,7 @@ def get_openai_key():
                         }
                     }
                 });
-                
+
             } catch (error) {
                 console.error('Failed to load trend chart:', error);
                 const ctx = document.getElementById('trendChart');
@@ -1240,20 +1342,20 @@ def get_openai_key():
         async function loadCloudChart(providers) {
             const ctx = document.getElementById('cloudChart');
             if (!ctx) return;
-            
+
             if (cloudChart) {
                 cloudChart.destroy();
             }
-            
+
             if (!providers || providers.length === 0) {
                 showNoData(ctx, 'No cloud provider data available');
                 return;
             }
-            
+
             const labels = providers.map(p => p.provider?.toUpperCase() || 'Unknown');
             const resources = providers.map(p => p.resources || 0);
             const findings = providers.map(p => p.findings || 0);
-            
+
             const colors = {
                 'AWS': 'rgba(255, 153, 0, 0.8)',
                 'GCP': 'rgba(66, 133, 244, 0.8)',
@@ -1261,9 +1363,9 @@ def get_openai_key():
                 'OPENAI': 'rgba(16, 163, 127, 0.8)',
                 'UNKNOWN': 'rgba(148, 163, 184, 0.8)'
             };
-            
+
             const backgroundColors = labels.map(label => colors[label] || colors.UNKNOWN);
-            
+
             cloudChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -1291,7 +1393,7 @@ def get_openai_key():
                     plugins: {
                         legend: {
                             position: 'top',
-                            labels: { 
+                            labels: {
                                 color: '#94a3b8',
                                 padding: 20,
                                 font: { size: 12 }
@@ -1309,21 +1411,21 @@ def get_openai_key():
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: { 
+                            grid: {
                                 color: 'rgba(148, 163, 184, 0.1)',
                                 drawBorder: false
                             },
-                            ticks: { 
+                            ticks: {
                                 color: '#94a3b8',
                                 padding: 8
                             }
                         },
                         x: {
-                            grid: { 
+                            grid: {
                                 color: 'rgba(148, 163, 184, 0.05)',
                                 drawBorder: false
                             },
-                            ticks: { 
+                            ticks: {
                                 color: '#94a3b8',
                                 padding: 8
                             }
@@ -1335,7 +1437,7 @@ def get_openai_key():
 
         function loadCloudProviders(providers) {
             const container = document.getElementById('cloud-providers');
-            
+
             if (!providers || providers.length === 0) {
                 container.innerHTML = `
                     <div class="no-data">
@@ -1345,18 +1447,18 @@ def get_openai_key():
                     </div>`;
                 return;
             }
-            
+
             const cloudIcons = {
                 'aws': { icon: '☁️', class: 'aws-icon', color: '#ff9900' },
                 'gcp': { icon: '📊', class: 'gcp-icon', color: '#4285f4' },
                 'azure': { icon: '🔷', class: 'azure-icon', color: '#0078d4' },
                 'openai': { icon: '🤖', class: 'openai-icon', color: '#10a37f' }
             };
-            
+
             container.innerHTML = providers.map(provider => {
                 const cloud = provider.provider?.toLowerCase() || 'unknown';
                 const cloudInfo = cloudIcons[cloud] || { icon: '☁️', class: 'aws-icon', color: '#94a3b8' };
-                
+
                 return `
                     <div class="cloud-card">
                         <div class="cloud-header">
@@ -1402,7 +1504,7 @@ def get_openai_key():
 
         async function loadVulnerabilities(findings) {
             const container = document.getElementById('vulnerability-list');
-            
+
             if (!findings || findings.length === 0) {
                 container.innerHTML = `
                     <div class="no-data">
@@ -1412,14 +1514,14 @@ def get_openai_key():
                     </div>`;
                 return;
             }
-            
+
             const grouped = {};
             findings.forEach(f => {
                 const cloud = f.cloud?.toUpperCase() || 'UNKNOWN';
                 if (!grouped[cloud]) grouped[cloud] = [];
                 grouped[cloud].push(f);
             });
-            
+
             container.innerHTML = Object.entries(grouped).map(([cloud, vulns]) => {
                 return `
                     <div style="margin-bottom: 30px;">
@@ -1431,13 +1533,13 @@ def get_openai_key():
                         </h3>
                         
                         ${vulns.map((v, idx) => {
-                            const severity = (v.severity || 'MEDIUM').toLowerCase();
-                            const cloudClass = cloud.toLowerCase().includes('aws') ? 'aws-badge' : 
-                                             cloud.toLowerCase().includes('gcp') ? 'gcp-badge' : 'cloud-badge';
-                            
-                            const remediation = generateAIRemediation(v);
-                            
-                            return `
+                    const severity = (v.severity || 'MEDIUM').toLowerCase();
+                    const cloudClass = cloud.toLowerCase().includes('aws') ? 'aws-badge' :
+                        cloud.toLowerCase().includes('gcp') ? 'gcp-badge' : 'cloud-badge';
+
+                    const remediation = generateAIRemediation(v);
+
+                    return `
                                 <div class="vulnerability-card ${severity}">
                                     <div class="vuln-header">
                                         <div class="vuln-title">
@@ -1521,7 +1623,7 @@ def get_openai_key():
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+                }).join('')}
                     </div>
                 `;
             }).join('');
@@ -1529,12 +1631,12 @@ def get_openai_key():
 
         function filterVulnerabilities(severity) {
             currentFilter = severity;
-            
+
             document.querySelectorAll('.severity-filter').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
+
             const cards = document.querySelectorAll('.vulnerability-card');
             cards.forEach(card => {
                 if (severity === 'all' || card.classList.contains(severity)) {
@@ -1553,39 +1655,39 @@ def get_openai_key():
             const progress = document.getElementById('scan-progress');
             progress.classList.add('show');
             scanInProgress = true;
-            
+
             let progressPercent = 33;
             const progressFill = document.getElementById('progress-fill');
             const progressMessage = document.getElementById('progress-message');
-            
+
             const interval = setInterval(() => {
                 progressPercent += Math.random() * 10;
                 if (progressPercent > 100) progressPercent = 100;
                 progressFill.style.width = progressPercent + '%';
-                
+
                 if (progressPercent >= 33) {
                     document.getElementById('step-cloud').className = 'step-icon complete';
                     document.getElementById('step-vuln').className = 'step-icon active';
                     progressMessage.textContent = 'Scanning for vulnerabilities...';
                 }
-                
+
                 if (progressPercent >= 66) {
                     document.getElementById('step-vuln').className = 'step-icon complete';
                     document.getElementById('step-analysis').className = 'step-icon active';
                     progressMessage.textContent = 'Running AI security analysis...';
                 }
-                
+
                 if (progressPercent >= 100) {
                     clearInterval(interval);
                     document.getElementById('step-analysis').className = 'step-icon complete';
                     progressMessage.textContent = 'Scan complete!';
                     document.getElementById('results-ready').style.display = 'block';
-                    
+
                     setTimeout(() => {
                         loadDashboard();
                         scrollToResults();
                     }, 1000);
-                    
+
                     setTimeout(() => {
                         hideScanProgress();
                         scanInProgress = false;
@@ -1603,7 +1705,7 @@ def get_openai_key():
         function scrollToResults() {
             const section = document.getElementById('vulnerabilities-section');
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
+
             section.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.5)';
             setTimeout(() => {
                 section.style.boxShadow = 'none';
@@ -1637,16 +1739,16 @@ def get_openai_key():
                 <span>${message}</span>
             `;
             container.insertBefore(errorDiv, container.firstChild);
-            
+
             setTimeout(() => errorDiv.remove(), 5000);
         }
 
         function showNoData(canvas, message) {
             const ctx = canvas.getContext('2d');
             const container = canvas.parentElement;
-            
+
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+
             container.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
                     <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">📊</div>
@@ -1662,4 +1764,5 @@ def get_openai_key():
         window.toggleRemediation = toggleRemediation;
     </script>
 </body>
+
 </html>

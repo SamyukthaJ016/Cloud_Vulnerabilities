@@ -2651,7 +2651,8 @@ def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
         resources=resources,
         findings=findings,
         scan_duration=data.get("scan_duration", 0.0),
-        errors=data.get("errors", [])
+        errors=data.get("errors", []),
+        scanned_services=data.get("scanned_services", [])
     )
 
 async def run_gpt_agent(prompt: str) -> str:
@@ -4396,12 +4397,18 @@ def _mcp_to_scan_result(provider: str, mcp_result: Dict[str, Any]):
     
     
     # Convert resources
+    resources_raw = mcp_result.get("resources", [])
+    if isinstance(resources_raw, dict):
+        resources_list = list(resources_raw.values())
+    else:
+        resources_list = resources_raw
+
     resources = []
-    for res in mcp_result.get("resources", {}).values():
+    for res in resources_list:
         if isinstance(res, dict):
             resources.append(CloudResource(
                 provider=provider,
-                resource_type=res.get("type", "unknown"),
+                resource_type=res.get("resource_type") or res.get("type", "unknown"),
                 name=res.get("name", "unnamed"),
                 region=res.get("region", "global"),
                 config=res.get("config", {}),

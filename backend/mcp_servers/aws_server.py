@@ -9,6 +9,7 @@ import boto3
 import json
 import logging
 from typing import Dict, List, Any
+from botocore.exceptions import ClientError
 from datetime import datetime
 from backend.mcp_servers.base_server import mcp_server_manager,MCPMessage
 from backend.mcp_servers.base_server import (
@@ -53,6 +54,7 @@ class AWSMCPServer(BaseMCPServer):
             self.ec2 = self.session.client("ec2")
             self.cloudtrail = self.session.client("cloudtrail")
             self.kms = self.session.client("kms")
+            self.guardduty = self.session.client("guardduty")
             
             # Validate credentials
             sts = self.session.client("sts")
@@ -308,6 +310,29 @@ class AWSMCPServer(BaseMCPServer):
             except:
                 pass
             
+            # Check Block Public Access
+            try:
+                bpa = self.s3.get_public_access_block(Bucket=bucket_name)
+                conf = bpa.get("PublicAccessBlockConfiguration", {})
+                if not (conf.get("BlockPublicAcls") and conf.get("IgnorePublicAcls") and 
+                        conf.get("BlockPublicPolicy") and conf.get("RestrictPublicBuckets")):
+                    findings.append({
+                        "severity": "HIGH",
+                        "issue": "S3 Block Public Access Disabled",
+                        "description": f"Bucket {bucket_name} does not have Block Public Access enabled for all settings",
+                        "recommendation": "Enable 'Block all public access' for this bucket"
+                    })
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'NoSuchPublicAccessBlockConfiguration':
+                     findings.append({
+                        "severity": "HIGH",
+                        "issue": "S3 Block Public Access Disabled",
+                        "description": f"Bucket {bucket_name} does not have Block Public Access configuration",
+                        "recommendation": "Enable 'Block all public access' for this bucket"
+                    })
+            except Exception:
+                pass
+
             return {
                 "bucket": bucket_name,
                 "is_public": is_public,
@@ -437,8 +462,170 @@ class AWSMCPServer(BaseMCPServer):
         
         except Exception as e:
             return {"error": str(e), "resources": [], "count": 0}
-    
-    # Update backend/mcp_servers/aws_server.py
+
+    async def _check_cloudtrail(self) -> List[Dict[str, Any]]:
+        """Check CloudTrail configuration"""
+        logger.info("[AWS] Checking CloudTrail configuration...")
+        findings = []
+        try:
+            trails_response = self.cloudtrail.describe_trails()
+            trails = trails_response.get("trailList", [])
+            
+            if not trails:
+                findings.append({
+                    "severity": "CRITICAL",
+                    "issue": "No CloudTrail Configured",
+                    "description": "No CloudTrail trails found in the region. Auditing is disabled.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Enable CloudTrail in all regions to track API activity."
+                })
+                return findings
+            
+            # Check if logging is enabled for at least one trail
+            logging_enabled = False
+            for trail in trails:
+                try:
+                    status = self.cloudtrail.get_trail_status(Name=trail["TrailARN"])
+                    if status.get("IsLogging"):
+                        logging_enabled = True
+                        break
+                except Exception:
+                    continue
+            
+            if not logging_enabled:
+                findings.append({
+                    "severity": "HIGH",
+                    "issue": "CloudTrail Logging Disabled",
+                    "description": "CloudTrail exists but logging is disabled on all trails.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Enable logging for your CloudTrail trails."
+                })
+
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AccessDenied':
+                findings.append({
+                    "severity": "MEDIUM",  # Medium because it blocks visibility, not necessarily a vul
+                    "issue": "Scan Permission Missing (CloudTrail)",
+                    "description": "Scanner does not have permission to list CloudTrails.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Add `cloudtrail:DescribeTrails` and `cloudtrail:GetTrailStatus` to IAM policy."
+                })
+            else:
+                logger.error(f"CloudTrail check failed: {e}")
+        except Exception as e:
+            logger.error(f"CloudTrail check failed: {e}")
+        return findings
+
+    async def _check_guardduty(self) -> List[Dict[str, Any]]:
+        """Check GuardDuty configuration"""
+        logger.info("[AWS] Checking GuardDuty configuration...")
+        findings = []
+        try:
+            detectors_response = self.guardduty.list_detectors()
+            detectors = detectors_response.get("DetectorIds", [])
+            
+            if not detectors:
+                findings.append({
+                    "severity": "HIGH",
+                    "issue": "GuardDuty Not Enabled",
+                    "description": "Amazon GuardDuty is not enabled in this region.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Enable GuardDuty to detect potential threats."
+                })
+            else:
+                 # Check if enabled
+                 for detector_id in detectors:
+                    try:
+                        detector = self.guardduty.get_detector(DetectorId=detector_id)
+                        if detector.get("Status") != "ENABLED":
+                            findings.append({
+                                "severity": "HIGH",
+                                "issue": "GuardDuty Disabled",
+                                "description": f"GuardDuty detector {detector_id} is disabled.",
+                                "resource_name": f"GuardDuty-{detector_id}",
+                                "recommendation": "Enable the GuardDuty detector."
+                            })
+                    except Exception:
+                        continue
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'AccessDenied':
+                findings.append({
+                    "severity": "MEDIUM",
+                    "issue": "Scan Permission Missing (GuardDuty)",
+                    "description": "Scanner does not have permission to list GuardDuty detectors.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Add `guardduty:ListDetectors` to IAM policy."
+                })
+            # Check for SubscriptionRequiredException (GuardDuty not enabled) caught by generic Exception usually, but ensuring here
+            elif "SubscriptionRequiredException" in str(e):
+                  findings.append({
+                    "severity": "HIGH",
+                    "issue": "GuardDuty Not Enabled",
+                    "description": "Amazon GuardDuty is not enabled/subscribed in this region.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Enable GuardDuty to detect potential threats."
+                })
+            else:
+                logger.error(f"GuardDuty check failed: {e}")
+
+        except Exception as e:
+             # Check for SubscriptionRequiredException (GuardDuty not enabled)
+             error_str = str(e)
+             if "SubscriptionRequiredException" in error_str:
+                 findings.append({
+                    "severity": "HIGH",
+                    "issue": "GuardDuty Not Enabled",
+                    "description": "Amazon GuardDuty is not enabled/subscribed in this region.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Enable GuardDuty to detect potential threats."
+                })
+             else:
+                logger.error(f"GuardDuty check failed: {e}")
+        return findings
+
+    async def _check_vpc_flow_logs(self) -> List[Dict[str, Any]]:
+        """Check VPC Flow Logs configuration"""
+        logger.info("[AWS] Checking VPC Flow Logs...")
+        findings = []
+        try:
+            vpcs_response = self.ec2.describe_vpcs()
+            vpcs = vpcs_response.get("Vpcs", [])
+            
+            for vpc in vpcs:
+                vpc_id = vpc["VpcId"]
+                # Check flow logs for this VPC
+                try:
+                    flow_logs_response = self.ec2.describe_flow_logs(
+                        Filters=[{'Name': 'resource-id', 'Values': [vpc_id]}]
+                    )
+                    flow_logs = flow_logs_response.get("FlowLogs", [])
+                    
+                    if not flow_logs:
+                        findings.append({
+                            "severity": "MEDIUM",
+                            "issue": "VPC Flow Logs Disabled",
+                            "description": f"VPC {vpc_id} does not have Flow Logs enabled.",
+                            "resource_name": vpc_id,
+                            "recommendation": "Enable VPC Flow Logs for network traffic analysis."
+                        })
+                except Exception as e:
+                    logger.error(f"Failed to check flow logs for VPC {vpc_id}: {e}")
+
+        except ClientError as e:
+             if e.response['Error']['Code'] == 'AccessDenied':
+                findings.append({
+                    "severity": "MEDIUM",
+                    "issue": "Scan Permission Missing (VPC Flow Logs)",
+                    "description": "Scanner does not have permission to describe VPCs or Flow Logs.",
+                    "resource_name": "Account Level",
+                    "recommendation": "Add `ec2:DescribeVpcs` and `ec2:DescribeFlowLogs` to IAM policy."
+                })
+             else:
+                logger.error(f"VPC Flow Logs check failed: {e}")
+
+        except Exception as e:
+             logger.error(f"VPC Flow Logs check failed: {e}")
+        return findings
 
     async def _full_scan(self,account_id: str = "default",deep_scan: bool = False,offensive_scan: bool = False,include_cloudfox: bool | None = None) -> Dict[str, Any]:
 
@@ -463,27 +650,110 @@ class AWSMCPServer(BaseMCPServer):
         try:
             # 1. Discover S3
             s3_result = await self._discover_s3_buckets()
-            results["resources"]["s3_buckets"] = s3_result["count"]
-        
+            s3_res_list = []
+            for r in s3_result.get("resources", []):
+                res = {
+                    "provider": "aws",
+                    "resource_type": "s3_bucket",
+                    "name": r["name"],
+                    "region": r.get("region", "us-east-1"),
+                    "config": r
+                }
+                s3_res_list.append(res)
+            
             # 2. Check S3 security
-            for bucket in s3_result.get("resources", []):
-                security_check = await self._check_s3_security(bucket["name"])
+            for res_dict in s3_res_list:
+                security_check = await self._check_s3_security(res_dict["name"])
+                # Attach resource to findings
+                for f in security_check.get("findings", []):
+                    f["resource"] = res_dict
                 results["findings"].extend(security_check.get("findings", []))
-        
+            
+            # Prepare final resource list for main.py storage
+            all_resources = s3_res_list
+
             # 3. Discover IAM
             iam_result = await self._discover_iam_users()
-            results["resources"]["iam_users"] = iam_result["count"]
+            iam_res_list = []
+            for r in iam_result.get("resources", []):
+                res = {
+                    "provider": "aws",
+                    "resource_type": "iam_user",
+                    "name": r["username"],
+                    "region": "global",
+                    "config": r
+                }
+                iam_res_list.append(res)
+            all_resources.extend(iam_res_list)
         
             # 4. Check IAM security
-            for user in iam_result.get("resources", []):
-                security_check = await self._check_iam_security(user["username"])
+            for res_dict in iam_res_list:
+                security_check = await self._check_iam_security(res_dict["name"])
+                for f in security_check.get("findings", []):
+                    f["resource"] = res_dict
                 results["findings"].extend(security_check.get("findings", []))
         
-        # 5. Discover security groups
+            # 5. Discover security groups
             sg_result = await self._discover_security_groups()
-            results["resources"]["security_groups"] = sg_result["count"]
-        
-        # 6. RUN CLOUDFOX IF ENABLED
+            for r in sg_result.get("resources", []):
+                all_resources.append({
+                    "provider": "aws",
+                    "resource_type": "security_group",
+                    "name": r["group_id"],
+                    "region": r.get("region", "us-east-1"),
+                    "config": r
+                })
+
+            # Create Account Level resource for generic findings
+            account_resource = {
+                "provider": "aws",
+                "resource_type": "account",
+                "name": "Account Level",
+                "region": "global",
+                "config": {"account_id": account_id}
+            }
+            all_resources.append(account_resource)
+            
+            # --- NEW: Logging & Monitoring Checks ---
+            
+            # 6. Check CloudTrail
+            cloudtrail_findings = await self._check_cloudtrail()
+            for f in cloudtrail_findings:
+                f["resource"] = account_resource
+                f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
+            results["findings"].extend(cloudtrail_findings)
+            
+            # 7. Check GuardDuty
+            guardduty_findings = await self._check_guardduty()
+            for f in guardduty_findings:
+                f["resource"] = account_resource
+                f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
+            results["findings"].extend(guardduty_findings)
+            
+            # 8. Check VPC Flow Logs
+            vpc_findings = await self._check_vpc_flow_logs()
+            for f in vpc_findings:
+                # If finding specified a resource_name (vpc-id), try to match or use account
+                res_name = f.get("resource_name", "Account Level")
+                if res_name != "Account Level":
+                     # Create a temporary VPC resource for storage if not exists
+                     vpc_res = {
+                         "provider": "aws",
+                         "resource_type": "vpc",
+                         "name": res_name,
+                         "region": self.config.get("region", "us-east-1"),
+                         "config": {"vpc_id": res_name}
+                     }
+                     all_resources.append(vpc_res)
+                     f["resource"] = vpc_res
+                else:
+                    f["resource"] = account_resource
+                f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
+            results["findings"].extend(vpc_findings)
+
+            results["resources"] = all_resources
+
+        # 9. RUN CLOUDFOX IF ENABLED
             if include_cloudfox:
                 try:
                     cloudfox_results = await self._run_cloudfox_scan()
@@ -494,12 +764,12 @@ class AWSMCPServer(BaseMCPServer):
                     logger.error(f"[AWS] CloudFox scan failed: {e}")
                     results["cloudfox_error"] = str(e)
         
-        # 7. Combine all findings
+        # 10. Combine all findings
             all_findings = results["findings"] + results.get("cloudfox_findings", [])
         
-        # 8. Summary
+        # 11. Summary
             results["summary"] = {
-                "total_resources": sum(results["resources"].values()),
+                "total_resources": len(results["resources"]),
                 "total_findings": len(all_findings),
                 "aws_findings": len(results["findings"]),
                 "cloudfox_findings": len(results.get("cloudfox_findings", [])),
