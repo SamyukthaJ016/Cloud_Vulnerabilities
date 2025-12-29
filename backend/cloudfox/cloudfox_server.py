@@ -59,7 +59,22 @@ class CloudFoxMCPServer(BaseMCPServer):
                     logger.info(f"✅ CloudFox found at: {location}")
                     logger.info(f"   Version: {result.stdout.strip()}")
                     return
-            except (FileNotFoundError, subprocess.TimeoutExpired, Exception) as e:
+                else:
+                    logger.debug(f"CloudFox at {location} exists but --version failed (code {result.returncode})")
+            except FileNotFoundError:
+                continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f"CloudFox at {location} timed out while checking version")
+                continue
+            except OSError as e:
+                if "Exec format error" in str(e):
+                    logger.error(f"❌ Binary architecture mismatch for CloudFox at {location}: {e}")
+                    logger.error("   This usually means an ARM64 binary is being run on x86_64 or vice-versa.")
+                else:
+                    logger.error(f"⚠ OSError checking CloudFox at {location}: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error checking CloudFox at {location}: {e}")
                 continue
         
         logger.warning("⚠️ CloudFox not found. Install: go install github.com/BishopFox/cloudfox@latest")

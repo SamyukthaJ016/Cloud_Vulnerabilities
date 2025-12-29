@@ -31,17 +31,23 @@ WORKDIR /app
 # Stage 2: Security Tools (CloudFox + trivy/gitleaks/grype)
 # ============================================================================
 FROM base AS security-tools
+ARG TARGETARCH
 
 # Install Trivy
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
     | sh -s -- -b /usr/local/bin
 
-# Install Gitleaks (ARM64 compatible)
-RUN wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_arm64.tar.gz \
-    && tar -xzf gitleaks_8.18.4_linux_arm64.tar.gz \
-    && mv gitleaks /usr/local/bin/ \
-    && chmod +x /usr/local/bin/gitleaks \
-    && rm gitleaks_8.18.4_linux_arm64.tar.gz
+# Install Gitleaks (Architecture-aware)
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        GITLEAKS_ARCH="arm64"; \
+    else \
+        GITLEAKS_ARCH="x64"; \
+    fi && \
+    wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_${GITLEAKS_ARCH}.tar.gz -O gitleaks.tar.gz && \
+    tar -xzf gitleaks.tar.gz && \
+    mv gitleaks /usr/local/bin/ && \
+    chmod +x /usr/local/bin/gitleaks && \
+    rm gitleaks.tar.gz
 
 # Install Grype
 RUN curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
@@ -49,17 +55,23 @@ RUN curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh |
 # Install Safety
 RUN pip install --no-cache-dir safety
 
-# Install Go + CloudFox (ARM64)
-RUN rm -rf /tmp/go && \
-    curl -fsSL https://go.dev/dl/go1.24.11.linux-arm64.tar.gz -o /tmp/go.tar.gz && \
-    mkdir -p /usr/local/go && \
-    tar -xzf /tmp/go.tar.gz -C /usr/local --strip-components=1 && \
-    rm -rf /tmp/go.tar.gz
-ENV PATH="/usr/local/go/bin:${PATH}"
-RUN go install github.com/BishopFox/cloudfox@latest && \
-    cp /root/go/bin/cloudfox /usr/local/bin/ && \
-    go clean -cache -modcache && \
-    rm -rf /root/go
+# Install CloudFox (Architecture-aware binary)
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        CLOUDFOX_ARCH="arm64"; \
+    else \
+        CLOUDFOX_ARCH="amd64"; \
+    fi && \
+    wget https://github.com/BishopFox/cloudfox/releases/download/v1.17.0/cloudfox-linux-${CLOUDFOX_ARCH}.zip -O cloudfox.zip && \
+    unzip cloudfox.zip && \
+    echo "DEBUG: CloudFox unzip contents:" && ls -R && \
+    # Find the executable (it might be named cloudfox or cloudfox-linux-amd64)
+    # Search recursively in case it's in a subdirectory
+    EXE_PATH=$(find . -type f -name "cloudfox*" | head -n 1) && \
+    if [ -z "$EXE_PATH" ]; then echo "❌ Could not find cloudfox binary!"; ls -la; exit 1; fi && \
+    echo "DEBUG: Found binary at $EXE_PATH" && \
+    mv "$EXE_PATH" /usr/local/bin/cloudfox && \
+    chmod +x /usr/local/bin/cloudfox && \
+    rm cloudfox.zip
 
 # Verify all tools
 RUN trivy --version && \

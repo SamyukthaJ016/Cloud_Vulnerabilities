@@ -208,7 +208,7 @@ shell-prod:
 
 install-tools:
 	@echo "$(GREEN)Installing additional security tools...$(NC)"
-	$(DOCKER_COMPOSE) exec backend bash -c "trivy --version && gitleaks version && grype version"
+	$(DOCKER_COMPOSE) exec backend bash -c "trivy --version && gitleaks version && grype version && cloudfox --version"
 
 logs:
 	$(DOCKER_COMPOSE) logs -f

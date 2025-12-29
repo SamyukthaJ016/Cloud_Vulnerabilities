@@ -341,12 +341,51 @@ async def delete_credential(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# @router.post("/session", response_model=ScanSessionResponse)
+# async def create_scan_session(request: ScanSessionRequest):
+#     """Create a scan session with credentials"""
+#     try:
+#         credential_ids = {}
+        
+#         if request.aws_credential_id:
+#             credential_ids['aws'] = request.aws_credential_id
+#         if request.gcp_credential_id:
+#             credential_ids['gcp'] = request.gcp_credential_id
+#         if request.openai_credential_id:
+#             credential_ids['openai'] = request.openai_credential_id
+#         if request.azure_credential_id:
+#             credential_ids['azure'] = request.azure_credential_id
+        
+#         session_id = credential_manager.create_session(
+#             request.user_id,
+#             credential_ids,
+#             request.scan_config
+#         )
+        
+#         credentials_available = list(credential_ids.keys())
+        
+#         return ScanSessionResponse(
+#             session_id=session_id,
+#             expires_at=datetime.utcnow(),
+#             credentials_available=credentials_available
+#         )
+        
+#     except Exception as e:
+#         logger.error(f"Failed to create scan session: {e}")
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/session", response_model=ScanSessionResponse)
-async def create_scan_session(request: ScanSessionRequest):
+async def create_scan_session(
+    request: ScanSessionRequest,
+    user_id: str = Depends(get_user_id)
+):
     """Create a scan session with credentials"""
     try:
+        # 🔥 FORCE session user_id to match credential user_id
+        request.user_id = user_id
+
         credential_ids = {}
-        
+
         if request.aws_credential_id:
             credential_ids['aws'] = request.aws_credential_id
         if request.gcp_credential_id:
@@ -355,21 +394,21 @@ async def create_scan_session(request: ScanSessionRequest):
             credential_ids['openai'] = request.openai_credential_id
         if request.azure_credential_id:
             credential_ids['azure'] = request.azure_credential_id
-        
+
         session_id = credential_manager.create_session(
             request.user_id,
             credential_ids,
             request.scan_config
         )
-        
+
         credentials_available = list(credential_ids.keys())
-        
+
         return ScanSessionResponse(
             session_id=session_id,
             expires_at=datetime.utcnow(),
             credentials_available=credentials_available
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to create scan session: {e}")
         raise HTTPException(status_code=500, detail=str(e))

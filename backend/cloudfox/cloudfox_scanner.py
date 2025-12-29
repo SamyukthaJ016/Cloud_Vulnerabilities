@@ -57,11 +57,14 @@ class CloudFoxScanner:
     
     def _find_cloudfox(self) -> Optional[str]:
         """Find CloudFox executable"""
+        # Minimal diagnostic logging
+        logger.debug(f"Checking CloudFox availability (UID: {os.getuid() if hasattr(os, 'getuid') else 'unknown'})")
+        
         # Check common locations
         locations = [
             "cloudfox",  # In PATH
-            os.path.expanduser("~/go/bin/cloudfox"),  # Go install location
             "/usr/local/bin/cloudfox",
+            os.path.expanduser("~/go/bin/cloudfox"),
             "./cloudfox"
         ]
         
@@ -70,12 +73,28 @@ class CloudFoxScanner:
                 result = subprocess.run(
                     [location, "--version"],
                     capture_output=True,
-                    timeout=5
+                    timeout=5,
+                    text=True
                 )
                 if result.returncode == 0:
                     logger.info(f"CloudFox found at: {location}")
                     return location
-            except (FileNotFoundError, subprocess.TimeoutExpired):
+                else:
+                    logger.debug(f"CloudFox at {location} exists but --version failed (code {result.returncode})")
+            except FileNotFoundError:
+                continue
+            except subprocess.TimeoutExpired:
+                logger.warning(f"CloudFox at {location} timed out while checking version")
+                continue
+            except OSError as e:
+                if "Exec format error" in str(e):
+                    logger.error(f"❌ Binary architecture mismatch for CloudFox at {location}: {e}")
+                    logger.error("   This usually means an ARM64 binary is being run on x86_64 or vice-versa.")
+                else:
+                    logger.error(f"⚠ OSError checking CloudFox at {location}: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error checking CloudFox at {location}: {e}")
                 continue
         
         return None
