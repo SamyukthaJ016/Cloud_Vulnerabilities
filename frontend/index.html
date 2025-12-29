@@ -769,7 +769,7 @@
             <h1 class="title">CloudGuard Security Scanner</h1>
             <p class="subtitle">
                 AI-powered multi-cloud security scanning with real-time vulnerability detection.
-                Protect your AWS, GCP, Azure, and OpenAI environments.
+                Protect your AWS, GCP and Azure environments.
             </p>
         </div>
 
@@ -954,7 +954,7 @@
                     <div class="feature-icon">🔐</div>
                     <h3 class="feature-title">Secure Credential Management</h3>
                     <p class="feature-description">
-                        Store your cloud credentials securely with encryption. Use your own AWS, GCP, and OpenAI
+                        Store your cloud credentials securely with encryption. Use your own AWS,GCP and Azure
                         credentials for scanning instead of environment variables.
                     </p>
                 </div>
@@ -1023,7 +1023,7 @@
             </div>
             <p>CloudGuard Security Scanner v3.1 • Multi-Cloud CSPM with AI & Credential Management</p>
             <p style="margin-top: 8px; font-size: 0.8rem; color: #475569;">
-                Securing AWS, GCP, Azure, and OpenAI environments with user credentials
+                Securing AWS, GCP and Azure environments with user credentials
             </p>
         </div>
     </div>
@@ -1180,8 +1180,7 @@
                     const providersGrid = document.getElementById('providersGrid');
                     const providers = [
                         { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon' },
-                        { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon' },
-                        { id: 'openai', name: 'OpenAI', icon: '🤖', iconClass: 'openai-icon' }
+                        { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon' }
                     ];
 
                     providersGrid.innerHTML = providers.map(provider => {
@@ -1592,46 +1591,6 @@
             }
         }
 
-        async function saveOpenAICredentials() {
-            const credentialName = document.getElementById('openaiCredentialName').value;
-            const apiKey = document.getElementById('openaiApiKey').value;
-            const orgId = document.getElementById('openaiOrgId').value;
-            const isDefault = document.getElementById('openaiIsDefault').checked;
-
-            if (!apiKey) {
-                showAlert('Please enter OpenAI API Key', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/credentials/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: getUserId(),
-                        credential_name: credentialName,
-                        openai_api_key: apiKey,
-                        openai_org_id: orgId || undefined,
-                        is_default: isDefault
-                    })
-                });
-
-                if (!response.ok) throw new Error('Failed to save credentials');
-
-                const result = await response.json();
-                showAlert(`OpenAI credentials saved successfully! ID: ${result.id}`, 'success');
-
-                document.getElementById('openaiApiKey').value = '';
-                document.getElementById('openaiOrgId').value = '';
-
-                await loadSavedCredentials();
-                await checkCredentialsStatus();
-                await loadProviders();
-
-            } catch (error) {
-                showAlert(`Error: ${error.message}`, 'error');
-            }
-        }
 
         async function saveGCPCredentials() {
             const credentialName = document.getElementById('gcpCredentialName').value;
@@ -1857,7 +1816,6 @@
 
             <div class="modal-tabs">
                 <button class="tab-btn active" onclick="switchCredentialTab('aws', this)">AWS</button>
-                <button class="tab-btn" onclick="switchCredentialTab('openai', this)">OpenAI</button>
                 <button class="tab-btn" onclick="switchCredentialTab('gcp', this)">GCP</button>
                 <button class="tab-btn" onclick="switchCredentialTab('saved', this)">Saved Credentials</button>
             </div>
@@ -1917,7 +1875,7 @@
             </div>
 
             <!-- OpenAI Tab -->
-            <div id="openaiTab" class="tab-content">
+            <!-- <div id="openaiTab" class="tab-content">
                 <div class="form-section">
                     <h3>OpenAI Credentials</h3>
                     <p class="form-description">
@@ -1953,7 +1911,7 @@
                         </button>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- GCP Tab -->
             <div id="gcpTab" class="tab-content">
