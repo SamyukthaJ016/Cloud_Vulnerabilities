@@ -34,6 +34,7 @@ FROM base AS security-tools
 ARG TARGETARCH
 
 # Install Trivy
+# Install Trivy (explicit binary path)
 RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
     | sh -s -- -b /usr/local/bin
 
@@ -73,11 +74,25 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     chmod +x /usr/local/bin/cloudfox && \
     rm cloudfox.zip
 
+# Install Nuclei (Architecture-aware)
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+        NUCLEI_ARCH="arm64"; \
+    else \
+        NUCLEI_ARCH="amd64"; \
+    fi && \
+    wget https://github.com/projectdiscovery/nuclei/releases/download/v3.1.8/nuclei_3.1.8_linux_${NUCLEI_ARCH}.zip -O nuclei.zip && \
+    mkdir -p nuclei_install && \
+    unzip nuclei.zip -d nuclei_install && \
+    mv nuclei_install/nuclei /usr/local/bin/ && \
+    chmod +x /usr/local/bin/nuclei && \
+    rm -rf nuclei.zip nuclei_install
+
 # Verify all tools
 RUN trivy --version && \
     gitleaks version && \
     grype version && \
     cloudfox --version && \
+    nuclei -version && \
     echo "✅ All security tools verified"
 
 # ============================================================================
@@ -151,12 +166,14 @@ COPY --from=security-tools /usr/local/bin/trivy /usr/local/bin/trivy
 COPY --from=security-tools /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 COPY --from=security-tools /usr/local/bin/grype /usr/local/bin/grype
 COPY --from=security-tools /usr/local/bin/cloudfox /usr/local/bin/cloudfox
+COPY --from=security-tools /usr/local/bin/nuclei /usr/local/bin/nuclei
 
 # Verify tools work in production image
 RUN trivy --version && \
     gitleaks version && \
     grype version && \
     cloudfox --version && \
+    nuclei -version && \
     echo "✅ Production: All security tools verified"
 
 # Copy Python packages

@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from backend.utils.audit_logger import AuditLogger
 from backend.mcp.mcp_base import CloudResource, SecurityFinding, Severity
 
 logger = logging.getLogger("cloudfox_scanner")
@@ -189,6 +190,10 @@ class CloudFoxScanner:
         logger.info(f"Running CloudFox: {' '.join(cmd)}")
         
         try:
+            # Audit logging setup
+            auditor = AuditLogger(f"cloudfox/{check}", "pentest", "aws")
+            auditor.log_input({"check": check, "profile": profile, "region": region, "cmd": cmd})
+
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -200,25 +205,38 @@ class CloudFoxScanner:
                 timeout=300  # 5 minute timeout
             )
             
+            stdout_str = stdout.decode() if stdout else ""
+            stderr_str = stderr.decode() if stderr else ""
+
             if process.returncode != 0:
-                error_msg = stderr.decode() if stderr else "Unknown error"
+                error_msg = stderr_str if stderr_str else "Unknown error"
+                auditor.log_failure(error_msg, output=stdout_str)
                 raise RuntimeError(f"CloudFox failed: {error_msg}")
             
             # Parse JSON output
-            output = stdout.decode()
+            output = stdout_str
             
             # CloudFox may output multiple JSON objects or CSV
             # Try to parse as JSON first
             try:
-                return json.loads(output)
+                result = json.loads(output)
+                auditor.log_success(result)
+                return result
             except json.JSONDecodeError:
                 # If not JSON, return raw output
-                return {"raw_output": output}
+                result = {"raw_output": output}
+                auditor.log_success(result)
+                return result
         
         except asyncio.TimeoutError:
-            raise RuntimeError(f"CloudFox check '{check}' timed out")
+            msg = f"CloudFox check '{check}' timed out"
+            auditor.log_failure(msg)
+            raise RuntimeError(msg)
         except Exception as e:
-            raise RuntimeError(f"CloudFox execution failed: {e}")
+            msg = f"CloudFox execution failed: {e}"
+            if 'auditor' in locals():
+                auditor.log_failure(msg)
+            raise RuntimeError(msg)
     
     def _parse_check_output(self, check: str, result: Dict[str, Any]) -> List[CloudFoxFinding]:
         """Parse CloudFox check output into findings"""

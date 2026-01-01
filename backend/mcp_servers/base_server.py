@@ -13,6 +13,7 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime
 from enum import Enum
+from backend.utils.audit_logger import AuditLogger
 
 logger = logging.getLogger("mcp_server")
 
@@ -245,23 +246,32 @@ class BaseMCPServer(ABC):
             )
         
         tool = self.tools[tool_name]
+    
+        # Audit logging start
+        auditor = AuditLogger(tool_name, tool.category.value if tool.category else "unknown", self.provider)
+        auditor.log_input(arguments)
         
         if not tool.handler:
+            error_msg = f"Tool {tool_name} has no handler"
+            auditor.log_failure(error_msg)
             return MCPResponse.error(
                 code=-32603,
-                message=f"Tool {tool_name} has no handler",
+                message=error_msg,
                 id=message.id
             )
         
         try:
             result = await tool.handler(**arguments)
+            auditor.log_success(result)
             return MCPResponse.success(result, message.id)
         
         except Exception as e:
+            error_msg = f"Tool execution failed: {str(e)}"
             logger.error(f"Tool execution error: {e}")
+            auditor.log_failure(error_msg)
             return MCPResponse.error(
                 code=-32603,
-                message=f"Tool execution failed: {str(e)}",
+                message=error_msg,
                 id=message.id
             )
     
