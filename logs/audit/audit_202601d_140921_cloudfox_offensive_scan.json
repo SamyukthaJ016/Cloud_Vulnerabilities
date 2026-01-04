@@ -1,0 +1,57 @@
+{
+  "tool": "cloudfox/offensive_scan",
+  "category": "vulnerability",
+  "provider": "cloudfox",
+  "timestamp": "2026-01-01T14:09:21.785955",
+  "status": "SUCCESS",
+  "duration_sec": 0.11,
+  "input": {
+    "profile": "default",
+    "region": "us-east-1",
+    "modules": [
+      "secrets",
+      "principals",
+      "endpoints",
+      "role-trusts"
+    ]
+  },
+  "output": {
+    "scan_id": "cloudfox-1767276561.89574",
+    "timestamp": "2026-01-01T14:09:21.895759",
+    "profile": "default",
+    "region": "us-east-1",
+    "modules_run": [
+      "secrets",
+      "principals",
+      "endpoints",
+      "role-trusts"
+    ],
+    "total_findings": 0,
+    "findings": [],
+    "severity_breakdown": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "raw_results": {
+      "secrets": {
+        "raw_output": "",
+        "command": "secrets"
+      },
+      "principals": {
+        "raw_output": "",
+        "command": "principals"
+      },
+      "endpoints": {
+        "raw_output": "",
+        "command": "endpoints"
+      },
+      "role-trusts": {
+        "raw_output": "",
+        "command": "role-trusts"
+      }
+    }
+  },
+  "error": null
+}
