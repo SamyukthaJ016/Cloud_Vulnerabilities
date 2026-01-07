@@ -396,3 +396,36 @@ def check_database_health():
 
 
 print("✅ Multi-Cloud Database Module Loaded (STABLE)")
+
+# -------------------------------------------------------------------
+# CloudFox Helper (ADD ONLY – NO EXISTING CODE TOUCHED)
+# -------------------------------------------------------------------
+def store_cloudfox_finding(
+    scan_id: int,
+    resource_name: str,
+    resource_type: str,
+    cloud: str,
+    severity: str,
+    description: str
+):
+    """
+    Helper to store CloudFox findings using existing tables.
+    """
+    # 1. Store resource (CloudFox findings are IAM-level, so not public)
+    resource_id = store_resource(
+        scan_id=scan_id,
+        cloud=cloud,
+        resource_type=resource_type,
+        name=resource_name,
+        config={"source": "cloudfox"},
+        is_public=False
+    )
+
+    # 2. Store finding
+    store_finding(
+        scan_id=scan_id,
+        resource_id=resource_id,
+        severity=severity,
+        description=description,
+        source="cloudfox"
+    )

@@ -920,8 +920,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: development
-      cache_from:
-        - security-scanner-backend:latest
+      #cache_from:
+        #- security-scanner-backend:latest
     container_name: security-scanner-backend-dev
     environment:
       # Database
@@ -931,8 +931,7 @@ services:
       REDIS_URL: redis://:redis_password@redis:6379/0
 
       # AWS
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ASSUME_ROLE_ARN: arn:aws:iam::208384285667:role/cloud-vulnerabilities-scanner-role
       AWS_REGION: ${AWS_REGION:-us-east-1}
 
       # GCP
@@ -966,6 +965,8 @@ services:
       - ./config:/app/config:ro
       - ./reports:/app/reports:rw
       - ./logs:/app/logs:rw
+      - ~/.aws:/home/scanner/.aws:ro
+
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
@@ -1004,8 +1005,7 @@ services:
     environment:
       DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
       REDIS_URL: redis://:redis_password@redis:6379/0
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ASSUME_ROLE_ARN: arn:aws:iam::208384285667:role/cloud-vulnerabilities-scanner-role
       AWS_REGION: ${AWS_REGION:-us-east-1}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID}
       GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-/app/config/gcp-service-account.json}
@@ -1020,6 +1020,8 @@ services:
       - ./backend:/app/backend:rw
       - ./config:/app/config:ro
       - ./logs:/app/logs:rw
+      - ~/.aws:/home/scanner/.aws:ro
+
     networks:
       - security-network
     restart: unless-stopped
@@ -1034,8 +1036,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: production
-      cache_from:
-        - security-scanner-backend:latest
+      #cache_from:
+        #- security-scanner-backend:latest
     container_name: security-scanner-backend
     environment:
       DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
@@ -1133,8 +1135,7 @@ services:
     container_name: scheduled-scanner
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ASSUME_ROLE_ARN: arn:aws:iam::<ACCOUNT_ID>:role/cloud-vulnerabilities-scanner-role
       AWS_REGION: ${AWS_REGION:-us-east-1}
       SCAN_SCHEDULE: ${SCAN_SCHEDULE:-0 2 * * *}
     volumes:

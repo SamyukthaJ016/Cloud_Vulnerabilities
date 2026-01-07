@@ -4,7 +4,7 @@
 AWS MCP Server - Dedicated server for AWS security scanning
 Implements MCP protocol for AWS cloud resources
 """
-
+from backend.credentials.aws_assume_role import get_aws_session
 import boto3
 import json
 import logging
@@ -42,13 +42,9 @@ class AWSMCPServer(BaseMCPServer):
     def _initialize_aws_session(self) -> None:
         """Initialize AWS boto3 session"""
         try:
-            self.session = boto3.Session(
-                aws_access_key_id=self.config.get("access_key_id"),
-                aws_secret_access_key=self.config.get("secret_access_key"),
-                aws_session_token=self.config.get("session_token"),
-                region_name=self.config.get("region", "us-east-1")
-            )
-            
+            self.session = get_aws_session(
+                region=self.config.get("region", "us-east-1"))
+
             self.s3 = self.session.client("s3")
             self.iam = self.session.client("iam")
             self.ec2 = self.session.client("ec2")
