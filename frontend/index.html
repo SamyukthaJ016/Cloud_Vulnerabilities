@@ -793,9 +793,14 @@
                     </button>
                 </div>
 
-                <!-- Cloud Providers Selection -->
                 <div class="input-group">
-                    <div class="input-label">Select Cloud Providers</div>
+                    <div class="input-label-row">
+                        <div class="input-label">Select Cloud Providers</div>
+                        <button class="btn btn-text btn-sm" onclick="clearSelection()"
+                            style="padding: 2px 8px; font-size: 12px; color: var(--accent-blue); background: none; border: 1px solid var(--accent-blue); border-radius: 4px; cursor: pointer;">
+                            🧹 Clear Selection
+                        </button>
+                    </div>
                     <div class="providers-grid" id="providersGrid">
                         <!-- Dynamically populated -->
                     </div>
@@ -1167,7 +1172,8 @@
         // Load providers with credential status
         async function loadProviders() {
             try {
-                const response = await fetch('/api/credentials/providers/status');
+                // Add cache busting timestamp
+                const response = await fetch('/api/credentials/providers/status?t=' + Date.now());
                 if (response.ok) {
                     const data = await response.json();
 
@@ -1197,15 +1203,31 @@
                         `;
                     }).join('');
 
-                    selectedProviders = providers.filter(p => availableProviders[p.id]).map(p => p.id);
-                    if (selectedProviders.length === 0) {
-                        selectedProviders = ['aws'];
-                    }
+                    // Preserve any providers the user has already manually selected
+                    const currentSelected = new Set(selectedProviders);
+
+                    // Identify providers that actually have credentials (STRICT check)
+                    const configuredProviders = providers.filter(p => availableProviders[p.id] && availableProviders[p.id].configured).map(p => p.id);
+
+                    // Additive Selection: if credentials for a provider are newly found AND 
+                    // this is the first load or the provider was just added, select it.
+                    // But never un-select what the user has.
+                    configuredProviders.forEach(p => {
+                        if (!currentSelected.has(p)) {
+                            console.log(`✨ Auto-selecting newly configured provider: ${p}`);
+                            selectedProviders.push(p);
+                        }
+                    });
+
+                    console.log('📊 Provider Status:', availableProviders);
+                    console.log('✅ Current Selection:', selectedProviders);
 
                     document.querySelectorAll('.provider-option').forEach(option => {
-                        const providerId = option.querySelector('.provider-name').textContent.toLowerCase();
+                        const providerId = option.getAttribute('onclick').match(/'([^']+)'/)[1];
                         if (selectedProviders.includes(providerId)) {
                             option.classList.add('selected');
+                        } else {
+                            option.classList.remove('selected');
                         }
                     });
                 }
@@ -1233,18 +1255,26 @@
             }
         }
 
+        function clearSelection() {
+            selectedProviders = [];
+            document.querySelectorAll('.provider-option').forEach(opt => opt.classList.remove('selected'));
+            console.log('🧹 Selection cleared');
+        }
+
         // Provider selection
         function toggleProvider(provider) {
-            const option = event.currentTarget;
+            // Use querySelector to find the right element rather than relying on global 'event'
+            const option = document.querySelector(`.provider-option[onclick*="'${provider}'"]`);
             const index = selectedProviders.indexOf(provider);
 
             if (index === -1) {
                 selectedProviders.push(provider);
-                option.classList.add('selected');
+                if (option) option.classList.add('selected');
             } else {
                 selectedProviders.splice(index, 1);
-                option.classList.remove('selected');
+                if (option) option.classList.remove('selected');
             }
+            console.log('Selected providers:', selectedProviders);
         }
 
         // Load recent scans
@@ -1318,6 +1348,10 @@
                 deep_scan: deepScan,
                 user_id: userId  // 🔥 ADDED: Send user ID
             };
+
+            // 🔥 DEBUG ALERT: Show exactly what is being sent
+            alert(`🚀 Starting scan for providers: ${JSON.stringify(selectedProviders)}\nUser ID: ${userId}`);
+            console.log('📤 Sending scan request:', scanRequest);
 
             // Handle different schedule types
             if (currentScheduleTab === 'scheduled') {
@@ -1444,6 +1478,18 @@
 
                 if (response.ok) {
                     console.log('✅ Scan completed:', result);
+
+                    if (!result.scan_ids || result.scan_ids.length === 0) {
+                        updateScanStatus('Scan finished but no resources were found. Check your credentials.', 100);
+                        setTimeout(() => {
+                            modal.classList.remove('active');
+                            scanInProgress = false;
+                            enableControls();
+                            alert('Scan completed but found no vulnerabilities or resources. This might happen if your cloud provider credentials have limited permissions.');
+                        }, 2000);
+                        return;
+                    }
+
                     setTimeout(() => {
                         window.location.href = `/dashboard?scanComplete=true&scanIds=${result.scan_ids.join(',')}`;
                     }, 1500);
@@ -1533,16 +1579,20 @@
         }
 
         function getUserId() {
-            //     let userId = sessionStorage.getItem('cloudguard_user_id');
-            //     if (!userId) {
-            // // Generate consistent user ID
-            //         userId = 'user_' + Math.random().toString(36).substr(2, 9);
-            //         sessionStorage.setItem('cloudguard_user_id', userId);
+            let userId = sessionStorage.getItem('cloudguard_user_id');
+            if (!userId) {
+                // Generate new consistent user ID
+                userId = Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('cloudguard_user_id', userId);
+            }
 
-            // // Also set as cookie for backend
-            //         document.cookie = `cloudguard_session=${userId}; path=/; max-age=86400`;
-            //     }
-            return 'anonymous';
+            // Handle legacy IDs that might already have 'user_' prefix
+            const rawId = userId.startsWith('user_') ? userId.replace('user_', '') : userId;
+
+            // Ensure cookie is ALWAYS set for the backend (session_id)
+            document.cookie = `session_id=${rawId}; path=/; max-age=86400`;
+
+            return 'user_' + rawId;
         }
 
 

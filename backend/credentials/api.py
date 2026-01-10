@@ -109,8 +109,9 @@ class ScanSessionResponse(BaseModel):
 # Helper function to get user ID from request
 def get_user_id(request: Request) -> str:
     """Extract user ID from request"""
-    # In a real app, this would come from authentication
-    # For now, use session or generate anonymous ID
+    # 🔥 DEBUG: Log ALL cookies for session debugging
+    logger.info(f"🍪 Request Cookies: {request.cookies}")
+    
     session_id = request.cookies.get("session_id")
     if session_id:
         return f"user_{session_id}"

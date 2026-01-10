@@ -45,6 +45,7 @@
             font-weight: 700;
             background: linear-gradient(135deg, #60a5fa, #8b5cf6);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
@@ -1118,6 +1119,70 @@ def get_openai_key():
                     'OpenAI API Best Practices',
                     'AWS Secrets Manager Integration Guide'
                 ]
+            },
+            gcs: {
+                title: 'GCS Bucket Security Hardening',
+                priority: 'CRITICAL',
+                estimatedTime: '15 minutes',
+                steps: [
+                    'Remove allUsers and allAuthenticatedUsers from IAM policy',
+                    'Enable uniform bucket-level access',
+                    'Configure customer-managed encryption keys (CMEK)',
+                    'Enable object versioning and access logging'
+                ],
+                code: (resourceName) => `# Remove public access
+gsutil iam ch -d allUsers ${resourceName}
+gsutil iam ch -d allAuthenticatedUsers ${resourceName}
+
+# Enable Uniform Bucket-Level Access
+gsutil ubla set on gs://${resourceName}
+
+# Enable versioning
+gsutil versioning set on gs://${resourceName}`,
+                validation: 'gsutil iam get gs://BUCKET_NAME',
+                references: [
+                    'GCP Cloud Storage Security Best Practices',
+                    'CIS GCP Foundations Benchmark 5.1'
+                ]
+            },
+            gcp_iam: {
+                title: 'GCP IAM Least Privilege Integration',
+                priority: 'HIGH',
+                estimatedTime: '20 minutes',
+                steps: [
+                    'Remove "Primitive" roles (Owner, Editor, Viewer)',
+                    'Implement "Predefined" roles for specific services',
+                    'Use IAM Recommender to find over-privileged accounts',
+                    'Enforce MFA on all user accounts'
+                ],
+                code: (resourceName) => `# Remove Owner role from a member
+gcloud projects remove-iam-policy-binding PROJECT_ID \\
+  --member='user:EMAIL' \\
+  --role='roles/owner'`,
+                validation: 'gcloud projects get-iam-policy PROJECT_ID',
+                references: [
+                    'GCP IAM Best Practices',
+                    'Using the IAM Recommender'
+                ]
+            },
+            gcp_compute: {
+                title: 'GCP Compute Instance Security',
+                priority: 'HIGH',
+                estimatedTime: '25 minutes',
+                steps: [
+                    'Remove external IP addresses where not required',
+                    'Use Identity-Aware Proxy (IAP) for management access',
+                    'Enable "Shielded VM" features',
+                    'Configure VPC Service Controls for sensitive workloads'
+                ],
+                code: (resourceName) => `# Delete external IP access config
+gcloud compute instances delete-access-config ${resourceName} \\
+  --access-config-name "external-nat"`,
+                validation: 'gcloud compute instances describe INSTANCE_NAME',
+                references: [
+                    'GCP Compute Engine Security Best Practices',
+                    'IAP Documentation'
+                ]
             }
         };
 
@@ -1152,20 +1217,38 @@ def get_openai_key():
             try {
                 console.log('Loading dashboard data...');
 
+                // Read scanIds from URL with fallback to sessionStorage
+                const urlParams = new URLSearchParams(window.location.search);
+                let scanIds = urlParams.get('scanIds');
+
+                if (scanIds) {
+                    sessionStorage.setItem('last_scan_ids', scanIds);
+                    console.log('💾 Saving scanIds to session:', scanIds);
+                } else {
+                    scanIds = sessionStorage.getItem('last_scan_ids');
+                    if (scanIds) console.log('📂 Retrieved scanIds from session fallback:', scanIds);
+                }
+
+                const filter = scanIds ? `?scan_ids=${scanIds}` : '';
+
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
                 document.getElementById('security-score').textContent = '...';
                 document.getElementById('active-tools').textContent = '...';
 
                 const [summaryRes, providersRes, findingsRes] = await Promise.all([
-                    fetch('/posture/dashboard'),
-                    fetch('/api/provider-breakdown'),
-                    fetch('/api/latest-findings?limit=20')
+                    fetch(`/posture/dashboard${filter}`),
+                    fetch(`/api/provider-breakdown${filter}`),
+                    fetch(`/api/latest-findings${filter}${scanIds ? '&' : '?'}limit=20`)
                 ]);
 
                 const summary = await summaryRes.json();
                 const providers = await providersRes.json();
                 const findings = await findingsRes.json();
+
+                console.log('📊 Dashboard Summary:', summary);
+                console.log('☁️ Providers Breakdown:', providers);
+                console.log('🔍 Latest Findings:', findings);
 
                 document.getElementById('total-resources').textContent =
                     summary.total_resources || 0;
@@ -1196,6 +1279,7 @@ def get_openai_key():
             const desc = vuln.description?.toLowerCase() || '';
             const resourceName = vuln.resource_name?.toLowerCase() || '';
             const tool = vuln.tool?.toLowerCase() || '';
+            const cloud = vuln.cloud?.toLowerCase() || '';
 
             let type = 'vulnerability';
 
@@ -1209,6 +1293,12 @@ def get_openai_key():
                 type = 'encryption';
             } else if (desc.includes('openai') || resourceName.includes('openai')) {
                 type = 'openai';
+            } else if (desc.includes('gcs') || (cloud === 'gcp' && (desc.includes('bucket') || resourceName.includes('bucket')))) {
+                type = 'gcs';
+            } else if (cloud === 'gcp' && (desc.includes('iam') || desc.includes('role'))) {
+                type = 'gcp_iam';
+            } else if (cloud === 'gcp' && (desc.includes('firewall') || desc.includes('compute') || desc.includes('instance'))) {
+                type = 'gcp_compute';
             } else if (['trivy', 'grype', 'safety', 'npm_audit'].includes(tool)) {
                 type = 'vulnerability';
             }
@@ -1716,7 +1806,10 @@ def get_openai_key():
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('scanComplete') === 'true') {
                 showScanProgress();
-                window.history.replaceState({}, document.title, window.location.pathname);
+                // ONLY remove scanComplete, KEEP scanIds so refresh works
+                urlParams.delete('scanComplete');
+                const newRelativePathQuery = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                window.history.replaceState({}, document.title, newRelativePathQuery);
             }
         }
 

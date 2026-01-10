@@ -9,6 +9,7 @@ import json
 import logging
 from typing import Dict, List, Any
 from google.cloud import storage
+from google.cloud import compute_v1
 from google.oauth2 import service_account
 from datetime import datetime
 
@@ -28,6 +29,8 @@ class GCPMCPServer(BaseMCPServer):
     
     def __init__(self, config: Dict[str, Any]):
         self.storage_client = None
+        self.compute_client = None
+        self.firewall_client = None
         self.credentials = None
         self.project_id = None
         
@@ -74,12 +77,18 @@ class GCPMCPServer(BaseMCPServer):
                     project=self.project_id,
                     credentials=self.credentials
                 )
+
+                # Initialize compute clients
+                self.compute_client = compute_v1.InstancesClient(credentials=self.credentials)
+                self.firewall_client = compute_v1.FirewallsClient(credentials=self.credentials)
                 
                 logger.info(f"[GCP] Authenticated for project: {self.project_id}")
                 
             else:
                 # Use default credentials
                 self.storage_client = storage.Client(project=self.project_id)
+                self.compute_client = compute_v1.InstancesClient()
+                self.firewall_client = compute_v1.FirewallsClient()
                 logger.info(f"[GCP] Using default credentials for project: {self.project_id}")
             
         except Exception as e:
@@ -137,7 +146,31 @@ class GCPMCPServer(BaseMCPServer):
             handler=self._discover_iam_policies
         ))
         
-        # Tool 4: Full GCP Scan
+        # Tool 4: Discover Compute Instances
+        self.register_tool(MCPTool(
+            name="gcp/discover_compute_instances",
+            description="Discover Compute Engine instances",
+            category=ToolCategory.DISCOVERY,
+            input_schema={
+                "type": "object",
+                "properties": {}
+            },
+            handler=self._discover_compute_instances
+        ))
+        
+        # Tool 5: Check Firewall Security
+        self.register_tool(MCPTool(
+            name="gcp/check_firewall_security",
+            description="Check VPC firewall rule security",
+            category=ToolCategory.VULNERABILITY,
+            input_schema={
+                "type": "object",
+                "properties": {}
+            },
+            handler=self._check_firewall_security
+        ))
+        
+        # Tool 6: Full GCP Scan
         self.register_tool(MCPTool(
             name="gcp/full_scan",
             description="Perform complete GCP security scan",
@@ -145,9 +178,13 @@ class GCPMCPServer(BaseMCPServer):
             input_schema={
                 "type": "object",
                 "properties": {
+                    "account_id": {
+                        "type": "string",
+                        "description": "GCP account/project ID"
+                    },
                     "project_id": {
                         "type": "string",
-                        "description": "GCP project ID"
+                        "description": "GCP project ID (legacy)"
                     },
                     "deep_scan": {
                         "type": "boolean",
@@ -301,6 +338,83 @@ class GCPMCPServer(BaseMCPServer):
         
         except Exception as e:
             return {"error": str(e), "bucket": bucket_name, "findings": []}
+            
+    async def _discover_compute_instances(self) -> Dict[str, Any]:
+        """Discover Compute Engine instances"""
+        logger.info("[GCP] Discovering compute instances...")
+        try:
+            # We need to list all instances across all zones
+            request = compute_v1.AggregatedListInstancesRequest(
+                project=self.project_id,
+            )
+            
+            agg_list = self.compute_client.aggregated_list(request=request)
+            
+            resources = []
+            for zone, response in agg_list:
+                if response.instances:
+                    for instance in response.instances:
+                        resources.append({
+                            "name": instance.name,
+                            "zone": zone.split('/')[-1],
+                            "machine_type": instance.machine_type.split('/')[-1],
+                            "status": instance.status,
+                            "network_interfaces": [
+                                {
+                                    "network_ip": ni.network_i_p,
+                                    "access_configs": [
+                                        {"nat_ip": ac.nat_i_p} for ac in ni.access_configs
+                                    ]
+                                } for ni in instance.network_interfaces
+                            ]
+                        })
+            
+            return {
+                "resources": resources,
+                "count": len(resources),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"[GCP] Compute discovery failed: {e}")
+            return {"error": str(e), "resources": [], "count": 0}
+
+    async def _check_firewall_security(self) -> Dict[str, Any]:
+        """Check VPC firewall rule security"""
+        logger.info("[GCP] Checking firewall security...")
+        findings = []
+        try:
+            request = compute_v1.ListFirewallsRequest(project=self.project_id)
+            firewalls = self.firewall_client.list(request=request)
+            
+            for fw in firewalls:
+                # Check for overly permissive rules (0.0.0.0/0)
+                if '0.0.0.0/0' in fw.source_ranges and fw.direction == 'INGRESS' and fw.allowed:
+                    for allowed in fw.allowed:
+                        # Check for risky ports (SSH 22, RDP 3389, DBs, etc.)
+                        risky_ports = ['22', '3389', '3306', '5432', '27017']
+                        if not allowed.ports or any(port in allowed.ports for port in risky_ports):
+                            findings.append({
+                                "severity": "HIGH",
+                                "issue": "Overly Permissive Firewall Rule",
+                                "description": f"Firewall rule {fw.name} allows traffic from 0.0.0.0/0 on sensitive ports",
+                                "resource": fw.name
+                            })
+                        elif 'all' in str(allowed.i_p_protocol).lower():
+                             findings.append({
+                                "severity": "CRITICAL",
+                                "issue": "Full Ingress Access",
+                                "description": f"Firewall rule {fw.name} allows ALL traffic from 0.0.0.0/0",
+                                "resource": fw.name
+                            })
+
+            return {
+                "findings": findings,
+                "count": len(findings),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"[GCP] Firewall check failed: {e}")
+            return {"error": str(e), "findings": []}
     
     async def _discover_iam_policies(self) -> Dict[str, Any]:
         """Discover IAM policies (basic implementation)"""
@@ -313,39 +427,101 @@ class GCPMCPServer(BaseMCPServer):
             "timestamp": datetime.utcnow().isoformat()
         }
     
-    async def _full_scan(self, project_id: str = None, deep_scan: bool = False) -> Dict[str, Any]:
-        """Perform full GCP security scan"""
-        logger.info(f"[GCP] Starting full scan (deep={deep_scan})...")
+    async def _full_scan(self, account_id: str = None, project_id: str = None, deep_scan: bool = False, **kwargs) -> Dict[str, Any]:
+        """Perform complete GCP security scan"""
+        # Ignore "default" account_id
+        effective_account_id = account_id if account_id != "default" else None
+        active_project = project_id or effective_account_id or self.project_id
         
-        project_id = project_id or self.project_id
+        logger.info(f"[GCP] Starting full scan for project: {active_project} (deep={deep_scan})...")
         
         results = {
             "scan_id": f"gcp-{datetime.utcnow().timestamp()}",
-            "project_id": project_id,
+            "project_id": active_project,
             "timestamp": datetime.utcnow().isoformat(),
             "deep_scan": deep_scan,
-            "resources": {},
+            "resources": [], # Now a list of objects
             "findings": [],
             "summary": {}
         }
         
         try:
-            # Discover GCS buckets
-            gcs_result = await self._discover_gcs_buckets()
-            results["resources"]["gcs_buckets"] = gcs_result["count"]
+            # 1. Discover GCS buckets
+            gcs_discovery = await self._discover_gcs_buckets()
+            bucket_resources = gcs_discovery.get("resources", [])
             
-            # Check GCS security for each bucket
-            for bucket in gcs_result.get("resources", []):
-                security_check = await self._check_gcs_security(bucket["name"])
-                results["findings"].extend(security_check.get("findings", []))
+            # Convert to CloudResource compatible dicts
+            for r in bucket_resources:
+                res_obj = {
+                    "provider": "gcp",
+                    "resource_type": "gcs_bucket",
+                    "name": r["name"],
+                    "region": r.get("location", "global"),
+                    "config": r,
+                    "is_public": False # Will be updated by check_gcs_security
+                }
+                
+                # Check GCS security for this specific bucket
+                security_check = await self._check_gcs_security(r["name"])
+                res_obj["is_public"] = security_check.get("is_public", False)
+                
+                results["resources"].append(res_obj)
+                
+                # Add findings with proper resource context
+                for f in security_check.get("findings", []):
+                    results["findings"].append({
+                        "resource": res_obj,
+                        "severity": f["severity"],
+                        "issue": f["issue"],
+                        "description": f["description"],
+                        "recommendation": "Follow GCP security hardening guidelines for Cloud Storage.",
+                        "detection_tool": "gcp-config-scanner"
+                    })
             
-            # Summary
+            # 2. Discover Compute Instances
+            compute_discovery = await self._discover_compute_instances()
+            for r in compute_discovery.get("resources", []):
+                results["resources"].append({
+                    "provider": "gcp",
+                    "resource_type": "compute_instance",
+                    "name": r["name"],
+                    "region": r.get("zone", "global"),
+                    "config": r,
+                    "is_public": any(ni.get("access_configs") for ni in r.get("network_interfaces", []))
+                })
+            
+            # 3. Check Firewalls
+            firewall_check = await self._check_firewall_security()
+            for f in firewall_check.get("findings", []):
+                # Create a pseudo-resource for the firewall rule
+                fw_name = f.get("resource", "unknown-firewall")
+                res_obj = {
+                    "provider": "gcp",
+                    "resource_type": "firewall_rule",
+                    "name": fw_name,
+                    "region": "global",
+                    "config": {"firewall_name": fw_name},
+                    "is_public": True 
+                }
+                results["resources"].append(res_obj)
+                
+                results["findings"].append({
+                    "resource": res_obj,
+                    "severity": f["severity"],
+                    "issue": f["issue"],
+                    "description": f["description"],
+                    "recommendation": "Restrict firewall ingress to known IP ranges and specific ports.",
+                    "detection_tool": "gcp-firewall-checker"
+                })
+            
+            # Final summary
             results["summary"] = {
-                "total_resources": sum(results["resources"].values()),
+                "total_resources": len(results["resources"]),
                 "total_findings": len(results["findings"]),
                 "critical": len([f for f in results["findings"] if f["severity"] == "CRITICAL"]),
                 "high": len([f for f in results["findings"] if f["severity"] == "HIGH"]),
-                "medium": len([f for f in results["findings"] if f["severity"] == "MEDIUM"])
+                "medium": len([f for f in results["findings"] if f["severity"] == "MEDIUM"]),
+                "low": len([f for f in results["findings"] if f.get("severity") == "LOW"])
             }
             
             return results

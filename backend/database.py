@@ -213,12 +213,11 @@ def get_scan_report(scan_id):
         cur.close()
 
 
-def get_multi_cloud_summary():
-    conn = ensure_connection()  # CHANGED: Use ensure_connection
+def get_multi_cloud_summary(scan_ids=None):
+    conn = ensure_connection()
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
+        query = """
             SELECT
                 r.cloud,
                 COUNT(DISTINCT r.id),
@@ -226,9 +225,18 @@ def get_multi_cloud_summary():
                 COUNT(DISTINCT CASE WHEN r.public THEN r.id END)
             FROM resources r
             LEFT JOIN findings f ON r.id = f.resource_id
-            GROUP BY r.cloud
-            """
-        )
+        """
+        params = []
+        if scan_ids:
+            try:
+                ids = [int(i.strip()) for i in scan_ids.split(",")]
+                query += " WHERE r.scan_id = ANY(%s)"
+                params.append(ids)
+            except ValueError:
+                pass
+        
+        query += " GROUP BY r.cloud"
+        cur.execute(query, tuple(params))
         rows = cur.fetchall()
         return rows
     finally:

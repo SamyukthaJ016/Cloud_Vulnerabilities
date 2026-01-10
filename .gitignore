@@ -16,3 +16,4 @@ sql/
 gcp-service-account.json 
 .DS_Store
 *.env
+logs/

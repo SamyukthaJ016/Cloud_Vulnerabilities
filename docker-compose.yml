@@ -1179,7 +1179,6 @@ services:
     restart: "no"
     profiles:
       - scanning
-      - dev
     entrypoint: ["cloudfox"]
     command: ["aws", "-p", "default", "all-checks"]
 

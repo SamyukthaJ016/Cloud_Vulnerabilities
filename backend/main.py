@@ -2382,6 +2382,7 @@ from backend.mcp_servers.base_server import (
     MCPResponse
 )
 from backend.mcp_servers.aws_server import create_aws_server
+from backend.mcp_servers.gcp_server import create_gcp_server
 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.mcp_scanner import mcp_scanner
 
@@ -2469,6 +2470,7 @@ class MultiCloudScanRequest(BaseModel):
     deep_scan: bool = False
     offensive_scan: bool = True  # NEW: Enable CloudFox by default
     session_id: Optional[str] = None
+    user_id: Optional[str] = None
 
 
 class ScheduledScanRequest(BaseModel):
@@ -2508,10 +2510,13 @@ class SessionResponse(BaseModel):
 # ============================================================
 
 def get_user_id(request: Request) -> str:
-    """Extract user ID from request"""
-    # session_id = request.cookies.get("cloudguard_session")
-    # if session_id:
-    #     return f"user_{session_id}"
+    """
+    Extract user ID from request.
+    Harmonized with credentials API to look for session_id cookie.
+    """
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        return f"user_{session_id}"
     return "anonymous"
 
 def _wrap_text(text: str, width: int = 95):
@@ -2560,23 +2565,25 @@ def build_scan_report(scan_id: int) -> dict:
         "per_cloud": per_cloud,
     }
 async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
-    """
-    Initialize MCP servers for requested providers using user credentials
-    """
-    logger.info(f"🔧 Initializing MCP servers for user={user_id}, providers={providers}")
-
+    """Ensure MCP servers are initialized for the user's selected providers."""
+    logger.info(f"🔄 (Re)initializing MCP servers for user {user_id} and requested providers: {providers}")
+    
     for provider in providers:
         if provider == "aws":
             aws_cred = credential_manager.get_default_credential(user_id, "aws")
-            if not aws_cred:
-                logger.warning("⚠️ No AWS credentials found")
+            if (not aws_cred):
+                logger.warning(f"⚠️ No AWS credentials found in DB for user {user_id}")
+                # ONLY fallback if user is anonymous and we have no other choice
+                if user_id == "anonymous" and mcp_server_manager.get_server("aws"):
+                    logger.info("ℹ️ Using existing AWS MCP server for anonymous user (env fallback)")
+                    continue
+                logger.error(f"❌ Cannot initialize AWS for user {user_id}: No credentials.")
+                # We don't continue here - we want the scan to fail for this provider specifically
+                mcp_registry.unregister("aws") # Ensure we don't use a stale one
                 continue
 
-            # Avoid double registration
-            if mcp_server_manager.get_server("aws"):
-                logger.info("ℹ️ AWS MCP server already initialized")
-                continue
-
+            # If we HAVE a user credential, always (re)initialize to ensure it's used
+            logger.info(f"[ServerInit] (Re)initializing AWS server with credentials for user: {user_id}")
             aws_config = {
                 "access_key_id": aws_cred.aws_access_key_id,
                 "secret_access_key": aws_cred.aws_secret_access_key,
@@ -2614,6 +2621,33 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
                 logger.info("✅ CloudFox MCP server initialized")
             logger.info("✅ AWS MCP server initialized and registered")
 
+        elif provider == "gcp":
+            logger.info(f"[ServerInit] Attempting to retrieve default GCP credential for user: {user_id}")
+            gcp_cred = credential_manager.get_default_credential(user_id, "gcp")
+            
+            if not gcp_cred:
+                logger.warning(f"⚠️ No GCP credentials found in DB for user {user_id}")
+                if user_id == "anonymous" and mcp_server_manager.get_server("gcp"):
+                    logger.info("ℹ️ Using existing GCP MCP server for anonymous user (env fallback)")
+                    continue
+                logger.error(f"❌ Cannot initialize GCP for user {user_id}: No credentials.")
+                mcp_registry.unregister("gcp")
+                continue
+
+            # If we HAVE a user credential, always (re)initialize to ensure it's used
+            logger.info(f"[ServerInit] (Re)initializing GCP server with credentials for user: {user_id}")
+            gcp_config = {
+                "service_account_json": gcp_cred.gcp_service_account_json,
+                "project_id": gcp_cred.gcp_project_id
+            }
+
+            server = create_gcp_server(gcp_config)
+            mcp_server_manager.register_server(server)
+            await server.start()
+
+            mcp_registry.register("gcp", server)
+            logger.info("✅ GCP MCP Server initialized and registered")
+
         elif provider == "cloudfox":
             if mcp_server_manager.get_server("cloudfox"):
                 continue
@@ -2631,27 +2665,69 @@ def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
     if isinstance(data, ScanResult):
         return data
 
-    resources_data = data.get("resources", [])
-    resources = [CloudResource(**r) if isinstance(r, dict) else r for r in resources_data]
-    
+    raw_resources = data.get("resources", [])
+    # 🛡️ DEFENSIVE: Handle cases where resources might be a dict instead of a list
+    if isinstance(raw_resources, dict):
+        logger.warning(f"⚠️ Provider {provider} returned resources as dict, converting to list")
+        resources_list = []
+        for r_type, count in raw_resources.items():
+            if isinstance(count, int):
+                # If it's just a count, we can't do much, but let's at least not crash
+                resources_list.append({
+                    "provider": provider,
+                    "resource_type": r_type,
+                    "name": f"{r_type}_count_{count}",
+                    "config": {"count": count}
+                })
+            else:
+                resources_list.append(count)
+        raw_resources = resources_list
+
+    resources = []
+    for r in raw_resources:
+        try:
+            if isinstance(r, dict):
+                # Ensure provider is set
+                if "provider" not in r: r["provider"] = provider
+                resources.append(CloudResource(**r))
+            else:
+                resources.append(r)
+        except Exception as e:
+            logger.error(f"❌ Failed to parse resource: {e}")
+
     findings_data = data.get("findings", [])
     findings = []
     for f in findings_data:
-        if isinstance(f, dict):
-            # Handle nested resource
-            if isinstance(f.get("resource"), dict):
-                f["resource"] = CloudResource(**f["resource"])
-            
-            # Handle severity enum
-            if isinstance(f.get("severity"), str):
-                try:
-                    f["severity"] = Severity(f["severity"])
-                except:
-                    f["severity"] = Severity.MEDIUM
-            
-            findings.append(SecurityFinding(**f))
-        else:
-            findings.append(f)
+        try:
+            if isinstance(f, dict):
+                # 🛡️ DEFENSIVE: Fix missing mandatory fields for SecurityFinding
+                if "provider" not in f: f["provider"] = provider
+                
+                # Handle nested resource
+                if isinstance(f.get("resource"), dict):
+                    res_dict = f["resource"]
+                    if "provider" not in res_dict: res_dict["provider"] = provider
+                    f["resource"] = CloudResource(**res_dict)
+                elif not f.get("resource"):
+                    # Create a dummy resource if missing
+                    f["resource"] = CloudResource(provider=provider, resource_type="unknown", name="unknown")
+                
+                # Ensure recommendation exists
+                if "recommendation" not in f:
+                    f["recommendation"] = "No recommendation provided by scanner."
+                
+                # Handle severity enum
+                if isinstance(f.get("severity"), str):
+                    try:
+                        f["severity"] = Severity(f["severity"].upper())
+                    except:
+                        f["severity"] = Severity.MEDIUM
+                
+                findings.append(SecurityFinding(**f))
+            else:
+                findings.append(f)
+        except Exception as e:
+            logger.error(f"❌ Failed to parse finding: {e}")
 
     return ScanResult(
         provider=provider,
@@ -2770,16 +2846,36 @@ async def run_multi_cloud_scan_internal(
             logger.error(f"❌ Scan failed for {provider}: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            # Don't raise here - continue with other providers
-            # But add to errors
-            if not scan_results:
-                scan_results.append(ScanResult(
-                    provider=provider,
-                    account_id=account_id,
-                    resources=[],
-                    findings=[],
-                    errors=[str(e)]
-                ))
+            
+            # Create a "Failed Scan" result so it's visible on the dashboard
+            failed_result = ScanResult(
+                provider=provider,
+                account_id=account_id,
+                resources=[],
+                findings=[
+                    SecurityFinding(
+                        id=f"error_{provider}_{int(datetime.now().timestamp())}",
+                        title=f"Scan Error: {provider.upper()}",
+                        description=f"The scan for {provider} failed with the following error: {str(e)}. Please check your credentials and network connectivity.",
+                        severity="high",
+                        provider=provider,
+                        resource="Scanner",
+                        remediation="Ensure that the service account JSON or AWS keys provided in the Settings are valid and have the necessary permissions (e.g., Viewer role for GCP, SecurityAudit for AWS)."
+                    )
+                ],
+                errors=[str(e)]
+            )
+            scan_results.append(failed_result)
+            
+            # Store the error as a scan record so it's not lost
+            try:
+                # Get appropriate credential ID if possible
+                aws_id = aws_cred_id if provider == "aws" else None
+                scan_id = await store_scan_result(failed_result, aws_credential_id=aws_id)
+                stored_ids.append(scan_id)
+                logger.info(f"⚠️ Stored FAILED scan as scan_id: {scan_id}")
+            except Exception as store_err:
+                logger.error(f"Failed to store error record: {store_err}")
 
     # ✅ STEP 4: AI Analysis
     try:
@@ -2916,10 +3012,15 @@ def format_scan_completion_response(scan_ids: List[int], scan_results: List[Scan
 @app.post("/scan/multi-cloud")
 async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     """Direct multi-cloud scan with USER credentials (MCP-based)"""
-    logger.info(f"🚀 Multi-cloud scan for providers: {request.providers}")
+    logger.info(f"🚀 [ScanAPI] Multi-cloud scan request received.")
+    logger.info(f"📦 Payload: {request.dict()}")
 
     user_id = get_user_id(req)
-    logger.info(f"👤 User ID: {user_id}")
+    # If the request has an explicit user_id, use it (though cookies are safer)
+    if "user_id" in request.dict() and request.user_id:
+        user_id = request.user_id
+        
+    logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
     # 🔥 Initialize MCP servers FIRST
     await initialize_mcp_servers_for_user(user_id, request.providers)
@@ -3390,8 +3491,12 @@ async def list_providers():
     }
 
 @app.get("/posture/dashboard")
-async def posture_dashboard():
-    summary = get_multi_cloud_summary()
+async def posture_dashboard(scan_ids: Optional[str] = None):
+    # Pass scan_ids to get_multi_cloud_summary if implemented
+    # or filter here if not.
+    logger.info(f"📊 Dashboard request with scan_ids={scan_ids}")
+    summary = get_multi_cloud_summary(scan_ids=scan_ids)
+    logger.info(f"📉 Resulting summary from DB: {summary}")
     
     dashboard = {
         "clouds": [],
@@ -3458,20 +3563,34 @@ async def get_severity_breakdown():
         }
 
 @app.get("/api/provider-breakdown")
-async def get_provider_breakdown():
+async def get_provider_breakdown(scan_ids: Optional[str] = None):
     try:
         conn = get_conn()
         with conn.cursor() as cur:
-            cur.execute("""
+            query = """
                 SELECT 
                     r.cloud as provider,
                     COUNT(DISTINCT r.id) as resources,
                     COUNT(DISTINCT f.id) as findings
                 FROM resources r
                 LEFT JOIN findings f ON r.id = f.resource_id
+            """
+            params = []
+            
+            if scan_ids:
+                try:
+                    ids = [int(i.strip()) for i in scan_ids.split(",")]
+                    query += " WHERE r.scan_id = ANY(%s)"
+                    params.append(ids)
+                except ValueError:
+                    pass
+            
+            query += """
                 GROUP BY r.cloud
                 ORDER BY resources DESC
-            """)
+            """
+            
+            cur.execute(query, tuple(params))
             results = cur.fetchall()
         
         data = []
@@ -3536,11 +3655,11 @@ async def get_scan_history(days: int = 30):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/latest-findings")
-async def get_latest_findings(limit: int = 10):
+async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
     try:
         conn = get_conn()
         with conn.cursor() as cur:
-            cur.execute("""
+            query = """
                 SELECT 
                     r.name as resource_name,
                     r.cloud,
@@ -3550,9 +3669,21 @@ async def get_latest_findings(limit: int = 10):
                     f.created_at
                 FROM findings f
                 JOIN resources r ON f.resource_id = r.id
-                ORDER BY f.created_at DESC
-                LIMIT %s
-            """, (limit,))
+            """
+            params = []
+            
+            if scan_ids:
+                try:
+                    ids = [int(i.strip()) for i in scan_ids.split(",")]
+                    query += " WHERE f.scan_id = ANY(%s)"
+                    params.append(ids)
+                except ValueError:
+                    pass
+                    
+            query += " ORDER BY f.created_at DESC LIMIT %s"
+            params.append(limit)
+            
+            cur.execute(query, tuple(params))
             results = cur.fetchall()
         
         return {
