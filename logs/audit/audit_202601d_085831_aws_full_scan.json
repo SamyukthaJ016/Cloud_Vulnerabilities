@@ -1,0 +1,53 @@
+{
+  "tool": "aws/full_scan",
+  "category": "vulnerability",
+  "provider": "aws",
+  "timestamp": "2026-01-09T08:58:31.129691",
+  "status": "SUCCESS",
+  "duration_sec": 130.195,
+  "input": {
+    "account_id": "default",
+    "deep_scan": true,
+    "offensive_scan": true
+  },
+  "output": {
+    "scan_id": "aws-1767949111.134984",
+    "account_id": "default",
+    "timestamp": "2026-01-09T08:58:31.135060",
+    "deep_scan": true,
+    "cloudfox_included": true,
+    "resources": [
+      {
+        "provider": "aws",
+        "resource_type": "account",
+        "name": "Account Level",
+        "region": "global",
+        "config": {
+          "account_id": "default"
+        }
+      }
+    ],
+    "findings": [],
+    "cloudfox_findings": [],
+    "summary": {
+      "total_resources": 1,
+      "total_findings": 0,
+      "aws_findings": 0,
+      "cloudfox_findings": 0,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "cloudfox_summary": {
+      "total_findings": 0,
+      "by_severity": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 0,
+        "LOW": 0
+      }
+    }
+  },
+  "error": null
+}
