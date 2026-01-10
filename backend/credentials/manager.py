@@ -352,7 +352,7 @@ class CredentialManager:
                 (credential_id,)
             )
             conn.commit()
-            logger.error(f"FINAL credential_dict keys: {list(credential_dict.keys())}")
+            logger.debug(f"FINAL credential_dict keys: {list(credential_dict.keys())}")
 
         # Convert to CloudCredential object
             return CloudCredential(

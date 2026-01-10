@@ -2635,7 +2635,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
                 continue
 
             # If we HAVE a user credential, always (re)initialize to ensure it's used
-            logger.info(f"[ServerInit] (Re)initializing GCP server with credentials for user: {user_id}")
+            logger.info(f"[ServerInit] (Re)initializing GCP server with credentials (cred_id={gcp_cred.id}) for user: {user_id}")
             gcp_config = {
                 "service_account_json": gcp_cred.gcp_service_account_json,
                 "project_id": gcp_cred.gcp_project_id
@@ -2646,7 +2646,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
             await server.start()
 
             mcp_registry.register("gcp", server)
-            logger.info("✅ GCP MCP Server initialized and registered")
+            logger.info(f"✅ GCP MCP Server initialized and registered for project: {gcp_cred.gcp_project_id}")
 
         elif provider == "cloudfox":
             if mcp_server_manager.get_server("cloudfox"):
@@ -2735,8 +2735,7 @@ def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
         resources=resources,
         findings=findings,
         scan_duration=data.get("scan_duration", 0.0),
-        errors=data.get("errors", []),
-        scanned_services=data.get("scanned_services", [])
+        errors=data.get("errors", [])
     )
 
 async def run_gpt_agent(prompt: str) -> str:

@@ -134,16 +134,16 @@ class GCPMCPServer(BaseMCPServer):
             handler=self._check_gcs_security
         ))
         
-        # Tool 3: Discover IAM Policies
+        # Tool 3: Check IAM Security
         self.register_tool(MCPTool(
-            name="gcp/discover_iam_policies",
-            description="Discover project IAM policies",
-            category=ToolCategory.DISCOVERY,
+            name="gcp/check_iam_security",
+            description="Check project IAM security policies",
+            category=ToolCategory.VULNERABILITY,
             input_schema={
                 "type": "object",
                 "properties": {}
             },
-            handler=self._discover_iam_policies
+            handler=self._check_iam_security
         ))
         
         # Tool 4: Discover Compute Instances
@@ -354,7 +354,7 @@ class GCPMCPServer(BaseMCPServer):
             for zone, response in agg_list:
                 if response.instances:
                     for instance in response.instances:
-                        resources.append({
+                        instance_dict = {
                             "name": instance.name,
                             "zone": zone.split('/')[-1],
                             "machine_type": instance.machine_type.split('/')[-1],
@@ -366,8 +366,17 @@ class GCPMCPServer(BaseMCPServer):
                                         {"nat_ip": ac.nat_i_p} for ac in ni.access_configs
                                     ]
                                 } for ni in instance.network_interfaces
-                            ]
-                        })
+                            ],
+                            "config_raw": {
+                                "shielded_instance_config": {
+                                    "enable_secure_boot": instance.shielded_instance_config.enable_secure_boot,
+                                    "enable_vtpm": instance.shielded_instance_config.enable_vtpm,
+                                    "enable_integrity_monitoring": instance.shielded_instance_config.enable_integrity_monitoring
+                                } if instance.shielded_instance_config else {},
+                                "can_ip_forward": instance.can_ip_forward
+                            }
+                        }
+                        resources.append(instance_dict)
             
             return {
                 "resources": resources,
@@ -415,17 +424,94 @@ class GCPMCPServer(BaseMCPServer):
         except Exception as e:
             logger.error(f"[GCP] Firewall check failed: {e}")
             return {"error": str(e), "findings": []}
-    
-    async def _discover_iam_policies(self) -> Dict[str, Any]:
-        """Discover IAM policies (basic implementation)"""
-        logger.info("[GCP] Discovering IAM policies...")
+
+    async def _check_iam_security(self) -> Dict[str, Any]:
+        """Check project-level IAM security"""
+        logger.info("[GCP] Checking project IAM security...")
+        findings = []
+        try:
+            from google.cloud import resourcemanager_v3
+            client = resourcemanager_v3.ProjectsClient(credentials=self.credentials)
+            # Use flattened argument for robustness
+            policy = client.get_iam_policy(resource=f"projects/{self.project_id}")
+            
+            for binding in policy.bindings:
+                role = binding.role
+                members = binding.members
+                
+                # Check for primitive roles
+                if role in ["roles/owner", "roles/editor"]:
+                    findings.append({
+                        "severity": "HIGH",
+                        "issue": "Primitive Role Usage",
+                        "description": f"Role {role} is assigned to {len(members)} members. Use predefined or custom roles instead.",
+                        "recommendation": "Replace basic/primitive roles (Owner, Editor, Viewer) with fine-grained IAM roles."
+                    })
+                
+                # Check for external members
+                for member in members:
+                    if "@gmail.com" in member or "@googlemail.com" in member:
+                        findings.append({
+                            "severity": "MEDIUM",
+                            "issue": "External Member in IAM",
+                            "description": f"External user {member} has role {role}",
+                            "recommendation": "Remove external personal accounts from project IAM policies."
+                        })
+            
+            return {
+                "findings": findings,
+                "count": len(findings),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"[GCP] IAM security check failed: {e}")
+            return {"error": str(e), "findings": []}
+
+    async def _check_compute_security(self, instance: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Check specific security posture of a compute instance"""
+        findings = []
+        instance_name = instance.get("name", "unknown")
         
-        # Note: Full implementation requires Resource Manager API
-        return {
-            "message": "IAM policy discovery requires Resource Manager API",
-            "project_id": self.project_id,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        # 1. Check Shielded VM
+        # Note: instance here is the dict from _discover_compute_instances, 
+        # but aggregated_list returns Instance objects which we converted to dict.
+        # We need to ensure we have the right fields.
+        config = instance.get("config_raw", {}) # We'll populate this in discovery
+        
+        shielded_config = config.get("shielded_instance_config", {})
+        if not shielded_config.get("enable_secure_boot"):
+            findings.append({
+                "severity": "MEDIUM",
+                "issue": "Shielded VM Secure Boot Disabled",
+                "description": f"Instance {instance_name} does not have Secure Boot enabled",
+                "recommendation": "Enable Shielded VM Secure Boot to protect against rootkits and bootkits."
+            })
+            
+        # 2. Check for Public IP
+        has_public_ip = False
+        for ni in instance.get("network_interfaces", []):
+            if ni.get("access_configs"):
+                has_public_ip = True
+                break
+        
+        if has_public_ip:
+             findings.append({
+                "severity": "MEDIUM",
+                "issue": "Public IP Address Assigned",
+                "description": f"Instance {instance_name} has a public IP address",
+                "recommendation": "Remove public IPs unless absolutely necessary. Use Identity-Aware Proxy (IAP) for access."
+            })
+             
+        # 3. Check IP Forwarding
+        if config.get("can_ip_forward"):
+            findings.append({
+                "severity": "HIGH",
+                "issue": "IP Forwarding Enabled",
+                "description": f"Instance {instance_name} has IP forwarding enabled",
+                "recommendation": "Disable IP forwarding unless the instance is specifically used as a gateway or NAT."
+            })
+
+        return findings
     
     async def _full_scan(self, account_id: str = None, project_id: str = None, deep_scan: bool = False, **kwargs) -> Dict[str, Any]:
         """Perform complete GCP security scan"""
@@ -440,17 +526,19 @@ class GCPMCPServer(BaseMCPServer):
             "project_id": active_project,
             "timestamp": datetime.utcnow().isoformat(),
             "deep_scan": deep_scan,
-            "resources": [], # Now a list of objects
+            "resources": [], 
             "findings": [],
+            "errors": [],
             "summary": {}
         }
         
         try:
             # 1. Discover GCS buckets
             gcs_discovery = await self._discover_gcs_buckets()
-            bucket_resources = gcs_discovery.get("resources", [])
+            if "error" in gcs_discovery:
+                results["errors"].append(f"GCS Discovery error: {gcs_discovery['error']}")
             
-            # Convert to CloudResource compatible dicts
+            bucket_resources = gcs_discovery.get("resources", [])
             for r in bucket_resources:
                 res_obj = {
                     "provider": "gcp",
@@ -458,42 +546,85 @@ class GCPMCPServer(BaseMCPServer):
                     "name": r["name"],
                     "region": r.get("location", "global"),
                     "config": r,
-                    "is_public": False # Will be updated by check_gcs_security
+                    "is_public": False 
                 }
                 
-                # Check GCS security for this specific bucket
                 security_check = await self._check_gcs_security(r["name"])
-                res_obj["is_public"] = security_check.get("is_public", False)
-                
+                if "error" in security_check:
+                    results["errors"].append(f"GCS Security check for {r['name']} failed: {security_check['error']}")
+                else:
+                    res_obj["is_public"] = security_check.get("is_public", False)
+                    for f in security_check.get("findings", []):
+                        results["findings"].append({
+                            "resource": res_obj,
+                            "severity": f["severity"],
+                            "issue": f["issue"],
+                            "description": f["description"],
+                            "recommendation": "Follow GCP security hardening guidelines for Cloud Storage.",
+                            "detection_tool": "gcp-config-scanner"
+                        })
                 results["resources"].append(res_obj)
-                
-                # Add findings with proper resource context
-                for f in security_check.get("findings", []):
-                    results["findings"].append({
-                        "resource": res_obj,
-                        "severity": f["severity"],
-                        "issue": f["issue"],
-                        "description": f["description"],
-                        "recommendation": "Follow GCP security hardening guidelines for Cloud Storage.",
-                        "detection_tool": "gcp-config-scanner"
-                    })
             
-            # 2. Discover Compute Instances
+            # 2. Discover Compute Instances & Check Security
             compute_discovery = await self._discover_compute_instances()
+            if "error" in compute_discovery:
+                results["errors"].append(f"Compute Discovery error: {compute_discovery['error']}")
+            
             for r in compute_discovery.get("resources", []):
-                results["resources"].append({
+                res_obj = {
                     "provider": "gcp",
                     "resource_type": "compute_instance",
                     "name": r["name"],
                     "region": r.get("zone", "global"),
                     "config": r,
                     "is_public": any(ni.get("access_configs") for ni in r.get("network_interfaces", []))
+                }
+                results["resources"].append(res_obj)
+                
+                # Check security for this instance
+                instance_findings = await self._check_compute_security(r)
+                for f in instance_findings:
+                    results["findings"].append({
+                        "resource": res_obj,
+                        "severity": f["severity"],
+                        "issue": f["issue"],
+                        "description": f["description"],
+                        "recommendation": f["recommendation"],
+                        "detection_tool": "gcp-compute-scanner"
+                    })
+            
+            # 3. Check Project IAM Security
+            iam_check = await self._check_iam_security()
+            if "error" in iam_check:
+                results["errors"].append(f"IAM Check error: {iam_check['error']}")
+            
+            # Create a pseudo-resource for Project IAM
+            project_res = {
+                "provider": "gcp",
+                "resource_type": "project_iam",
+                "name": f"project-{active_project}-iam",
+                "region": "global",
+                "config": {"project_id": active_project},
+                "is_public": False
+            }
+            results["resources"].append(project_res)
+            
+            for f in iam_check.get("findings", []):
+                results["findings"].append({
+                    "resource": project_res,
+                    "severity": f["severity"],
+                    "issue": f["issue"],
+                    "description": f["description"],
+                    "recommendation": f["recommendation"],
+                    "detection_tool": "gcp-iam-scanner"
                 })
             
-            # 3. Check Firewalls
+            # 4. Check Firewalls
             firewall_check = await self._check_firewall_security()
+            if "error" in firewall_check:
+                results["errors"].append(f"Firewall Check error: {firewall_check['error']}")
+            
             for f in firewall_check.get("findings", []):
-                # Create a pseudo-resource for the firewall rule
                 fw_name = f.get("resource", "unknown-firewall")
                 res_obj = {
                     "provider": "gcp",
@@ -521,7 +652,8 @@ class GCPMCPServer(BaseMCPServer):
                 "critical": len([f for f in results["findings"] if f["severity"] == "CRITICAL"]),
                 "high": len([f for f in results["findings"] if f["severity"] == "HIGH"]),
                 "medium": len([f for f in results["findings"] if f["severity"] == "MEDIUM"]),
-                "low": len([f for f in results["findings"] if f.get("severity") == "LOW"])
+                "low": len([f for f in results["findings"] if f.get("severity") == "LOW"]),
+                "errors_count": len(results["errors"])
             }
             
             return results

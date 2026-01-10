@@ -26,6 +26,7 @@ google-cloud-storage==2.14.0   # Google Cloud Storage client library
 google-auth==2.27.0            # Google authentication library
 google-api-python-client==2.116.0  # Google API client library
 google-cloud-compute==1.15.0   # Google Compute Engine client library
+google-cloud-resource-manager==1.12.3 # Google Cloud Resource Manager client library
 
 # ============================================================================
 # OpenAI / AI Analysis
@@ -68,11 +69,19 @@ click==8.1.7                   # Command-line interface creation toolkit
 # To upgrade: pip install --upgrade -r requirements.txt
 
 
-reportlab
 
+# ============================================================================
+# Generating Reports
+# ============================================================================
+reportlab>=4.0.0
+
+# ============================================================================
+# Security & Cryptography
+# ============================================================================
 cryptography>=41.0.0
-boto3>=1.28.0
-openai>=1.0.0
-google-auth>=2.23.0
+
+# ============================================================================
+# Azure SDK
+# ============================================================================
 azure-identity>=1.15.0
 azure-mgmt-resource>=23.0.0

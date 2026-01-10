@@ -101,7 +101,7 @@ RUN trivy --version && \
 FROM security-tools AS python-deps
 
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
 
 # ============================================================================
 # Stage 4: Development Image
