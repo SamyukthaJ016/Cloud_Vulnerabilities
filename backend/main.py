@@ -1,150 +1,188 @@
 
 
-# """
-# Enhanced Main.py with WORKING Credential Management
-# """
+"""
+Enhanced Main.py with WORKING Credential Management
+"""
 
-# import os
-# import json
-# import logging
-# import textwrap
-# from io import BytesIO
-# from typing import Optional, Dict, List
-# from datetime import datetime, timedelta
-# import secrets
-# from typing import Any, Dict
+import os
+import json
+import logging
+import textwrap
+from io import BytesIO
+from typing import Optional, Dict, List
+from datetime import datetime, timedelta
+import secrets
+from typing import Any, Dict
 
-# from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
-# from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
-# from fastapi.middleware.cors import CORSMiddleware
-# from pydantic import BaseModel
-# from dotenv import load_dotenv
-# from openai import OpenAI
-# from reportlab.lib.pagesizes import A4
-# from reportlab.pdfgen import canvas
+from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from dotenv import load_dotenv
+from openai import OpenAI
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
-# from backend.mcp.mcp_base import mcp_registry, ScanResult, SecurityFinding
-# from backend.mcp.mcp_aws_plugin import AWSPlugin
-# from backend.vulnerability.vulnerability_scanner import VulnerabilityScanner, ScanTarget
-# from backend.vulnerability.vulnerability_integration import CloudVulnerabilityIntegration
-# from backend.mcp.mcp_gcp_plugin import GCPPlugin
-# from backend.mcp.mcp_openai_plugin import OpenAIPlugin
-# from backend.ai_recommender import AIRecommendationEngine
-# from backend.database import (
-#     create_scan_record,
-#     store_resource,
-#     store_finding,
-#     store_vulnerability,
-#     get_scan_report,
-#     get_multi_cloud_summary,
-#     get_conn,
-# )
-# from backend.cloudfox.cloudfox_server import create_cloudfox_server
-# from backend.mcp_servers.base_server import MCPMessage
-# from backend.credentials.api import router as credentials_router
-# from backend.credentials.manager import credential_manager, CloudCredential
+from backend.mcp.mcp_base import mcp_registry, ScanResult, SecurityFinding
+from backend.mcp.mcp_aws_plugin import AWSPlugin
+from backend.vulnerability.vulnerability_scanner import VulnerabilityScanner, ScanTarget
+from backend.vulnerability.vulnerability_integration import CloudVulnerabilityIntegration
+from backend.mcp.mcp_gcp_plugin import GCPPlugin
+from backend.mcp.mcp_openai_plugin import OpenAIPlugin
+from backend.ai_recommender import AIRecommendationEngine
+from backend.database import (
+    create_scan_record,
+    store_resource,
+    store_finding,
+    store_vulnerability,
+    get_scan_report,
+    get_multi_cloud_summary,
+    get_conn,
+)
+from backend.cloudfox.cloudfox_server import create_cloudfox_server
+from backend.mcp_servers.base_server import MCPMessage
+from backend.credentials.api import router as credentials_router
+from backend.credentials.manager import credential_manager, CloudCredential
 
-# from backend.mcp_servers.base_server import (
-#     mcp_server_manager,
-#     MCPMessage,
-#     MCPResponse
-# )
-# from backend.mcp_servers.aws_server import create_aws_server
-# from backend.cloudfox.cloudfox_scanner import (
-#     cloudfox_scanner,
-#     full_offensive_scan,
-#     format_cloudfox_report
-# )
-
-
-# load_dotenv()
-
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger("mcp_scanner")
-
-# # ============================================================
-# # FASTAPI APP
-# # ============================================================
-
-# app = FastAPI(
-#     title="CloudGuard - Multi-Cloud Security Scanner",
-#     description="AI-powered CSPM with vulnerability detection and user credential management",
-#     version="3.1.0",
-# )
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["*"],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# app.include_router(credentials_router)
-
-# OPENAI_AGENT_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
-
-# openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-# orchestrator_client = openai_client
-# ai_engine = AIRecommendationEngine(api_key=os.getenv("OPENAI_API_KEY"))
-
-# vuln_scanner = VulnerabilityScanner()
-# vuln_integration = CloudVulnerabilityIntegration()
-
-# # ============================================================
-# # REQUEST MODELS
-# # ============================================================
-
-# class ScanRequest(BaseModel):
-#     message: str
-#     deep_scan: bool = False
-#     session_id: Optional[str] = None
-
-# class MultiCloudScanRequest(BaseModel):
-#     providers: list[str]
-#     account_ids: dict[str, str] = {}
-#     deep_scan: bool = False
-#     session_id: Optional[str] = None
-
-# class ScheduledScanRequest(BaseModel):
-#     providers: list[str]
-#     account_ids: dict[str, str] = {}
-#     deep_scan: bool = False
-#     schedule: dict
-#     user_id: Optional[str] = None
+from backend.mcp_servers.base_server import (
+    mcp_server_manager,
+    MCPMessage,
+    MCPResponse
+)
+from backend.mcp_servers.aws_server import create_aws_server
+from backend.cloudfox.cloudfox_scanner import (
+    cloudfox_scanner,
+    full_offensive_scan,
+    format_cloudfox_report
+)
 
 
-# class VulnScanRequest(BaseModel):
-#     target_type: str
-#     path: str
-#     metadata: dict = {}
-#     session_id: Optional[str] = None
+load_dotenv()
 
-# class AgentChatRequest(BaseModel):
-#     message: str
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("mcp_scanner")
 
-# class AgentChatResponse(BaseModel):
-#     reply: str
+# ============================================================
+# FASTAPI APP
+# ============================================================
 
-# class AgentExplainScanRequest(BaseModel):
-#     scan_id: int
-#     question: Optional[str] = None
+app = FastAPI(
+    title="CloudGuard - Multi-Cloud Security Scanner",
+    description="AI-powered CSPM with vulnerability detection and user credential management",
+    version="3.1.0",
+)
 
-# class SessionRequest(BaseModel):
-#     user_id: str = "anonymous"
-#     credentials: Dict[str, int] = {}
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# class SessionResponse(BaseModel):
-#     session_id: str
-#     expires_at: datetime
-#     providers_available: List[str]
+app.include_router(credentials_router)
 
-# # ============================================================
-# # 🔥 FIXED CREDENTIAL INITIALIZATION
-# # ============================================================
+OPENAI_AGENT_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
 
-# from backend.credentials.manager import credential_manager
-# # ...
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+orchestrator_client = openai_client
+ai_engine = AIRecommendationEngine(api_key=os.getenv("OPENAI_API_KEY"))
+
+vuln_scanner = VulnerabilityScanner()
+vuln_integration = CloudVulnerabilityIntegration()
+
+# ============================================================
+# REQUEST MODELS
+# ============================================================
+
+class ScanRequest(BaseModel):
+    message: str
+    deep_scan: bool = False
+    session_id: Optional[str] = None
+
+class MultiCloudScanRequest(BaseModel):
+    providers: list[str]
+    account_ids: dict[str, str] = {}
+    deep_scan: bool = False
+    session_id: Optional[str] = None
+
+class ScheduledScanRequest(BaseModel):
+    providers: list[str]
+    account_ids: dict[str, str] = {}
+    deep_scan: bool = False
+    schedule: dict
+    user_id: Optional[str] = None
+
+
+class VulnScanRequest(BaseModel):
+    target_type: str
+    path: str
+    metadata: dict = {}
+    session_id: Optional[str] = None
+
+class AgentChatRequest(BaseModel):
+    message: str
+
+class AgentChatResponse(BaseModel):
+    reply: str
+
+class AgentExplainScanRequest(BaseModel):
+    scan_id: int
+    question: Optional[str] = None
+
+class SessionRequest(BaseModel):
+    user_id: str = "anonymous"
+    credentials: Dict[str, int] = {}
+
+
+class SessionResponse(BaseModel):
+    session_id: str
+    expires_at: datetime
+    providers_available: List[str]
+
+# ============================================================
+# 🔥 FIXED CREDENTIAL INITIALIZATION
+# ============================================================
+
+from backend.credentials.manager import credential_manager
+
+def initialize_plugins_with_user_credentials(user_id: str) -> dict:
+    logger.info(f"🔍 Loading credentials for user: {user_id}")
+
+    providers_initialized: dict[str, MCPPlugin] = {}
+    
+    # ==========================
+    # AWS INITIALIZATION (Robust)
+    # ==========================
+    aws_credential_id: int | None = None
+    
+    # Try to get ANY valid credential (preferred default, then latest)
+    all_aws = credential_manager.get_all_user_credentials(user_id, "aws")
+    
+    if all_aws:
+        best_candidate = all_aws[0]
+        aws_cred = credential_manager.get_credentials(best_candidate["id"], user_id)
+        
+        if aws_cred:
+            aws_credential_id = aws_cred.id
+            is_def_str = "(Default)" if aws_cred.is_default else "(Fallback)"
+            logger.info(f"🔑 Using AWS credential {is_def_str} for user {user_id} (id={aws_credential_id})")
+
+            try:
+                plugin = AWSPlugin({
+                    "access_key_id": aws_cred.aws_access_key_id,
+                    "secret_access_key": aws_cred.aws_secret_access_key,
+                    "session_token": aws_cred.aws_session_token,
+                    "region": aws_cred.aws_region or "us-east-1",
+                })
+                mcp_registry.register("aws", plugin)
+                providers_initialized["aws"] = plugin
+                logger.info("✅ AWS Plugin registered")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize AWS plugin: {e}")
+                aws_credential_id = None
+    else:
+        logger.warning(f"⚠️ No AWS credentials found for user {user_id}")
 
     # ==========================
     # GCP INITIALIZATION (Robust)
@@ -174,43 +212,43 @@
     else:
         logger.warning(f"⚠️ No GCP credentials found for user {user_id}")
 
-#     logger.info(f"🎯 Final providers available: {list(providers_initialized.keys())}")
-#     logger.info(f"DEBUG aws_credential_id resolved: {aws_credential_id}")
-#     return {
-#         "providers": providers_initialized,
-#         "aws_credential_id": aws_credential_id,
-#     }
+    logger.info(f"🎯 Final providers available: {list(providers_initialized.keys())}")
+    logger.info(f"DEBUG aws_credential_id resolved: {aws_credential_id}")
+    return {
+        "providers": providers_initialized,
+        "aws_credential_id": aws_credential_id,
+    }
 
 
-# def get_user_id(request: Request) -> str:
-#     # """Extract user ID from request"""
-#     # session_id = request.cookies.get("cloudguard_session")
-#     # if session_id:
-#     #     return f"user_{session_id}"
-#     return "anonymous"
+def get_user_id(request: Request) -> str:
+    # """Extract user ID from request"""
+    # session_id = request.cookies.get("cloudguard_session")
+    # if session_id:
+    #     return f"user_{session_id}"
+    return "anonymous"
 
-# def _wrap_text(text: str, width: int = 95):
-#     text = text.replace("\r", " ").replace("\n", " ")
-#     return textwrap.wrap(text, width=width)
+def _wrap_text(text: str, width: int = 95):
+    text = text.replace("\r", " ").replace("\n", " ")
+    return textwrap.wrap(text, width=width)
 
-# def build_scan_report(scan_id: int) -> dict:
-#     rows = get_scan_report(scan_id)
-#     if not rows:
-#         raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
+def build_scan_report(scan_id: int) -> dict:
+    rows = get_scan_report(scan_id)
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
 
-#     findings = [
-#         {
-#             "resource_id": r[0],
-#             "resource_name": r[1],
-#             "cloud": (r[2] or "").lower(),
-#             "type": r[3],
-#             "public": r[4],
-#             "severity": r[5],
-#             "description": r[6],
-#         }
-#         for r in rows
-#         if r[5]
-#     ]
+    findings = [
+        {
+            "resource_id": r[0],
+            "resource_name": r[1],
+            "cloud": (r[2] or "").lower(),
+            "type": r[3],
+            "public": r[4],
+            "severity": r[5],
+            "description": r[6],
+        }
+        for r in rows
+        if r[5]
+    ]
 
 #     providers = sorted({(r[2] or "").lower() for r in rows if r[2]})
 #     per_cloud: dict[str, dict[str, int]] = {}
@@ -339,201 +377,201 @@
 # # 🆕 Helper function 
 # # # Replace the run_multi_cloud_scan_internal function in main.py with this:
 
-# async def run_multi_cloud_scan_internal(
-#     providers: list[str],
-#     account_ids: dict[str, str],
-#     deep_scan: bool,
-#     user_id: str,
-# ):
-#     """Core multi-cloud scan logic reused by API and scheduler."""
-#     logger.info(f"🚀 Multi-cloud scan for providers: {providers}")
-#     logger.info(f"👤 User ID: {user_id}")
+async def run_multi_cloud_scan_internal(
+    providers: list[str],
+    account_ids: dict[str, str],
+    deep_scan: bool,
+    user_id: str,
+):
+    """Core multi-cloud scan logic reused by API and scheduler."""
+    logger.info(f"🚀 Multi-cloud scan for providers: {providers}")
+    logger.info(f"👤 User ID: {user_id}")
 
-#     # ✅ STEP 1: Initialize plugins with user credentials
-#     init_ctx = initialize_plugins_with_user_credentials(user_id)
-#     providers_initialized = init_ctx["providers"]
-#     aws_cred_id = init_ctx["aws_credential_id"]
+    # ✅ STEP 1: Initialize plugins with user credentials
+    init_ctx = initialize_plugins_with_user_credentials(user_id)
+    providers_initialized = init_ctx["providers"]
+    aws_cred_id = init_ctx["aws_credential_id"]
     
-#     logger.info(f"DEBUG aws_cred_id in internal: {aws_cred_id}")
-#     logger.info(f"✅ Initialized providers: {list(providers_initialized.keys())}")
+    logger.info(f"DEBUG aws_cred_id in internal: {aws_cred_id}")
+    logger.info(f"✅ Initialized providers: {list(providers_initialized.keys())}")
 
-#     # ✅ STEP 2: Verify ALL requested providers are initialized
-#     missing_providers = []
-#     for provider in providers:
-#         if provider not in providers_initialized:
-#             missing_providers.append(provider)
-#             logger.error(f"❌ Provider {provider} not initialized - no credentials available")
+    # ✅ STEP 2: Verify ALL requested providers are initialized
+    missing_providers = []
+    for provider in providers:
+        if provider not in providers_initialized:
+            missing_providers.append(provider)
+            logger.error(f"❌ Provider {provider} not initialized - no credentials available")
     
-#     if missing_providers:
-#         error_msg = f"Missing credentials for: {', '.join(missing_providers)}. Please add credentials in Settings."
-#         logger.error(error_msg)
-#         raise HTTPException(status_code=400, detail=error_msg)
+    if missing_providers:
+        error_msg = f"Missing credentials for: {', '.join(missing_providers)}. Please add credentials in Settings."
+        logger.error(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
 
-#     # ✅ STEP 3: Run scans for each provider
-#     scan_results: list[ScanResult] = []
-#     stored_ids: list[int] = []
+    # ✅ STEP 3: Run scans for each provider
+    scan_results: list[ScanResult] = []
+    stored_ids: list[int] = []
 
-#     for provider in providers:
-#         try:
-#             account_id = account_ids.get(provider, "default") or "default"
-#             logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
+    for provider in providers:
+        try:
+            account_id = account_ids.get(provider, "default") or "default"
+            logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
 
-#             # Scan using the registry (which now has the user's credentials)
-#             result = await mcp_registry.scan(provider, account_id)
+            # Scan using the registry (which now has the user's credentials)
+            result = await mcp_registry.scan(provider, account_id)
 
-#             # Deep scan if requested
-#             if deep_scan:
-#                 logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
-#                 plugin = mcp_registry.get_plugin(provider)
-#                 cloud_client = None
-#                 if plugin:
-#                     cloud_client = getattr(plugin, "s3", None) or getattr(
-#                         plugin, "storage_client", None
-#                     )
+            # Deep scan if requested
+            if deep_scan:
+                logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
+                plugin = mcp_registry.get_plugin(provider)
+                cloud_client = None
+                if plugin:
+                    cloud_client = getattr(plugin, "s3", None) or getattr(
+                        plugin, "storage_client", None
+                    )
 
-#                 for resource in result.resources:
-#                     try:
-#                         vuln_findings = await vuln_integration.scan_cloud_resource(
-#                             resource, cloud_client
-#                         )
-#                         result.findings.extend(vuln_findings)
-#                     except Exception as e:
-#                         logger.error(f"Failed to scan resource {resource.name}: {e}")
+                for resource in result.resources:
+                    try:
+                        vuln_findings = await vuln_integration.scan_cloud_resource(
+                            resource, cloud_client
+                        )
+                        result.findings.extend(vuln_findings)
+                    except Exception as e:
+                        logger.error(f"Failed to scan resource {resource.name}: {e}")
 
-#                 logger.info(f"✅ Deep scan completed for {provider}")
+                logger.info(f"✅ Deep scan completed for {provider}")
 
-#             scan_results.append(result)
+            scan_results.append(result)
 
-#             # Store results with credential linkage
-#             scan_id = await store_scan_result(
-#                 result,
-#                 aws_credential_id=aws_cred_id if provider == "aws" else None,
-#             )
-#             stored_ids.append(scan_id)
-#             logger.info(f"✅ {provider.upper()} scan finished, stored as scan_id: {scan_id}")
+            # Store results with credential linkage
+            scan_id = await store_scan_result(
+                result,
+                aws_credential_id=aws_cred_id if provider == "aws" else None,
+            )
+            stored_ids.append(scan_id)
+            logger.info(f"✅ {provider.upper()} scan finished, stored as scan_id: {scan_id}")
 
-#         except Exception as e:
-#             logger.error(f"❌ Scan failed for {provider}: {e}")
-#             import traceback
-#             logger.error(traceback.format_exc())
-#             # Don't raise here - continue with other providers
-#             # But add to errors
-#             if not scan_results:
-#                 scan_results.append(ScanResult(
-#                     provider=provider,
-#                     account_id=account_id,
-#                     resources=[],
-#                     findings=[],
-#                     errors=[str(e)]
-#                 ))
+        except Exception as e:
+            logger.error(f"❌ Scan failed for {provider}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            # Don't raise here - continue with other providers
+            # But add to errors
+            if not scan_results:
+                scan_results.append(ScanResult(
+                    provider=provider,
+                    account_id=account_id,
+                    resources=[],
+                    findings=[],
+                    errors=[str(e)]
+                ))
 
-#     # ✅ STEP 4: AI Analysis
-#     try:
-#         ai_analysis = await ai_engine.analyze_scan_results(scan_results)
-#     except Exception as e:
-#         logger.error(f"AI analysis failed: {e}")
-#         ai_analysis = {"error": "AI unavailable"}
+    # ✅ STEP 4: AI Analysis
+    try:
+        ai_analysis = await ai_engine.analyze_scan_results(scan_results)
+    except Exception as e:
+        logger.error(f"AI analysis failed: {e}")
+        ai_analysis = {"error": "AI unavailable"}
 
-#     return {
-#         "scan_ids": stored_ids,
-#         "scan_results": scan_results,
-#         "ai_analysis": ai_analysis,
-#         "deep_scan_enabled": deep_scan,
-#         "user_credentials_used": len(providers_initialized) > 0,
-#     }
+    return {
+        "scan_ids": stored_ids,
+        "scan_results": scan_results,
+        "ai_analysis": ai_analysis,
+        "deep_scan_enabled": deep_scan,
+        "user_credentials_used": len(providers_initialized) > 0,
+    }
 
-# @app.post("/scan/multi-cloud")
-# async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
-#     """Direct multi-cloud scan with USER credentials"""
-#     logger.info(f"🚀 Multi-cloud scan for providers: {request.providers}")
+@app.post("/scan/multi-cloud")
+async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
+    """Direct multi-cloud scan with USER credentials"""
+    logger.info(f"🚀 Multi-cloud scan for providers: {request.providers}")
 
-#     user_id = get_user_id(req)
-#     logger.info(f"👤 User ID: {user_id}")
+    user_id = get_user_id(req)
+    logger.info(f"👤 User ID: {user_id}")
 
-#     init_ctx = initialize_plugins_with_user_credentials(user_id)
-#     providers_initialized = init_ctx["providers"]
-#     aws_cred_id = init_ctx["aws_credential_id"]
-#     logger.info(f"DEBUG aws_cred_id in endpoint: {aws_cred_id}")
+    init_ctx = initialize_plugins_with_user_credentials(user_id)
+    providers_initialized = init_ctx["providers"]
+    aws_cred_id = init_ctx["aws_credential_id"]
+    logger.info(f"DEBUG aws_cred_id in endpoint: {aws_cred_id}")
 
-#     logger.info(f"✅ Initialized providers: {list(providers_initialized.keys())}")
+    logger.info(f"✅ Initialized providers: {list(providers_initialized.keys())}")
 
-#     for provider in request.providers:
-#         if provider not in mcp_registry.list_providers():
-#             logger.error(
-#                 f"❌ Provider {provider} not initialized. "
-#                 f"Available: {mcp_registry.list_providers()}"
-#             )
-#             raise HTTPException(
-#                 status_code=400,
-#                 detail=f"{provider} scan failed: No credentials available. "
-#                        f"Please add credentials in Settings.",
-#             )
+    for provider in request.providers:
+        if provider not in mcp_registry.list_providers():
+            logger.error(
+                f"❌ Provider {provider} not initialized. "
+                f"Available: {mcp_registry.list_providers()}"
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"{provider} scan failed: No credentials available. "
+                       f"Please add credentials in Settings.",
+            )
 
-#     scan_results: list[ScanResult] = []
-#     stored_ids: list[int] = []
+    scan_results: list[ScanResult] = []
+    stored_ids: list[int] = []
 
-#     for provider in request.providers:
-#         try:
-#             account_id = request.account_ids.get(provider, "default") or "default"
-#             logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
+    for provider in request.providers:
+        try:
+            account_id = request.account_ids.get(provider, "default") or "default"
+            logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
 
-#             result = await mcp_registry.scan(provider, account_id)
+            result = await mcp_registry.scan(provider, account_id)
 
-#             if request.deep_scan:
-#                 logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
-#                 plugin = mcp_registry.get_plugin(provider)
-#                 cloud_client = None
-#                 if plugin:
-#                     cloud_client = getattr(plugin, "s3", None) or getattr(
-#                         plugin, "storage_client", None
-#                     )
+            if request.deep_scan:
+                logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
+                plugin = mcp_registry.get_plugin(provider)
+                cloud_client = None
+                if plugin:
+                    cloud_client = getattr(plugin, "s3", None) or getattr(
+                        plugin, "storage_client", None
+                    )
 
-#                 for resource in result.resources:
-#                     try:
-#                         vuln_findings = await vuln_integration.scan_cloud_resource(
-#                             resource, cloud_client
-#                         )
-#                         result.findings.extend(vuln_findings)
-#                     except Exception as e:
-#                         logger.error(f"Failed to scan resource {resource.name}: {e}")
+                for resource in result.resources:
+                    try:
+                        vuln_findings = await vuln_integration.scan_cloud_resource(
+                            resource, cloud_client
+                        )
+                        result.findings.extend(vuln_findings)
+                    except Exception as e:
+                        logger.error(f"Failed to scan resource {resource.name}: {e}")
 
-#                 logger.info(f"✅ Deep scan completed for {provider}")
+                logger.info(f"✅ Deep scan completed for {provider}")
 
-#             scan_results.append(result)
+            scan_results.append(result)
 
-#             scan_id = await store_scan_result(
-#                 result,
-#                 aws_credential_id=aws_cred_id if provider == "aws" else None,
-#             )
-#             stored_ids.append(scan_id)
-#             logger.info(f"✅ {provider.upper()} scan finished, stored as scan_id: {scan_id}")
+            scan_id = await store_scan_result(
+                result,
+                aws_credential_id=aws_cred_id if provider == "aws" else None,
+            )
+            stored_ids.append(scan_id)
+            logger.info(f"✅ {provider.upper()} scan finished, stored as scan_id: {scan_id}")
 
-#         except Exception as e:
-#             logger.error(f"❌ Scan failed for {provider}: {e}")
-#             raise HTTPException(status_code=500, detail=f"{provider} scan failed: {e}")
+        except Exception as e:
+            logger.error(f"❌ Scan failed for {provider}: {e}")
+            raise HTTPException(status_code=500, detail=f"{provider} scan failed: {e}")
 
-#     try:
-#         ai_analysis = await ai_engine.analyze_scan_results(scan_results)
-#     except Exception as e:
-#         logger.error(f"AI analysis failed: {e}")
-#         ai_analysis = {"error": "AI unavailable"}
+    try:
+        ai_analysis = await ai_engine.analyze_scan_results(scan_results)
+    except Exception as e:
+        logger.error(f"AI analysis failed: {e}")
+        ai_analysis = {"error": "AI unavailable"}
 
-#     return {
-#         "status": "completed",
-#         "scan_ids": stored_ids,
-#         "deep_scan_enabled": request.deep_scan,
-#         "user_credentials_used": len(providers_initialized) > 0,
-#         "scan_results": [
-#             {
-#                 "provider": r.provider,
-#                 "resources": len(r.resources),
-#                 "findings": len(r.findings),
-#                 "duration": r.scan_duration,
-#             }
-#             for r in scan_results
-#         ],
-#         "ai_analysis": ai_analysis,
-#     }
+    return {
+        "status": "completed",
+        "scan_ids": stored_ids,
+        "deep_scan_enabled": request.deep_scan,
+        "user_credentials_used": len(providers_initialized) > 0,
+        "scan_results": [
+            {
+                "provider": r.provider,
+                "resources": len(r.resources),
+                "findings": len(r.findings),
+                "duration": r.scan_duration,
+            }
+            for r in scan_results
+        ],
+        "ai_analysis": ai_analysis,
+    }
 
 # @app.post("/scan")
 # async def intelligent_scan(request: ScanRequest, req: Request):
