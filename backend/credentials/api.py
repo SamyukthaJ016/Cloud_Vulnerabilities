@@ -238,7 +238,7 @@ async def save_gcp_credential(
             credential_name=request.credential_name,
             gcp_service_account_json=request.gcp_service_account_json,
             gcp_project_id=request.gcp_project_id,
-            is_default=request.is_default
+            is_default=True # Force default for new uploads
         )
         
         credential_id = credential_manager.save_credential(credential)
@@ -247,6 +247,8 @@ async def save_gcp_credential(
             credential_manager.validate_credential,
             credential
         )
+        
+        logger.info(f"✅ Saved GCP credential {credential_id} for user {user_id} (default=True)")
         
         return CredentialResponse(
             id=credential_id,
