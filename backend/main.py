@@ -146,37 +146,33 @@
 # from backend.credentials.manager import credential_manager
 # # ...
 
-# def initialize_plugins_with_user_credentials(user_id: str) -> dict:
-#     logger.info(f"🔍 Loading credentials for user: {user_id}")
-
-#     providers_initialized: dict[str, MCPPlugin] = {}
-#     aws_credential_id: int | None = None
-
-#     aws_cred = credential_manager.get_default_credential(user_id, "aws")
-#     if aws_cred:
-#         aws_credential_id = aws_cred.id
-#         logger.info(f"🔑 Using default AWS credential for user {user_id} (id={aws_credential_id})")
-
-#         key_preview = (aws_cred.aws_access_key_id or "")[:4]
-#         logger.info(f"AWS key prefix: {key_preview}..., region={aws_cred.aws_region}")
-
-#         try:
-#             plugin = AWSPlugin(
-#                 {
-#                     "access_key_id": aws_cred.aws_access_key_id,
-#                     "secret_access_key": aws_cred.aws_secret_access_key,
-#                     "session_token": aws_cred.aws_session_token,
-#                     "region": aws_cred.aws_region or "us-east-1",
-#                 }
-#             )
-#             mcp_registry.register("aws", plugin)
-#             providers_initialized["aws"] = plugin
-#             logger.info("✅ AWS Plugin registered with USER default credential")
-#         except Exception as e:
-#             logger.error(f"❌ Failed to initialize AWS plugin: {e}")
-#             aws_credential_id = None
-#     else:
-#         logger.warning(f"⚠️ No default AWS credential found for user {user_id}")
+    # ==========================
+    # GCP INITIALIZATION (Robust)
+    # ==========================
+    # Try to get ANY valid credential (preferred default, then latest)
+    all_gcp = credential_manager.get_all_user_credentials(user_id, "gcp")
+    
+    if all_gcp:
+        best_candidate = all_gcp[0]
+        gcp_cred = credential_manager.get_credentials(best_candidate["id"], user_id)
+        
+        if gcp_cred:
+            is_def_str = "(Default)" if gcp_cred.is_default else "(Fallback)"
+            logger.info(f"🔑 Using GCP credential {is_def_str} for user {user_id} (id={gcp_cred.id})")
+            
+            try:
+                # GCPPlugin expects 'service_account_json' (string/dict) and 'project_id' in config
+                plugin = GCPPlugin({
+                    "service_account_json": gcp_cred.gcp_service_account_json,
+                    "project_id": gcp_cred.gcp_project_id
+                })
+                mcp_registry.register("gcp", plugin)
+                providers_initialized["gcp"] = plugin
+                logger.info("✅ GCP Plugin registered")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize GCP plugin: {e}")
+    else:
+        logger.warning(f"⚠️ No GCP credentials found for user {user_id}")
 
 #     logger.info(f"🎯 Final providers available: {list(providers_initialized.keys())}")
 #     logger.info(f"DEBUG aws_credential_id resolved: {aws_credential_id}")
