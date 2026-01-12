@@ -499,6 +499,9 @@ class CredentialManager:
         
         # Log before deletion
             self._log_audit(credential_id, user_id, 'delete')
+            logger.warning(f"⚠️ DELETE CREDENTIAL TRIGGERED: id={credential_id}, user={user_id}")
+            import traceback
+            logger.info(f"Traceback:\n{''.join(traceback.format_stack())}")
         
         # Delete credential
             cur.execute(

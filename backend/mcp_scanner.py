@@ -53,10 +53,10 @@ class MCPSecurityScanner:
                 credential = credential_manager.get_default_credential(user_id, provider)
                 
                 if not credential:
-                    logger.warning(f"⚠️ No credential found for {provider}")
+                    logger.warning(f"⚠️ No credential found for {provider} (user_id={user_id}). DB Query returned empty.")
                     results["failed"].append({
                         "provider": provider,
-                        "reason": "No credentials available"
+                        "reason": f"No default credential found for {user_id}"
                     })
                     continue
                 

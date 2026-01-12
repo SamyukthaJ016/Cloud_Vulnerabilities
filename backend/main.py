@@ -2509,9 +2509,9 @@ class SessionResponse(BaseModel):
 
 def get_user_id(request: Request) -> str:
     """Extract user ID from request"""
-    # session_id = request.cookies.get("cloudguard_session")
-    # if session_id:
-    #     return f"user_{session_id}"
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        return f"user_{session_id}"
     return "anonymous"
 
 def _wrap_text(text: str, width: int = 95):
@@ -2593,10 +2593,15 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
                 aws_config.pop("session_token", None)
 
 
-            server = create_aws_server(aws_config)
-
-            mcp_server_manager.register_server(server)
-            await server.start()
+            try:
+                server = create_aws_server(aws_config)
+                mcp_server_manager.register_server(server)
+                await server.start()
+                logger.info("✅ AWS MCP server initialized successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize AWS server: {e}")
+                # Don't raise, just skip this provider so others can proceed
+                continue
 
             # 🔥 THIS IS CRITICAL
             mcp_registry.register("aws", server)
