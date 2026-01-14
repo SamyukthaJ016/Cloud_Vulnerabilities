@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Read-only role for CloudGuard vulnerability scanning
+
+Parameters:
+  ScannerAccountId:
+    Type: String
+    Description: AWS Account ID of CloudGuard scanner (e.g., 859561299880)
+    Default: "859561299880"
+
+Resources:
+  CloudGuardReadOnlyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # Removed hardcoded RoleName to allow multiple stacks/onboarding without collision
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${ScannerAccountId}:root
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/SecurityAudit
+      Description: "Read-only role assumed by the CloudGuard scanner to perform security assessments."
+
+  CloudGuardScannerIdentityPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: 'CloudGuard-Scanner-Identity-Policy'
+      Description: 'Managed policy for the IAM User running the scanner to allow it to assume the read-only role.'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Resource: !GetAtt CloudGuardReadOnlyRole.Arn
+
+Outputs:
+  RoleArn:
+    Description: The ARN of the role created for the scanner.
+    Value: !GetAtt CloudGuardReadOnlyRole.Arn
+  ScannerIdentityPolicyArn:
+    Description: Attach this policy to YOUR IAM user to allow it to access this role.
+    Value: !Ref CloudGuardScannerIdentityPolicy
