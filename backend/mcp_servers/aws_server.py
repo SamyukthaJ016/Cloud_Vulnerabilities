@@ -40,10 +40,15 @@ class AWSMCPServer(BaseMCPServer):
         self._initialize_aws_session()
     
     def _initialize_aws_session(self) -> None:
-        """Initialize AWS boto3 session"""
+        """Initialize AWS session with credentials from config"""
         try:
+            logger.info(f"[AWS] Initializing session with config: {self.config}")
+            
+            # Pass self.config as the creds parameter
             self.session = get_aws_session(
-                region=self.config.get("region", "us-east-1"))
+                region=self.config.get('region', 'us-east-1'),
+                creds=self.config  # Pass the entire config as creds
+            )
 
             self.s3 = self.session.client("s3")
             self.iam = self.session.client("iam")
@@ -53,9 +58,9 @@ class AWSMCPServer(BaseMCPServer):
             self.guardduty = self.session.client("guardduty")
             
             # Validate credentials
-            sts = self.session.client("sts")
-            identity = sts.get_caller_identity()
-            logger.info(f"[AWS] Authenticated as {identity['Arn']}")
+            self.sts_client = self.session.client('sts')
+            identity = self.sts_client.get_caller_identity()
+            logger.info(f"[AWS] Session initialized. Account: {identity['Account']}")
             
         except Exception as e:
             logger.error(f"[AWS] Failed to initialize session: {e}")

@@ -80,7 +80,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(credentials_router)
+# Consolidating router inclusions...
+# app.include_router(credentials_router)
 
 OPENAI_AGENT_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
 
@@ -105,6 +106,7 @@ class MultiCloudScanRequest(BaseModel):
     account_ids: dict[str, str] = {}
     deep_scan: bool = False
     session_id: Optional[str] = None
+    credential_id: Optional[int] = None  # NEW: Allow selecting specific credential
 
 class ScheduledScanRequest(BaseModel):
     providers: list[str]
@@ -112,6 +114,7 @@ class ScheduledScanRequest(BaseModel):
     deep_scan: bool = False
     schedule: dict
     user_id: Optional[str] = None
+    credential_id: Optional[int] = None  # NEW: Allow selecting specific credential for scheduled scans
 
 
 class VulnScanRequest(BaseModel):
@@ -480,98 +483,7 @@ async def run_multi_cloud_scan_internal(
         "user_credentials_used": len(providers_initialized) > 0,
     }
 
-@app.post("/scan/multi-cloud")
-async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
-    """Direct multi-cloud scan with USER credentials"""
-    logger.info(f"🚀 Multi-cloud scan for providers: {request.providers}")
-
-    user_id = get_user_id(req)
-    logger.info(f"👤 User ID: {user_id}")
-
-    init_ctx = initialize_plugins_with_user_credentials(user_id)
-    providers_initialized = init_ctx["providers"]
-    aws_cred_id = init_ctx["aws_credential_id"]
-    logger.info(f"DEBUG aws_cred_id in endpoint: {aws_cred_id}")
-
-    logger.info(f"✅ Initialized providers: {list(providers_initialized.keys())}")
-
-    for provider in request.providers:
-        if provider not in mcp_registry.list_providers():
-            logger.error(
-                f"❌ Provider {provider} not initialized. "
-                f"Available: {mcp_registry.list_providers()}"
-            )
-            raise HTTPException(
-                status_code=400,
-                detail=f"{provider} scan failed: No credentials available. "
-                       f"Please add credentials in Settings.",
-            )
-
-    scan_results: list[ScanResult] = []
-    stored_ids: list[int] = []
-
-    for provider in request.providers:
-        try:
-            account_id = request.account_ids.get(provider, "default") or "default"
-            logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
-
-            result = await mcp_registry.scan(provider, account_id)
-
-            if request.deep_scan:
-                logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
-                plugin = mcp_registry.get_plugin(provider)
-                cloud_client = None
-                if plugin:
-                    cloud_client = getattr(plugin, "s3", None) or getattr(
-                        plugin, "storage_client", None
-                    )
-
-                for resource in result.resources:
-                    try:
-                        vuln_findings = await vuln_integration.scan_cloud_resource(
-                            resource, cloud_client
-                        )
-                        result.findings.extend(vuln_findings)
-                    except Exception as e:
-                        logger.error(f"Failed to scan resource {resource.name}: {e}")
-
-                logger.info(f"✅ Deep scan completed for {provider}")
-
-            scan_results.append(result)
-
-            scan_id = await store_scan_result(
-                result,
-                aws_credential_id=aws_cred_id if provider == "aws" else None,
-            )
-            stored_ids.append(scan_id)
-            logger.info(f"✅ {provider.upper()} scan finished, stored as scan_id: {scan_id}")
-
-        except Exception as e:
-            logger.error(f"❌ Scan failed for {provider}: {e}")
-            raise HTTPException(status_code=500, detail=f"{provider} scan failed: {e}")
-
-    try:
-        ai_analysis = await ai_engine.analyze_scan_results(scan_results)
-    except Exception as e:
-        logger.error(f"AI analysis failed: {e}")
-        ai_analysis = {"error": "AI unavailable"}
-
-    return {
-        "status": "completed",
-        "scan_ids": stored_ids,
-        "deep_scan_enabled": request.deep_scan,
-        "user_credentials_used": len(providers_initialized) > 0,
-        "scan_results": [
-            {
-                "provider": r.provider,
-                "resources": len(r.resources),
-                "findings": len(r.findings),
-                "duration": r.scan_duration,
-            }
-            for r in scan_results
-        ],
-        "ai_analysis": ai_analysis,
-    }
+# Consolidating multi_cloud_scan...
 
 # @app.post("/scan")
 # async def intelligent_scan(request: ScanRequest, req: Request):
@@ -2505,6 +2417,7 @@ class MultiCloudScanRequest(BaseModel):
     offensive_scan: bool = True  # NEW: Enable CloudFox by default
     session_id: Optional[str] = None
     user_id: Optional[str] = None
+    credential_id: Optional[int] = None  # NEW: Allow selecting specific credential
 
 
 class ScheduledScanRequest(BaseModel):
@@ -2513,6 +2426,7 @@ class ScheduledScanRequest(BaseModel):
     deep_scan: bool = False
     schedule: dict
     user_id: Optional[str] = None
+    credential_id: Optional[int] = None  # NEW: Allow selecting specific credential for scheduled scans
 
 class VulnScanRequest(BaseModel):
     target_type: str
@@ -2598,13 +2512,18 @@ def build_scan_report(scan_id: int) -> dict:
         "providers": providers,
         "per_cloud": per_cloud,
     }
-async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
+async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], credential_id: Optional[int] = None):
     """Ensure MCP servers are initialized for the user's selected providers."""
     logger.info(f"🔄 (Re)initializing MCP servers for user {user_id} and requested providers: {providers}")
     
     for provider in providers:
         if provider == "aws":
-            aws_cred = credential_manager.get_default_credential(user_id, "aws")
+            # Use specific credential if provided, otherwise use default
+            if credential_id:
+                aws_cred = credential_manager.get_credential_by_id(user_id, credential_id)
+            else:
+                aws_cred = credential_manager.get_default_credential(user_id, "aws")
+                
             if (not aws_cred):
                 logger.warning(f"⚠️ No AWS credentials found in DB for user {user_id}")
                 # ONLY fallback if user is anonymous and we have no other choice
@@ -2626,12 +2545,15 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
                 "user_id": user_id,
             }
 
-            # ✅ ONLY add session_token if it exists
+            # ✅ Add session_token if it exists
             token = aws_cred.aws_session_token
             if token and token.strip() and token.lower() not in ("none", "null"):
                 aws_config["session_token"] = token
-            else:
-                aws_config.pop("session_token", None)
+            
+            # ✅ Add role_arn if it exists
+            role_arn = aws_cred.aws_role_arn
+            if role_arn and role_arn.strip() and role_arn.lower() not in ("none", "null"):
+                aws_config["role_arn"] = role_arn
 
 
             server = create_aws_server(aws_config)
@@ -2795,13 +2717,14 @@ async def run_multi_cloud_scan_internal(
     account_ids: dict[str, str],
     deep_scan: bool,
     user_id: str,
+    credential_id: Optional[int] = None,  # NEW: Support specific credential
 ):
     """Core multi-cloud scan logic reused by API and scheduler."""
     logger.info(f"🚀 Multi-cloud scan for providers: {providers}")
     logger.info(f"👤 User ID: {user_id}")
 
     # ✅ STEP 1: Initialize plugins with user credentials
-    await initialize_mcp_servers_for_user(user_id, providers)
+    await initialize_mcp_servers_for_user(user_id, providers, credential_id)
     
     # Get initialized providers from registry
     initialized_list = mcp_registry.list_providers()
@@ -2926,12 +2849,13 @@ async def run_multi_cloud_scan_internal(
     }
 @app.post("/scan/schedule")
 async def schedule_scan(request: ScheduledScanRequest, req: Request):
-    user_id = request.user_id or get_user_id(req)
-    logger.info(f"📅 Scheduling scan for user={user_id}, schedule={request.schedule}")
+    user_id = request.user_id or "anonymous"
+    logger.info(f"📅 Received schedule scan request from user={user_id}: {request}")
 
     schedule = request.schedule or {}
     stype = schedule.get("type")
     if stype not in ("once", "recurring"):
+        logger.warning(f"❌ Invalid schedule type: {stype}")
         raise HTTPException(status_code=400, detail="schedule.type must be 'once' or 'recurring'")
 
     # ⏰ Timezone handling
@@ -2973,8 +2897,8 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
         cur.execute(
             """
             INSERT INTO scan_schedules
-            (user_id, providers, account_ids, deep_scan, schedule, status, next_run_at, created_at)
-            VALUES (%s, %s, %s, %s, %s, 'scheduled', %s, NOW())
+            (user_id, providers, account_ids, deep_scan, schedule, status, next_run_at, credential_id, created_at)
+            VALUES (%s, %s, %s, %s, %s, 'scheduled', %s, %s, NOW())
             RETURNING id
             """,
             (
@@ -2984,11 +2908,13 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
                 request.deep_scan,
                 Json(schedule),
                 next_run_at,
+                request.credential_id,  # NEW: Save credential_id
             ),
         )
         schedule_id = cur.fetchone()[0]
         conn.commit()
-
+    
+    logger.info(f"✅ Schedule created in DB: id={schedule_id}, next_run_at={next_run_at}")
     return {
         "status": "scheduled",
         "schedule_id": schedule_id,
@@ -3056,7 +2982,46 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
     # 🔥 Initialize MCP servers FIRST
-    await initialize_mcp_servers_for_user(user_id, request.providers)
+    try:
+        await initialize_mcp_servers_for_user(user_id, request.providers, request.credential_id)
+    except Exception as e:
+        # Check if this is our structured permission error from aws_assume_role.py
+        if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
+            logger.warning(f"🛡️ Detected missing assume-role permission for user: {e.iam_user_arn}")
+            
+            # Find the AWS credential ID (needed for the auto-grant request)
+            # Use specific credential if provided, otherwise use default
+            if request.credential_id:
+                aws_cred = credential_manager.get_credential_by_id(user_id, request.credential_id)
+            else:
+                aws_cred = credential_manager.get_default_credential(user_id, "aws")
+            cred_id = aws_cred.id if aws_cred else None
+            
+            # Extract simple name from ARN: arn:aws:iam::123:user/vuln_scan_test -> vuln_scan_test
+            iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
+            
+            return JSONResponse(
+                status_code=200, # Return 200 so the frontend can handle it as a flow, not a crash
+                content={
+                    "status": "permission_required",
+                    "permission_error": {
+                        "type": "missing_assume_role_permission",
+                        "iam_user_name": iam_user_name,
+                        "iam_user_arn": e.iam_user_arn,
+                        "role_arn": getattr(e, 'role_arn', None),
+                        "policy_arn": e.recommended_policy_arn,
+                        "credential_id": cred_id,
+                        "can_auto_grant": True
+                    }
+                }
+            )
+        
+        # Log other initialization errors
+        logger.error(f"❌ MCP Server initialization failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Initialization failed: {str(e)}"
+        )
 
     # ✅ NOW validate
     available_providers = mcp_registry.list_providers()
@@ -3494,6 +3459,29 @@ async def health():
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=500, detail=f"Service unhealthy: {e}")
 
+@app.get("/frontend/history.html")
+async def serve_history_page():
+    """Serve the scan history page"""
+    import os
+    from fastapi.responses import FileResponse
+    
+    # Try multiple possible paths for robustness in Docker/outside
+    possible_paths = [
+        os.path.join(os.path.dirname(__file__), "../frontend/history.html"),
+        "/app/frontend/history.html",
+        "frontend/history.html",
+        "./frontend/history.html"
+    ]
+    
+    for path in possible_paths:
+        abs_path = os.path.abspath(path)
+        if os.path.exists(abs_path):
+            logger.info(f"Serving history page from: {abs_path}")
+            return FileResponse(abs_path)
+    
+    logger.error(f"History page not found. Checked paths: {possible_paths}")
+    raise HTTPException(status_code=404, detail="History page not found")
+
 @app.get("/api/info")
 async def api_info():
     return {
@@ -3736,6 +3724,107 @@ async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
     except Exception as e:
         logger.exception("Failed to get latest findings")
         return {"status": "error", "message": str(e), "data": []}
+
+@app.get("/api/scans")
+async def get_scans(
+    user_id: str,
+    limit: int = 20,
+    offset: int = 0,
+    provider: Optional[str] = None,
+    status: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None
+):
+    """Get all scans with filters and pagination for history page"""
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            # Build query with filters
+            query = """
+                SELECT 
+                    s.id,
+                    s.cloud,
+                    s.account_id,
+                    s.status,
+                    s.started_at,
+                    s.duration_seconds,
+                    COUNT(DISTINCT r.id) as resource_count,
+                    COUNT(DISTINCT f.id) as finding_count,
+                    COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
+                FROM scans s
+                LEFT JOIN resources r ON s.id = r.scan_id
+                LEFT JOIN findings f ON s.id = f.scan_id
+                WHERE 1=1
+            """
+            params = []
+            
+            # Add filters
+            if provider:
+                query += " AND s.cloud = %s"
+                params.append(provider)
+            
+            if status:
+                query += " AND s.status = %s"
+                params.append(status)
+            
+            if from_date:
+                query += " AND s.started_at >= %s"
+                params.append(from_date)
+            
+            if to_date:
+                query += " AND s.started_at <= %s"
+                params.append(to_date)
+            
+            query += """
+                GROUP BY s.id, s.cloud, s.account_id, s.status, s.started_at, s.duration_seconds
+                ORDER BY s.started_at DESC
+                LIMIT %s OFFSET %s
+            """
+            params.extend([limit, offset])
+            
+            cur.execute(query, tuple(params))
+            results = cur.fetchall()
+            
+            # Get total count
+            count_query = "SELECT COUNT(*) FROM scans WHERE 1=1"
+            count_params = []
+            if provider:
+                count_query += " AND cloud = %s"
+                count_params.append(provider)
+            if status:
+                count_query += " AND status = %s"
+                count_params.append(status)
+            if from_date:
+                count_query += " AND started_at >= %s"
+                count_params.append(from_date)
+            if to_date:
+                count_query += " AND started_at <= %s"
+                count_params.append(to_date)
+            
+            cur.execute(count_query, tuple(count_params))
+            total = cur.fetchone()[0]
+        
+        return {
+            "status": "success",
+            "scans": [
+                {
+                    "id": scan_id,
+                    "cloud": cloud,
+                    "account_id": account_id,
+                    "status": scan_status,
+                    "started_at": started_at.isoformat() if started_at else None,
+                    "duration_seconds": duration,
+                    "resource_count": resource_count,
+                    "finding_count": finding_count,
+                    "critical_count": critical_count
+                }
+                for scan_id, cloud, account_id, scan_status, started_at, duration, resource_count, finding_count, critical_count in results
+            ],
+            "total": total
+        }
+    except Exception as e:
+        logger.exception("Failed to get scans")
+        return {"status": "error", "message": str(e), "scans": [], "total": 0}
 
 @app.get("/report/{scan_id}")
 async def get_report(scan_id: int):

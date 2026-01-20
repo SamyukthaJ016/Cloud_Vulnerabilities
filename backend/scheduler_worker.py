@@ -21,7 +21,7 @@ async def run_due_schedules():
             # Get all due schedules with FOR UPDATE SKIP LOCKED to prevent concurrent execution
             cur.execute(
                 """
-                SELECT id, user_id, providers, account_ids, deep_scan, schedule
+                SELECT id, user_id, providers, account_ids, deep_scan, schedule, credential_id
                 FROM scan_schedules
                 WHERE status = 'scheduled' AND next_run_at <= NOW()
                 FOR UPDATE SKIP LOCKED
@@ -36,7 +36,7 @@ async def run_due_schedules():
         logger.info(f"🕒 Found {len(rows)} due scheduled scans")
 
         for row in rows:
-            schedule_id, user_id, providers_text, account_ids_text, deep_scan, schedule = row
+            schedule_id, user_id, providers_text, account_ids_text, deep_scan, schedule, credential_id = row
             
             # Parse JSON fields
             try:
@@ -61,6 +61,7 @@ async def run_due_schedules():
                     account_ids=account_ids,
                     deep_scan=deep_scan,
                     user_id=user_id,
+                    credential_id=credential_id,  # NEW: Use saved credential
                 )
                 
                 scan_ids = result_ctx.get("scan_ids", [])

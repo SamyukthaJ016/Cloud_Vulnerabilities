@@ -758,6 +758,60 @@
                 width: 100%;
             }
         }
+
+        /* IAM Permission Modal Styles */
+        .command-group {
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .command-group h3 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        .code-block-container {
+            position: relative;
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .code-block-container pre {
+            margin: 0;
+            color: #f1f5f9;
+            font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            padding-right: 70px;
+            line-height: 1.5;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .copy-btn:hover {
+            background: rgba(148, 163, 184, 0.2);
+            color: white;
+            border-color: rgba(148, 163, 184, 0.4);
+        }
     </style>
 </head>
 
@@ -902,6 +956,22 @@
                     </div>
                 </div>
 
+                <!-- Credential Selection -->
+                <div class="credential-selector" style="margin-bottom: 20px;">
+                    <label for="scanCredentialSelect"
+                        style="display: block; margin-bottom: 8px; font-weight: 600; color: #e2e8f0;">
+                        Select AWS Credential
+                    </label>
+                    <select id="scanCredentialSelect"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 14px;">
+                        <option value="">Use Default Credential</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                    <span style="font-size: 12px; color: #94a3b8; margin-top: 4px; display: block;">
+                        Choose which AWS credential to use for this scan
+                    </span>
+                </div>
+
                 <!-- Scan Options -->
                 <div class="scan-options">
                     <div class="option-item">
@@ -1022,6 +1092,7 @@
         <div class="footer">
             <div class="nav-links">
                 <a href="/dashboard" class="nav-link">📊 Dashboard</a>
+                <a href="/frontend/history.html" class="nav-link">📜 Scan History</a>
                 <a href="/system-status" class="nav-link">🔍 System Status</a>
                 <a href="#" class="nav-link" onclick="openCredentialsModal()">🔐 Credentials</a>
                 <a href="/api/info" class="nav-link">🔧 API Info</a>
@@ -1048,6 +1119,7 @@
         };
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
+        let allCredentialsMap = {}; // Global map ID -> detail
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1077,8 +1149,50 @@
 
             // Set default date/time for scheduled scan
             setDefaultDateTime();
+
+            // Load credentials for selector dropdown
+            await loadCredentialSelector();
         });
 
+        // --- IAM Permission Modal Helpers ---
+        function openIamCommandsModal(credentialId, onConfirm) {
+            const cred = allCredentialsMap[credentialId];
+            const roleArn = (cred && cred.aws_role_arn) ? cred.aws_role_arn : 'arn:aws:iam::ACCOUNT_ID:role/CloudGuardReadOnlyRole';
+            const roleName = roleArn.includes('/') ? roleArn.split('/').pop() : 'CloudGuardReadOnlyRole';
+
+            // Simple policy JSONs
+            const policyDoc = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "sts:AssumeRole",
+                    "Resource": roleArn
+                }]
+            };
+
+            const trustDoc = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": { "AWS": "arn:aws:iam::ACCOUNT_ID:user/YOUR_IAM_USER" },
+                    "Action": "sts:AssumeRole"
+                }]
+            };
+
+            document.getElementById('iamPolicyCommand').textContent = `aws iam put-user-policy --user-name YOUR_IAM_USER --policy-name AllowAssumeCloudGuardRole --policy-document '${JSON.stringify(policyDoc, null, 2)}'`;
+            document.getElementById('iamTrustCommand').textContent = `aws iam update-assume-role-policy --role-name ${roleName} --policy-document '${JSON.stringify(trustDoc, null, 2)}'`;
+
+            document.getElementById('iamCommandsModal').style.display = 'flex';
+
+            document.getElementById('confirmIamCommandsBtn').onclick = () => {
+                closeIamCommandsModal();
+                onConfirm();
+            };
+        }
+
+        function closeIamCommandsModal() {
+            document.getElementById('iamCommandsModal').style.display = 'none';
+        }
 
         // Setup frequency selector
         function setupFrequencySelector() {
@@ -1100,6 +1214,46 @@
             const dateStr = tomorrow.toISOString().split('T')[0];
             document.getElementById('scheduleDate').value = dateStr;
             document.getElementById('scheduleTime').value = '09:00';
+        }
+
+        // Load credentials for selector dropdown
+        async function loadCredentialSelector() {
+            try {
+                const userId = getUserId();
+                const response = await fetch(`/api/credentials?user_id=${userId}`);
+                if (!response.ok) return;
+
+                const credentials = await response.json();
+                const select = document.getElementById('scanCredentialSelect');
+
+                // Clear existing options except default
+                select.innerHTML = '<option value="">Use Default Credential</option>';
+
+                // Add AWS credentials
+                const awsCredentials = credentials.filter(c => c.cloud_provider === 'aws');
+
+                // Clear map and populate
+                allCredentialsMap = {};
+                credentials.forEach(c => {
+                    allCredentialsMap[c.id] = c;
+                });
+
+                awsCredentials.forEach(cred => {
+                    const option = document.createElement('option');
+                    option.value = cred.id;
+                    // Use credential_name from API response
+                    const displayName = cred.credential_name || `AWS Credential ${cred.id}`;
+                    option.textContent = displayName;
+                    if (cred.is_default) {
+                        option.textContent += ' (Default)';
+                    }
+                    select.appendChild(option);
+                });
+
+                console.log(`✅ Loaded ${awsCredentials.length} AWS credentials for selector`);
+            } catch (error) {
+                console.error('Failed to load credentials for selector:', error);
+            }
         }
 
         // Switch schedule tab
@@ -1342,11 +1496,13 @@
             }
 
             // Build scan request
+            const selectedCredentialId = document.getElementById('scanCredentialSelect').value;
             let scanRequest = {
                 providers: selectedProviders,
                 account_ids: {},
                 deep_scan: deepScan,
-                user_id: userId  // 🔥 ADDED: Send user ID
+                user_id: userId,  // 🔥 ADDED: Send user ID
+                credential_id: selectedCredentialId ? parseInt(selectedCredentialId) : null  // NEW: Selected credential
             };
 
             // 🔥 DEBUG ALERT: Show exactly what is being sent
@@ -1372,22 +1528,29 @@
                     name: scheduleName || `Scan on ${scheduleDate}`
                 };
 
-                try {
-                    const resp = await fetch('/scan/schedule', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(scanRequest),
-                    });
-                    const result = await resp.json();
-                    if (!resp.ok) {
-                        throw new Error(result.detail || 'Failed to schedule scan');
-                    }
-                    alert(`Scan scheduled (id=${result.schedule_id}) for ${scheduleDate} at ${scheduleTime} ${timezone}`);
-                } catch (e) {
-                    alert('Failed to schedule scan: ' + e.message);
-                }
-                return;
+                // ⚠️ PERMISSION CHECK: Show custom modal before scheduling
+                openIamCommandsModal(selectedCredentialId, async () => {
+                    try {
+                        const resp = await fetch('/scan/schedule', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(scanRequest),
+                        });
+                        const result = await resp.json();
 
+                        if (resp.ok) {
+                            alert('✅ Scan scheduled successfully!');
+                            closeScanModal();
+                            loadRecentScans();
+                        } else {
+                            alert(`Error scheduling scan: ${result.detail || 'Unknown error'}`);
+                        }
+                    } catch (error) {
+                        console.error('Failed to schedule scan:', error);
+                        alert('Failed to connect to scanner API');
+                    }
+                });
+                return;
             } else if (currentScheduleTab === 'recurring') {
                 const recurringName = document.getElementById('recurringName').value;
                 const recurringTime = document.getElementById('recurringTime').value;
@@ -1406,20 +1569,24 @@
                     name: recurringName
                 };
 
-                try {
-                    const resp = await fetch('/scan/schedule', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(scanRequest),
-                    });
-                    const result = await resp.json();
-                    if (!resp.ok) {
-                        throw new Error(result.detail || 'Failed to create recurring schedule');
+                // ⚠️ PERMISSION CHECK: Show custom modal before scheduling
+                openIamCommandsModal(selectedCredentialId, async () => {
+                    try {
+                        const resp = await fetch('/scan/schedule', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(scanRequest),
+                        });
+                        const result = await resp.json();
+                        if (!resp.ok) {
+                            throw new Error(result.detail || 'Failed to create recurring schedule');
+                        }
+                        alert(`Recurring ${selectedFrequency} scan "${recurringName}" created (id=${result.schedule_id})!`);
+                        closeScanModal(); // Close after success
+                    } catch (e) {
+                        alert('Failed to create recurring scan: ' + e.message);
                     }
-                    alert(`Recurring ${selectedFrequency} scan "${recurringName}" created (id=${result.schedule_id})!`);
-                } catch (e) {
-                    alert('Failed to create recurring scan: ' + e.message);
-                }
+                });
                 return;
             }
 
@@ -1475,6 +1642,49 @@
                 });
 
                 const result = await response.json();
+                console.log('🔍 [DEBUG] Scan API Result:', result);
+
+                // 🔥 HANDLE PERMISSION REQUIRED
+                if (result.status === 'permission_required') {
+                    console.log('🛡️ Permission required:', result.permission_error);
+                    pendingPermissionRequest = result.permission_error;
+
+                    document.getElementById('permIamUser').textContent = result.permission_error.iam_user_name || 'unknown';
+                    document.getElementById('permPolicyArn').textContent = result.permission_error.policy_arn || 'unknown';
+
+                    // Reset UI
+                    document.getElementById('permissionDetails').style.display = 'block';
+                    document.getElementById('manualFixContainer').style.display = 'none';
+                    document.getElementById('btnGrantPerm').style.display = 'block';
+                    document.getElementById('adminSelectionArea').style.display = 'none';
+
+                    // Check if we have other credentials that might be Admin
+                    const adminSelect = document.getElementById('adminCredentialSelect');
+                    adminSelect.innerHTML = '<option value="">-- Choose Admin Credential (Optional) --</option>';
+
+                    // userCredentials is a global array populated by loadSavedCredentials()
+                    if (typeof userCredentials !== 'undefined' && userCredentials.length > 1) {
+                        userCredentials.forEach(cred => {
+                            if (cred.cloud_provider === 'aws' && cred.id !== pendingPermissionRequest.credential_id) {
+                                const opt = document.createElement('option');
+                                opt.value = cred.id;
+                                opt.textContent = `${cred.credential_name} (${cred.aws_access_key_id.substr(0, 8)}...)`;
+                                adminSelect.appendChild(opt);
+                            }
+                        });
+                        if (adminSelect.options.length > 1) {
+                            document.getElementById('adminSelectionArea').style.display = 'block';
+                        }
+                    }
+
+                    // Hide scanning modal
+                    modal.classList.remove('active');
+                    scanInProgress = false;
+                    enableControls();
+
+                    document.getElementById('permissionModal').style.display = 'flex';
+                    return;
+                }
 
                 if (response.ok) {
                     console.log('✅ Scan completed:', result);
@@ -1508,6 +1718,92 @@
                     alert(`Scan failed: ${error.message}`);
                 }, 3000);
             }
+        }
+
+        let pendingPermissionRequest = null;
+
+        async function grantPermissionAndScan() {
+            if (!pendingPermissionRequest) return;
+
+            const btn = document.getElementById('btnGrantPerm');
+            btn.disabled = true;
+            btn.textContent = '⏳ Granting...';
+
+            try {
+                console.log('🛡️ Attempting auto-grant:', pendingPermissionRequest);
+
+                const adminCredId = document.getElementById('adminCredentialSelect').value;
+
+                const response = await fetch('/api/credentials/aws/auto-grant-permission', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_id: pendingPermissionRequest.credential_id,
+                        iam_user_name: pendingPermissionRequest.iam_user_name,
+                        policy_arn: pendingPermissionRequest.policy_arn,
+                        role_arn: pendingPermissionRequest.role_arn,
+                        admin_credential_id: adminCredId ? parseInt(adminCredId) : null
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ Permission granted successfully! Starting scan now...');
+                    document.getElementById('permissionModal').style.display = 'none';
+                    // Retry the scan automatically
+                    startScan();
+                } else {
+                    // Show manual fix section
+                    document.getElementById('permissionDetails').style.display = 'none';
+                    document.getElementById('manualFixContainer').style.display = 'block';
+                    document.getElementById('manualFixError').textContent = result.error_details || result.message;
+                    document.getElementById('btnGrantPerm').style.display = 'none';
+
+                    if (result.recommended_cli_command) {
+                        document.getElementById('manualFixCommand').textContent = result.recommended_cli_command;
+                    } else {
+                        document.getElementById('manualFixCommand').textContent = "# Manual intervention required. Please attach the policy in the AWS console.";
+                    }
+
+                    // Populate Step 2: Trust Relationship command
+                    if (result.trust_relationship_cli_command) {
+                        document.getElementById('trustRelationshipCommand').textContent = result.trust_relationship_cli_command;
+                    } else {
+                        document.getElementById('trustRelationshipCommand').textContent = "# Trust relationship update not available.";
+                    }
+
+                    if (result.identity_policy_json) {
+                        document.getElementById('identityPolicyJSON').textContent = result.identity_policy_json;
+                    }
+                    if (result.trust_policy_json) {
+                        document.getElementById('trustPolicyJSON').textContent = result.trust_policy_json;
+                    }
+                }
+            } catch (error) {
+                alert('❌ Error granting permission: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '✅ Grant & Retry Scan';
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const content = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('📋 Copied to clipboard!');
+            });
+        }
+
+        function switchManualTab(tab) {
+            document.getElementById('manualTabCLI').style.display = tab === 'cli' ? 'block' : 'none';
+            document.getElementById('manualTabJSON').style.display = tab === 'json' ? 'block' : 'none';
+
+            // Update active state of buttons
+            const btns = document.querySelectorAll('#manualFixContainer .tabs button');
+            btns[0].classList.toggle('active', tab === 'cli');
+            btns[1].classList.toggle('active', tab === 'json');
         }
 
         // Simulate progress
@@ -1601,6 +1897,7 @@
             const accessKeyId = document.getElementById('awsAccessKeyId').value;
             const secretAccessKey = document.getElementById('awsSecretAccessKey').value;
             const region = document.getElementById('awsRegion').value;
+            const roleArn = document.getElementById('awsRoleArn').value;
             const sessionToken = document.getElementById('awsSessionToken').value;
             const isDefault = document.getElementById('awsIsDefault').checked;
 
@@ -1619,6 +1916,7 @@
                         aws_access_key_id: accessKeyId,
                         aws_secret_access_key: secretAccessKey,
                         aws_region: region,
+                        aws_role_arn: roleArn || undefined,
                         aws_session_token: sessionToken || undefined,
                         is_default: isDefault
                     })
@@ -1838,6 +2136,76 @@
             }, 5000);
         }
 
+        // CloudFormation Stack Deployment Functions
+        async function launchCloudFormationStack() {
+            try {
+                showAlert('🚀 Generating CloudFormation stack URL...', 'warning');
+
+                // Call backend to get CloudFormation URL
+                const response = await fetch('/api/credentials/aws/cloudformation-url');
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate CloudFormation URL');
+                }
+
+                const data = await response.json();
+
+                // Open CloudFormation console in new window
+                const cfnWindow = window.open(data.cloudformation_url, '_blank');
+
+                if (!cfnWindow) {
+                    showAlert('❌ Popup blocked! Please allow popups for this site and try again.', 'error');
+                    return;
+                }
+
+                // Show success message with instructions
+                showAlert(
+                    `✅ CloudFormation console opened! Stack name: ${data.stack_name}. ` +
+                    `Follow the steps in the console, then return here to complete setup.`,
+                    'success'
+                );
+
+                // Log instructions to console for reference
+                console.log('CloudFormation Deployment Instructions:', data.instructions);
+
+            } catch (error) {
+                console.error('CloudFormation launch error:', error);
+                showAlert(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function downloadCloudFormationTemplate() {
+            try {
+                showAlert('📥 Downloading CloudFormation template...', 'warning');
+
+                // Fetch the template
+                const response = await fetch('/api/credentials/aws/cloudformation-template');
+
+                if (!response.ok) {
+                    throw new Error('Failed to download template');
+                }
+
+                const templateContent = await response.text();
+
+                // Create a blob and download
+                const blob = new Blob([templateContent], { type: 'text/yaml' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cloudguard-enhanced-role.yaml';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                showAlert('✅ Template downloaded! Deploy it using AWS CLI or console.', 'success');
+
+            } catch (error) {
+                console.error('Template download error:', error);
+                showAlert(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
         // Expose functions globally
         window.switchScheduleTab = switchScheduleTab;
         window.toggleProvider = toggleProvider;
@@ -1855,6 +2223,8 @@
         window.validateCredential = validateCredential;
         window.deleteCredential = deleteCredential;
         window.refreshCredentials = refreshCredentials;
+        window.launchCloudFormationStack = launchCloudFormationStack;
+        window.downloadCloudFormationTemplate = downloadCloudFormationTemplate;
     </script>
 
     <!-- Credentials Modal (embedded) -->
@@ -1873,8 +2243,146 @@
 
             <!-- AWS Tab -->
             <div id="awsTab" class="tab-content active">
+                <!-- 🚀 ONE-CLICK CLOUDFORMATION SETUP -->
+                <div class="form-section cloudformation-setup">
+                    <h3>🚀 Quick Setup - Automated Role Creation</h3>
+                    <p class="form-description">
+                        Deploy a CloudFormation stack to automatically create a read-only IAM role with all necessary
+                        permissions.
+                        This is the <strong>recommended</strong> and <strong>safest</strong> way to set up CloudGuard
+                        scanning.
+                    </p>
+
+                    <div class="setup-steps">
+                        <div class="step-item">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <strong>Launch CloudFormation Stack</strong>
+                                <p>Click the button below to open AWS CloudFormation console with pre-configured
+                                    template</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <strong>Review & Create</strong>
+                                <p>Ensure <b>ScannerAccountId</b> matches your ID, check the IAM acknowledgment box, and
+                                    create the stack</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <strong>Copy Role ARN</strong>
+                                <p>After stack creation, copy the Role ARN from the Outputs tab</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <strong>Complete Setup</strong>
+                                <p>Enter your AWS credentials below and paste the Role ARN</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cloudformation-actions">
+                        <button class="btn btn-primary btn-large" onclick="launchCloudFormationStack()">
+                            🚀 Launch CloudFormation Stack
+                        </button>
+                        <button class="btn btn-secondary" onclick="downloadCloudFormationTemplate()">
+                            📥 Download Template
+                        </button>
+                    </div>
+
+                    <div class="permissions-info">
+                        <details>
+                            <summary>📋 View Permissions Included (20 Security Checks)</summary>
+                            <div class="permissions-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Service</th>
+                                            <th>Why You Need It</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>EC2 / VPC</td>
+                                            <td>Security Groups, VPCs, subnets, routing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>IAM</td>
+                                            <td>Users, roles, policies (read-only)</td>
+                                        </tr>
+                                        <tr>
+                                            <td>S3</td>
+                                            <td>Bucket configs, encryption, policies</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CloudTrail</td>
+                                            <td>Logging enabled checks</td>
+                                        </tr>
+                                        <tr>
+                                            <td>GuardDuty</td>
+                                            <td>Threat detection status</td>
+                                        </tr>
+                                        <tr>
+                                            <td>KMS</td>
+                                            <td>Key metadata and rotation</td>
+                                        </tr>
+                                        <tr>
+                                            <td>RDS</td>
+                                            <td>Database config and security</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Lambda</td>
+                                            <td>Function configuration</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ECS / EKS</td>
+                                            <td>Cluster configuration</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ELB</td>
+                                            <td>Load balancer exposure</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CloudWatch</td>
+                                            <td>Logs & metrics metadata</td>
+                                        </tr>
+                                        <tr>
+                                            <td>EBS</td>
+                                            <td>Volume encryption and snapshots</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Secrets Manager</td>
+                                            <td>Secret configuration and policies</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Inspector</td>
+                                            <td>Vulnerability findings</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div class="alert alert-info" style="margin-top: 20px;">
+                        <strong>🔒 Security Note:</strong> The CloudFormation stack creates a read-only role with
+                        SecurityAudit policy.
+                        It cannot make any changes to your AWS account - only read configurations for security scanning.
+                    </div>
+                </div>
+
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+
+                <!-- MANUAL CREDENTIALS ENTRY -->
                 <div class="form-section">
-                    <h3>AWS Credentials</h3>
+                    <h3>Manual AWS Credentials Entry</h3>
                     <p class="form-description">
                         Enter your AWS IAM user credentials with appropriate permissions.
                     </p>
@@ -1902,6 +2410,15 @@
                             <option value="us-west-2">US West (Oregon)</option>
                             <option value="eu-west-1">EU (Ireland)</option>
                         </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Role ARN (Optional - from CloudFormation)</label>
+                        <input type="text" id="awsRoleArn"
+                            placeholder="arn:aws:iam::123456789012:role/CloudGuardReadOnlyRole-xxx">
+                        <small style="color: #94a3b8; display: block; margin-top: 4px;">
+                            If you created a stack above, paste the Role ARN from the Outputs tab
+                        </small>
                     </div>
 
                     <div class="form-group">
@@ -2250,7 +2767,237 @@
             color: #fca5a5;
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
+
+        /* Permission Modal Styles */
+        #permissionModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .permission-modal-content {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-top: 5px solid #f59e0b;
+        }
+
+        .permission-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            color: #fbbf24;
+        }
+
+        .permission-modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .permission-info {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .permission-info p {
+            margin: 0 0 10px 0;
+            color: #fcd34d;
+            font-size: 0.95rem;
+        }
+
+        .permission-info code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #fde68a;
+            word-break: break-all;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .permission-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-grant {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-grant:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-cancel {
+            background: rgba(255, 255, 255, 0.05);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
     </style>
+    <!-- Permission Request Modal -->
+    <div id="permissionModal">
+        <div class="permission-modal-content">
+            <div class="permission-modal-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>Permission Required</h2>
+            </div>
+            <div id="permissionDetails" class="permission-info">
+                <p>Your IAM user <code id="permIamUser"></code> needs permission to <strong>assume</strong> the required
+                    security role to complete the scan.</p>
+
+                <div id="adminSelectionArea" style="margin-top: 15px; display: none;">
+                    <p style="font-size: 0.85rem; color: #fde68a; margin-bottom: 8px;"><strong>Option A: Try with Admin
+                            Credentials</strong></p>
+                    <select id="adminCredentialSelect"
+                        style="width: 100%; background: #0f172a; color: white; border: 1px solid #334155; padding: 8px; border-radius: 4px; font-size: 0.85rem;">
+                        <option value="">-- Select Admin Credential --</option>
+                    </select>
+                </div>
+
+                <div style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;">
+                    <p id="autoGrantText">Would you like to automatically attach the required policy?</p>
+                    <strong>Policy to attach:</strong><br>
+                    <code id="permPolicyArn" style="display: block; margin-top: 5px;"></code>
+                </div>
+            </div>
+
+            <!-- Manual Fix Container -->
+            <div id="manualFixContainer" class="permission-info"
+                style="display: none; border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
+                <p style="color: #fca5a5; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i> Manual Fix
+                    Required</p>
+                <p id="manualFixError" style="font-size: 0.85rem; color: #fca5a5; margin-bottom: 15px;"></p>
+
+                <div class="tabs" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button class="btn-cancel active" onclick="switchManualTab('cli')"
+                        style="padding: 5px 10px; font-size: 0.75rem;">CLI Command</button>
+                    <button class="btn-cancel" onclick="switchManualTab('json')"
+                        style="padding: 5px 10px; font-size: 0.75rem;">Console JSON</button>
+                </div>
+
+                <div id="manualTabCLI">
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Run these commands with
+                        <strong>administrator credentials</strong> (in order):
+                    </p>
+
+                    <!-- Step 1: Identity Policy -->
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 1:</strong> Grant
+                        User Permission to Assume Role</p>
+                    <pre id="manualFixCommand"
+                        style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-bottom: 5px;"></pre>
+                    <button class="btn-cancel" style="width: 100%; margin-bottom: 15px;"
+                        onclick="copyToClipboard('manualFixCommand')">📋 Copy Step 1 Command</button>
+
+                    <!-- Step 2: Trust Relationship -->
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 2:</strong> Update
+                        Role Trust Relationship</p>
+                    <pre id="trustRelationshipCommand"
+                        style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-bottom: 5px;"></pre>
+                    <button class="btn-cancel" style="width: 100%; margin-bottom: 10px;"
+                        onclick="copyToClipboard('trustRelationshipCommand')">📋 Copy Step 2 Command</button>
+                </div>
+
+                <div id="manualTabJSON" style="display: none;">
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 1: Identity
+                            Policy</strong> (Attach to User <code>vuln_scan_test</code>)</p>
+                    <pre id="identityPolicyJSON"
+                        style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; margin-bottom: 10px;"></pre>
+                    <button class="btn-cancel" style="width: 100%; margin-bottom: 15px;"
+                        onclick="copyToClipboard('identityPolicyJSON')">📋 Copy Identity JSON</button>
+
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 2: Trust
+                            Relationship</strong> (Edit trust relationship on Role <code>CloudGuardReadOnlyRole</code>)
+                    </p>
+                    <pre id="trustPolicyJSON"
+                        style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; margin-bottom: 10px;"></pre>
+                    <button class="btn-cancel" style="width: 100%;" onclick="copyToClipboard('trustPolicyJSON')">📋 Copy
+                        Trust JSON</button>
+                </div>
+            </div>
+
+            <div class="permission-actions">
+                <button class="btn-cancel"
+                    onclick="document.getElementById('permissionModal').style.display='none'">Cancel</button>
+                <button id="btnGrantPerm" class="btn-grant" onclick="grantPermissionAndScan()">✅ Grant & Retry
+                    Scan</button>
+            </div>
+        </div>
+    </div>
+    <!-- ⚠️ IAM Permissions Instructions Modal -->
+    <div id="iamCommandsModal" class="modal-overlay" style="display: none;">
+        <div class="modal-container" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>⚠️ AWS IAM Permissions Required</h2>
+                <button class="modal-close" onclick="closeIamCommandsModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 32px;">
+                <p style="margin-bottom: 24px; color: #94a3b8; font-size: 1.1rem;">To run scheduled scans, you must
+                    grant the scanner user permission to assume the role. Run these commands in your AWS terminal:</p>
+
+                <div class="command-group">
+                    <h3>1. Grant AssumeRole Permission to User</h3>
+                    <div class="code-block-container">
+                        <pre id="iamPolicyCommand"></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('iamPolicyCommand')">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div class="command-group">
+                    <h3>2. Update Role Trust Relationship</h3>
+                    <div class="code-block-container">
+                        <pre id="iamTrustCommand"></pre>
+                        <button class="copy-btn" onclick="copyToClipboard('iamTrustCommand')">📋 Copy</button>
+                    </div>
+                </div>
+
+                <div class="alert alert-info"
+                    style="margin-top: 32px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 20px; border-radius: 12px; display: flex; align-items: flex-start; gap: 12px;">
+                    <span style="font-size: 1.5rem;">ℹ️</span>
+                    <div>
+                        <strong style="color: #60a5fa; display: block; margin-bottom: 4px;">Important Note</strong>
+                        <span style="font-size: 0.95rem; color: #94a3b8;">These commands only need to be run once.
+                            Replace <code>YOUR_IAM_USER</code> with the AWS user whose access keys you provided.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"
+                style="padding: 24px 32px; background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(148, 163, 184, 0.1);">
+                <button class="btn btn-secondary" onclick="closeIamCommandsModal()">Cancel</button>
+                <button class="btn btn-primary" id="confirmIamCommandsBtn"
+                    style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);">✅ I have run these commands</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

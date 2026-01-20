@@ -35,6 +35,7 @@ class CloudCredential:
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
     aws_region: Optional[str] = "us-east-1"
+    aws_role_arn: Optional[str] = None
     aws_session_token: Optional[str] = None
 
     gcp_service_account_json: Optional[str] = None
@@ -364,6 +365,7 @@ class CredentialManager:
                 aws_access_key_id=credential_dict["aws_access_key_id"],
                 aws_secret_access_key=credential_dict["aws_secret_access_key"],
                 aws_region=credential_dict["aws_region"],
+                aws_role_arn=credential_dict.get("aws_role_arn"),
                 aws_session_token=credential_dict["aws_session_token"],
 
                 gcp_service_account_json=credential_dict["gcp_service_account_json"],
@@ -465,6 +467,10 @@ class CredentialManager:
         finally:
             cur.close()
             conn.close()
+    
+    def get_credential_by_id(self, user_id: str, credential_id: int) -> Optional[CloudCredential]:
+        """Get a specific credential by ID"""
+        return self.get_credentials(credential_id, user_id)
     
     def delete_credential(self, credential_id: int, user_id: str) -> bool:
         """Delete a credential"""

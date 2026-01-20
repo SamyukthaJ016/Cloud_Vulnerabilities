@@ -10,16 +10,23 @@ import logging
 import secrets
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+from urllib.parse import urlencode, quote
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Depends, Request, BackgroundTasks
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, validator
 from starlette.responses import JSONResponse
 
 from backend.credentials.manager import credential_manager, CloudCredential
+from backend.credentials import auto_permission
 
 logger = logging.getLogger("credentials_api")
 
 router = APIRouter(prefix="/api/credentials", tags=["credentials"])
+
+# Include auto-permission router
+router.include_router(auto_permission.router, prefix="/aws", tags=["auto-permission"])
 
 
 # Request/Response Models
@@ -36,6 +43,7 @@ class AWSCredentialRequest(CredentialBase):
     aws_access_key_id: str
     aws_secret_access_key: str
     aws_region: Optional[str] = Field(default="us-east-1")
+    aws_role_arn: Optional[str] = None
     aws_session_token: Optional[str] = None
 
 
@@ -74,6 +82,8 @@ class CredentialResponse(BaseModel):
     validation_message: Optional[str]
     last_used: Optional[datetime]
     created_at: datetime
+    aws_role_arn: Optional[str] = None
+    aws_access_key_id: Optional[str] = None
 
 
 class ValidationRequest(BaseModel):
@@ -137,6 +147,7 @@ async def save_aws_credential(
             aws_access_key_id=request.aws_access_key_id,
             aws_secret_access_key=request.aws_secret_access_key,
             aws_region=request.aws_region,
+            aws_role_arn=request.aws_role_arn,
             aws_session_token=request.aws_session_token,
             is_default=request.is_default
         )
@@ -290,7 +301,9 @@ async def get_credentials(
                 validation_status=cred.get('validation_status', 'pending'),
                 validation_message=cred.get('validation_message'),
                 last_used=cred.get('last_used'),
-                created_at=cred.get('created_at', datetime.utcnow())
+                created_at=cred.get('created_at', datetime.utcnow()),
+                aws_role_arn=cred.get('aws_role_arn'),
+                aws_access_key_id=cred.get('aws_access_key_id')
             ))
         
         return response
@@ -442,6 +455,107 @@ async def get_providers_status(user_id: str = Depends(get_user_id)):
         
     except Exception as e:
         logger.error(f"Failed to get providers status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/aws/cloudformation-url")
+async def get_cloudformation_url(
+    user_id: str = Depends(get_user_id),
+    template_url: Optional[str] = None
+):
+    """
+    Generate CloudFormation quick-create console URL for automated role setup.
+    
+    Args:
+        template_url: Optional S3 URL to the CloudFormation template. 
+                     If not provided, uses default S3 template.
+    
+    Returns:
+        CloudFormation console URL with pre-filled parameters
+    """
+    try:
+        # Use the public S3 URL for the template
+        template_url = "https://cloudguard-cfn-templates.s3.eu-north-1.amazonaws.com/aws-readonly-role.yaml"
+        
+        # Master Scanner Account ID (fixed - this is the account where the scanner runs)
+        master_scanner_account_id = "859561299880"
+        
+        # Generate unique stack name
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        stack_name = f"CloudGuard-Scanner-{timestamp}"
+        
+        region = "us-east-1"
+        
+        # Build URL with parameters pre-filled (always use master scanner account)
+        params = {
+            "templateURL": template_url,
+            "stackName": stack_name,
+            "param_ScannerAccountId": master_scanner_account_id
+        }
+            
+        cfn_url = (
+            f"https://console.aws.amazon.com/cloudformation/home"
+            f"?region={region}"
+            f"#/stacks/quickcreate"
+            f"?{urlencode(params)}"
+        )
+        
+        
+        return {
+            "cloudformation_url": cfn_url,
+            "stack_name": stack_name,
+            "region": region,
+            "detected_account_id": master_scanner_account_id,
+            "template_url": template_url,
+            "instructions": [
+                "🔐 Cross-Account Scanning Setup",
+                "This creates a role in YOUR account that the master scanner can assume",
+                "Click 'Launch CloudFormation Stack' to open AWS Console",
+                "The ScannerAccountId is pre-filled with the master scanner account (859561299880)",
+                "Check the IAM acknowledgment box",
+                "Click 'Create stack'",
+                "Wait for stack creation to complete (~2 minutes)",
+                "Copy the 'RoleArn' from the Outputs tab",
+                "Paste it into your AWS credential settings in the dashboard"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate CloudFormation URL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+@router.get("/aws/cloudformation-template", response_class=PlainTextResponse)
+async def get_cloudformation_template():
+    """
+    Download the CloudFormation template for manual deployment.
+    
+    Returns:
+        YAML content of the CloudFormation template
+    """
+    try:
+        # Get the template file path
+        template_path = Path(__file__).parent.parent.parent / "infra" / "enhanced-cloudformation-template.yaml"
+        
+        if not template_path.exists():
+            raise HTTPException(
+                status_code=404, 
+                detail="CloudFormation template not found"
+            )
+        
+        # Read and return the template
+        with open(template_path, 'r') as f:
+            template_content = f.read()
+        
+        return template_content
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to read CloudFormation template: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

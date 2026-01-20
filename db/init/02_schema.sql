@@ -220,6 +220,7 @@ CREATE TABLE IF NOT EXISTS scan_schedules (
   schedule JSONB NOT NULL,
   status TEXT NOT NULL DEFAULT 'scheduled',
   next_run_at TIMESTAMPTZ NOT NULL,
+  credential_id INTEGER,  -- NEW: Store which credential to use
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
