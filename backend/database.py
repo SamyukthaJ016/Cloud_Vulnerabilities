@@ -68,21 +68,30 @@ def json_serial(obj):
 # -------------------------------------------------------------------
 # Scans
 # -------------------------------------------------------------------
-def create_scan_record(account_id, cloud, aws_credential_id=None):
+def create_scan_record(account_id, cloud, credential_id=None):
     conn = ensure_connection()
     cur = conn.cursor()
+    
+    # Map cloud provider to its specific credential column
+    cred_column_map = {
+        "aws": "aws_credential_id",
+        "gcp": "gcp_credential_id",
+        "azure": "azure_credential_id",
+        "openai": "openai_credential_id"
+    }
+    
+    cred_column = cred_column_map.get(cloud.lower(), "aws_credential_id")
+    
     try:
-        cur.execute(
-            """
-            INSERT INTO scans (account_id, cloud, status, aws_credential_id)
+        query = f"""
+            INSERT INTO scans (account_id, cloud, status, {cred_column})
             VALUES (%s, %s, 'running', %s)
             RETURNING id
-            """,
-            (account_id, cloud, aws_credential_id),
-        )
+        """
+        cur.execute(query, (account_id, cloud, credential_id))
         scan_id = cur.fetchone()[0]
         conn.commit()
-        logger.info(f"Created scan record: {scan_id} (aws_cred_id={aws_credential_id})")
+        logger.info(f"Created scan record: {scan_id} ({cred_column}={credential_id})")
         return scan_id
     except Exception as e:
         conn.rollback()
@@ -122,18 +131,36 @@ def store_resource(scan_id, cloud, resource_type, name, config, is_public):
 # -------------------------------------------------------------------
 # Findings
 # -------------------------------------------------------------------
-def store_finding(scan_id, resource_id, severity, description, source):
-    conn = ensure_connection()  # CHANGED: Use ensure_connection
+def store_finding(scan_id, resource_id, severity, description, source, recommendation=None):
+    conn = ensure_connection()
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
-            INSERT INTO findings
-            (scan_id, resource_id, severity, description, validated_by)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (scan_id, resource_id, severity, description[:5000], source),
-        )
+        # Check if recommendation column exists (for backward compatibility during migration)
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='findings' AND column_name='recommendation';
+        """)
+        has_rec_col = cur.fetchone() is not None
+        
+        if has_rec_col:
+            cur.execute(
+                """
+                INSERT INTO findings
+                (scan_id, resource_id, severity, description, validated_by, recommendation)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (scan_id, resource_id, severity, description[:5000], source, recommendation),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO findings
+                (scan_id, resource_id, severity, description, validated_by)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (scan_id, resource_id, severity, description[:5000], source),
+            )
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -196,29 +223,45 @@ def get_scan_report(scan_id):
     conn = ensure_connection()  # CHANGED: Use ensure_connection
     cur = conn.cursor()
     try:
-        cur.execute(
+        # Check if recommendation column exists
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='findings' AND column_name='recommendation';
+        """)
+        has_rec_col = cur.fetchone() is not None
+        
+        if has_rec_col:
+            query = """
+                SELECT r.id, r.name, r.cloud, r.type, r.public,
+                       f.severity, f.description, f.recommendation
+                FROM resources r
+                LEFT JOIN findings f ON r.id = f.resource_id
+                WHERE r.scan_id = %s
+                ORDER BY r.id
             """
-            SELECT r.id, r.name, r.cloud, r.type, r.public,
-                   f.severity, f.description
-            FROM resources r
-            LEFT JOIN findings f ON r.id = f.resource_id
-            WHERE r.scan_id = %s
-            ORDER BY r.id
-            """,
-            (scan_id,),
-        )
+        else:
+            query = """
+                SELECT r.id, r.name, r.cloud, r.type, r.public,
+                       f.severity, f.description, NULL as recommendation
+                FROM resources r
+                LEFT JOIN findings f ON r.id = f.resource_id
+                WHERE r.scan_id = %s
+                ORDER BY r.id
+            """
+            
+        cur.execute(query, (scan_id,))
         rows = cur.fetchall()
         return rows
     finally:
         cur.close()
 
 
-def get_multi_cloud_summary():
-    conn = ensure_connection()  # CHANGED: Use ensure_connection
+def get_multi_cloud_summary(scan_ids: List[int] = None):
+    conn = ensure_connection()
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
+        query = """
             SELECT
                 r.cloud,
                 COUNT(DISTINCT r.id),
@@ -226,9 +269,15 @@ def get_multi_cloud_summary():
                 COUNT(DISTINCT CASE WHEN r.public THEN r.id END)
             FROM resources r
             LEFT JOIN findings f ON r.id = f.resource_id
-            GROUP BY r.cloud
-            """
-        )
+        """
+        params = []
+        if scan_ids:
+            query += " WHERE r.scan_id = ANY(%s) "
+            params.append(scan_ids)
+            
+        query += " GROUP BY r.cloud "
+        
+        cur.execute(query, params)
         rows = cur.fetchall()
         return rows
     finally:

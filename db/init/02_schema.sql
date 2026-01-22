@@ -136,6 +136,10 @@ CREATE TABLE IF NOT EXISTS scans (
     duration_seconds INTEGER,
     error_message TEXT,
     scan_metadata JSONB,
+    aws_credential_id INTEGER,
+    gcp_credential_id INTEGER,
+    azure_credential_id INTEGER,
+    openai_credential_id INTEGER,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

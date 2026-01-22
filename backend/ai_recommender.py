@@ -177,8 +177,8 @@ TOP CRITICAL ISSUES:
 Create a realistic 7-day remediation plan in JSON format:
 {{
   "day_1": {{
-    "focus": "Emergency critical issues",
-    "tasks": ["task 1", "task 2"],
+    "focus": "Fix Public Access (Cloud Functions/Run)",
+    "tasks": ["Disable unauthenticated access for blogapp-function", "Implement IAM authentication"],
     "priority": "CRITICAL"
   }},
   "day_2": {{ ... }},
@@ -190,7 +190,8 @@ Prioritize by:
 1. Exploitability (publicly exposed resources first)
 2. Data sensitivity (IAM, encryption issues)
 3. Compliance requirements
-4. Ease of remediation
+4. Actual Recommendations: USE THE 'recommendation' FIELD PROVIDED IN THE FINDINGS DATA.
+5. Avoid generic labels like 'Dependency Vulnerability Patch' unless the finding is actually a library vulnerability. Use labels like 'Network Hardening', 'IAM Remediation', 'Storage Encryption', etc.
 """
 
         try:

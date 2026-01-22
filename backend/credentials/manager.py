@@ -503,6 +503,12 @@ class CredentialManager:
             import traceback
             logger.info(f"Traceback:\n{''.join(traceback.format_stack())}")
         
+        # Delete associated scans first (to clean up history)
+            cur.execute(
+                "DELETE FROM scans WHERE aws_credential_id = %s",
+                (credential_id,)
+            )
+
         # Delete credential
             cur.execute(
                 "DELETE FROM cloud_credentials WHERE id = %s AND user_id = %s",

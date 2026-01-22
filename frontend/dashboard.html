@@ -1087,6 +1087,54 @@ aws s3api put-bucket-encryption \\
                     'CIS AWS Foundations Benchmark 2.1.1'
                 ]
             },
+            gcp_storage: {
+                title: 'GCP Cloud Storage Hardening',
+                priority: 'CRITICAL',
+                estimatedTime: '15 minutes',
+                steps: [
+                    'Enable "Uniform Bucket-Level Access" (UBLA)',
+                    'Remove public IAM bindings (allUsers)',
+                    'Enable bucket versioning for data protection',
+                    'Enable CMEK (Customer-Managed Encryption Keys)'
+                ],
+                code: (resourceName) => `# 1. Enable Uniform Bucket-Level Access
+gcloud storage buckets update gs://${resourceName} --uniform-bucket-level-access
+
+# 2. Remove public access
+gcloud storage buckets remove-iam-policy-binding gs://${resourceName} \\
+    --member=allUsers --role=roles/storage.objectViewer
+
+# 3. Enable Versioning
+gcloud storage buckets update gs://${resourceName} --versioning`,
+                validation: 'Verify with: gcloud storage buckets describe gs://[BUCKET_NAME]',
+                references: [
+                    'GCP Cloud Storage Security Best Practices',
+                    'Uniform Bucket-Level Access Overview'
+                ]
+            },
+            gcp_project: {
+                title: 'GCP Project Security Hardening',
+                priority: 'HIGH',
+                estimatedTime: '30 minutes',
+                steps: [
+                    'Enable OS Login at the project level',
+                    'Restrict default service account creation',
+                    'Enable VPC Service Controls',
+                    'Setup organization policies for restrictive defaults'
+                ],
+                code: (resourceName) => `# Enable OS Login project-wide
+gcloud compute project-info add-metadata \\
+    --metadata enable-oslogin=TRUE
+
+# Disable serial port access
+gcloud compute project-info add-metadata \\
+    --metadata serial-port-enable=FALSE`,
+                validation: 'Check Project Metadata in GCP Console',
+                references: [
+                    'GCP Project Security Foundations',
+                    'CIS GCP Benchmark 1.1'
+                ]
+            },
             openai: {
                 title: 'OpenAI API Security Hardening',
                 priority: 'HIGH',
@@ -1117,6 +1165,108 @@ def get_openai_key():
                 references: [
                     'OpenAI API Best Practices',
                     'AWS Secrets Manager Integration Guide'
+                ]
+            },
+            gcp_function: {
+                title: 'Secure Cloud Function (IAM)',
+                priority: 'CRITICAL',
+                estimatedTime: '10 minutes',
+                steps: [
+                    'Remove "allUsers" or "allAuthenticatedUsers" from IAM policy',
+                    'Grant "Cloud Functions Invoker" only to specific service accounts',
+                    'Implement authentication in the function code',
+                    'Use VPC Service Controls for sensitive functions'
+                ],
+                code: (resourceName) => `# Remove public access
+gcloud functions remove-iam-policy-binding ${resourceName.split('/').pop()} \\
+  --member="allUsers" \\
+  --role="roles/cloudfunctions.invoker" \\
+  --region=us-west1
+
+# Add specific invoker
+gcloud functions add-iam-policy-binding ${resourceName.split('/').pop()} \\
+  --member="serviceAccount:MY-SERVICE-ACCOUNT@PROJECT.iam.gserviceaccount.com" \\
+  --role="roles/cloudfunctions.invoker"`,
+                validation: 'Verify with: gcloud functions get-iam-policy [FUNCTION_NAME]',
+                references: [
+                    'GCP Cloud Functions Security Docs',
+                    'IAM Best Practices for Serverless'
+                ]
+            },
+            gcp_firewall: {
+                title: 'Restrict Public Network Access',
+                priority: 'CRITICAL',
+                estimatedTime: '15 minutes',
+                steps: [
+                    'Identify the firewall rule allowing 0.0.0.0/0',
+                    'Change source range to specific corporate IP ranges',
+                    'Alternatively, delete the rule and use IAP (Identity-Aware Proxy)',
+                    'Enable Firewall Insights to monitor blocked traffic'
+                ],
+                code: (resourceName) => `# Delete the public access rule
+gcloud compute firewall-rules delete ${resourceName}
+
+# Create restricted rule (example)
+gcloud compute firewall-rules create restricted-ssh \\
+  --direction=INGRESS \\
+  --priority=1000 \\
+  --network=default \\
+  --action=ALLOW \\
+  --rules=tcp:22 \\
+  --source-ranges=YOUR_IP_RANGE/32`,
+                validation: 'Run gcloud compute firewall-rules describe [RULE_NAME]',
+                references: [
+                    'GCP Firewall Security Best Practices',
+                    'Configuring IAP for Compute Engine'
+                ]
+            },
+            gcp_compute: {
+                title: 'Compute Instance Hardening',
+                priority: 'HIGH',
+                estimatedTime: '20 minutes',
+                steps: [
+                    'Remove external IP address from the instance',
+                    'Enable OS Login at project or instance level',
+                    'Replace default service account with a custom one',
+                    'Enable "Shielded VM" features'
+                ],
+                code: (resourceName) => `# Remove external IP
+gcloud compute instances delete-access-config ${resourceName} \\
+  --access-config-name="External NAT"
+
+# Enable OS Login
+gcloud compute project-info add-metadata \\
+  --metadata enable-oslogin=TRUE`,
+                validation: 'Check instance details in GCP Console for External IP: None',
+                references: [
+                    'GCP Shielded VM Documentation',
+                    'OS Login Overview'
+                ]
+            },
+            web_vuln: {
+                title: 'OWASP Top 10 Web Remediation',
+                priority: 'HIGH',
+                estimatedTime: '45 minutes',
+                steps: [
+                    'Implement robust input validation and output encoding',
+                    'Use parameterized queries for all database interactions',
+                    'Add security headers (CSP, X-Frame-Options, HSTS)',
+                    'Verify authentication and session management',
+                    'Enforce least privilege on API endpoints'
+                ],
+                code: (resourceName) => `# Express.js Security Headers (Helmet)
+npm install helmet
+
+# app.js
+const helmet = require("helmet");
+app.use(helmet());
+
+# Example CSP Header
+Content-Security-Policy: default-src 'self'; script-src 'self' 'trusted-scripts.com';`,
+                validation: 'Re-scan with Nuclei/ZAP after deployment',
+                references: [
+                    'OWASP Top 10 Project',
+                    'MDN Web Security Guidelines'
                 ]
             }
         };
@@ -1152,15 +1302,25 @@ def get_openai_key():
             try {
                 console.log('Loading dashboard data...');
 
+                const urlParams = new URLSearchParams(window.location.search);
+                // Handle various parameter names that might be passed
+                const rawScanIds = urlParams.get('scan_ids') ||
+                    urlParams.get('scanIds') ||
+                    urlParams.get('scan_id') ||
+                    urlParams.get('scans');
+
+                const queryParam = rawScanIds ? `?scan_ids=${rawScanIds}` : '';
+                const findingsQuery = rawScanIds ? `&scan_ids=${rawScanIds}` : '';
+
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
                 document.getElementById('security-score').textContent = '...';
                 document.getElementById('active-tools').textContent = '...';
 
                 const [summaryRes, providersRes, findingsRes] = await Promise.all([
-                    fetch('/posture/dashboard'),
-                    fetch('/api/provider-breakdown'),
-                    fetch('/api/latest-findings?limit=20')
+                    fetch(`/posture/dashboard${queryParam}`),
+                    fetch(`/api/provider-breakdown${queryParam}`),
+                    fetch(`/api/latest-findings?limit=100${findingsQuery}`)
                 ]);
 
                 const summary = await summaryRes.json();
@@ -1172,7 +1332,7 @@ def get_openai_key():
                 document.getElementById('total-findings').textContent =
                     summary.total_findings || 0;
                 document.getElementById('security-score').textContent =
-                    Math.round(summary.security_score || 100);
+                    summary.security_score !== undefined ? Math.round(summary.security_score) : 100;
                 document.getElementById('critical-count').innerHTML =
                     `${summary.total_findings || 0} total vulnerabilities`;
                 document.getElementById('active-tools').textContent =
@@ -1199,10 +1359,22 @@ def get_openai_key():
 
             let type = 'vulnerability';
 
-            if (desc.includes('s3') || desc.includes('bucket')) {
+            if (desc.includes('s3') || (desc.includes('bucket') && !vuln.cloud?.toLowerCase().includes('gcp'))) {
                 type = 's3';
+            } else if (desc.includes('gcs') || (desc.includes('bucket') && vuln.cloud?.toLowerCase().includes('gcp'))) {
+                type = 'gcp_storage';
+            } else if (desc.includes('cloud function') || desc.includes('unauthenticated invocation')) {
+                type = 'gcp_function';
+            } else if (desc.includes('firewall rule') || desc.includes('port 22') || desc.includes('ssh') || desc.includes('rdp') || desc.includes('port 3389')) {
+                type = 'gcp_firewall';
+            } else if (desc.includes('instance') || desc.includes('compute engine') || desc.includes('public ip') || desc.includes('service account')) {
+                type = 'gcp_compute';
             } else if (desc.includes('iam') || desc.includes('access key') || desc.includes('mfa')) {
                 type = 'iam';
+            } else if (desc.includes('os login') || desc.includes('project-level') || desc.includes('serial port')) {
+                type = 'gcp_project';
+            } else if (desc.includes('xss') || desc.includes('idor') || desc.includes('ssrf') || desc.includes('vuln') || desc.includes('sqli') || desc.includes('owasp')) {
+                type = 'web_vuln';
             } else if (desc.includes('secret') || desc.includes('exposed') || tool === 'gitleaks') {
                 type = 'secret';
             } else if (desc.includes('encrypt') || desc.includes('unencrypted')) {
@@ -1233,7 +1405,14 @@ def get_openai_key():
 
         async function loadTrendChart() {
             try {
-                const response = await fetch('/api/scan-history?days=30');
+                const urlParams = new URLSearchParams(window.location.search);
+                const rawScanIds = urlParams.get('scan_ids') ||
+                    urlParams.get('scanIds') ||
+                    urlParams.get('scan_id') ||
+                    urlParams.get('scans');
+
+                const queryParam = rawScanIds ? `&scan_ids=${rawScanIds}` : '';
+                const response = await fetch(`/api/scan-history?days=30${queryParam}`);
                 const data = await response.json();
 
                 const ctx = document.getElementById('trendChart');

@@ -1,18 +1,50 @@
-# Python cache
+# ========================
+# Python
+# ========================
 __pycache__/
 *.pyc
+*.pyo
 
-# Virtual env
+# ========================
+# Virtual environments
+# ========================
 venv/
-
-# Local env file (secrets)
 .env
-
-# Local SQL data / migrations (if you want to keep them out)
-sql/
-
-# Editor stuff (optional)
-.vscode/
-gcp-service-account.json 
-.DS_Store
+.env.*
 *.env
+
+# ========================
+# Secrets / Credentials
+# ========================
+gcp-service-account.json
+aws-credentials.json
+azure-credentials.json
+
+# ========================
+# Logs & Runtime Artifacts
+# ========================
+backend_logs.txt
+logs/
+logs/**
+logs/audit/
+logs/audit/**
+
+# ========================
+# Local Dev / Debug Files
+# ========================
+inspect_db.py
+test_credential_persistence.py
+
+# ========================
+# Database / SQL (optional)
+# ========================
+sql/
+*.sqlite
+*.db
+
+# ========================
+# Editor / OS
+# ========================
+.vscode/
+.DS_Store
+Thumbs.db

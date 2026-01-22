@@ -2382,6 +2382,7 @@ from backend.mcp_servers.base_server import (
     MCPResponse
 )
 from backend.mcp_servers.aws_server import create_aws_server
+from backend.mcp_servers.gcp_server import create_gcp_server
 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.mcp_scanner import mcp_scanner
 
@@ -2532,6 +2533,7 @@ def build_scan_report(scan_id: int) -> dict:
             "public": r[4],
             "severity": r[5],
             "description": r[6],
+            "recommendation": r[7] if len(r) > 7 else "Review GCP security documentation for remediation steps.",
         }
         for r in rows
         if r[5]
@@ -2618,6 +2620,38 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str]):
 
                 logger.info("✅ CloudFox MCP server initialized")
             logger.info("✅ AWS MCP server initialized and registered")
+
+        elif provider == "gcp":
+            gcp_cred = credential_manager.get_default_credential(user_id, "gcp")
+            if not gcp_cred:
+                logger.warning("⚠️ No GCP credentials found")
+                continue
+
+            # Avoid double registration
+            if mcp_server_manager.get_server("gcp"):
+                logger.info("ℹ️ GCP MCP server already initialized")
+                continue
+
+            gcp_config = {
+                "service_account_json": gcp_cred.gcp_service_account_json,
+                "project_id": gcp_cred.gcp_project_id,
+                "credential_id": gcp_cred.id,
+                "user_id": user_id,
+            }
+
+            try:
+                server = create_gcp_server(gcp_config)
+                mcp_server_manager.register_server(server)
+                await server.start()
+                logger.info("✅ GCP MCP server initialized successfully")
+            except Exception as e:
+                logger.error(f"❌ Failed to initialize GCP server: {e}")
+                # Don't raise, just skip this provider so others can proceed
+                continue
+
+            # Register in registry
+            mcp_registry.register("gcp", server)
+            logger.info("✅ GCP MCP server initialized and registered")
 
         elif provider == "cloudfox":
             if mcp_server_manager.get_server("cloudfox"):
@@ -2743,17 +2777,21 @@ async def run_multi_cloud_scan_internal(
             # Deep scan if requested
             if deep_scan:
                 logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
-                plugin = mcp_registry.get_plugin(provider)
-                cloud_client = None
-                if plugin:
-                    cloud_client = getattr(plugin, "s3", None) or getattr(
-                        plugin, "storage_client", None
-                    )
-
                 for resource in result.resources:
                     try:
+                        # Select appropriate client for deep scanning
+                        current_client = None
+                        if resource.resource_type in ["s3_bucket", "gcs_bucket"]:
+                            current_client = getattr(plugin, "s3", None) or getattr(plugin, "storage_client", None)
+                        elif resource.resource_type == "lambda_function":
+                            current_client = getattr(plugin, "lambda_client", None)
+                        elif resource.resource_type == "cloud_function":
+                            current_client = getattr(plugin, "functions_client", None)
+                        elif resource.resource_type in ["ecr_image", "gcr_image"]:
+                            current_client = getattr(plugin, "ecr_client", None) or getattr(plugin, "artifact_client", None)
+                        
                         vuln_findings = await vuln_integration.scan_cloud_resource(
-                            resource, cloud_client
+                            resource, current_client
                         )
                         result.findings.extend(vuln_findings)
                     except Exception as e:
@@ -2970,7 +3008,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
 
             scan_id = await store_scan_result(
                 scan_result_obj,
-                aws_credential_id=credential_id,
+                credential_id=credential_id,
             )
             stored_ids.append(scan_id)
 
@@ -3394,9 +3432,32 @@ async def list_providers():
         "credential_manager_ready": True
     }
 
+def get_latest_scan_ids(limit: int = 1) -> List[int]:
+    """Get the latest scan IDs"""
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id FROM scans 
+                ORDER BY started_at DESC 
+                LIMIT %s
+            """, (limit,))
+            results = cur.fetchall()
+            return [row[0] for row in results]
+    except Exception as e:
+        logger.error(f"Failed to get latest scan IDs: {e}")
+        return []
+
 @app.get("/posture/dashboard")
-async def posture_dashboard():
-    summary = get_multi_cloud_summary()
+async def posture_dashboard(scan_ids: str = None):
+    # Default to latest scan if no scan_ids provided
+    if not scan_ids:
+        latest_ids = get_latest_scan_ids(limit=1)
+        ids = latest_ids if latest_ids else None
+    else:
+        ids = [int(x) for x in scan_ids.split(',')]
+    
+    summary = get_multi_cloud_summary(ids)
     
     dashboard = {
         "clouds": [],
@@ -3463,20 +3524,34 @@ async def get_severity_breakdown():
         }
 
 @app.get("/api/provider-breakdown")
-async def get_provider_breakdown():
+async def get_provider_breakdown(scan_ids: str = None):
     try:
         conn = get_conn()
+        
+        # Default to latest scan if no scan_ids provided
+        if not scan_ids:
+            latest_ids = get_latest_scan_ids(limit=1)
+            ids = latest_ids if latest_ids else None
+        else:
+            ids = [int(x) for x in scan_ids.split(',')]
+        
+        query = """
+            SELECT 
+                r.cloud as provider,
+                COUNT(DISTINCT r.id) as resources,
+                COUNT(DISTINCT f.id) as findings
+            FROM resources r
+            LEFT JOIN findings f ON r.id = f.resource_id
+        """
+        params = []
+        if ids:
+            query += " WHERE r.scan_id = ANY(%s) "
+            params.append(ids)
+            
+        query += " GROUP BY r.cloud ORDER BY resources DESC "
+        
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    r.cloud as provider,
-                    COUNT(DISTINCT r.id) as resources,
-                    COUNT(DISTINCT f.id) as findings
-                FROM resources r
-                LEFT JOIN findings f ON r.id = f.resource_id
-                GROUP BY r.cloud
-                ORDER BY resources DESC
-            """)
+            cur.execute(query, params)
             results = cur.fetchall()
         
         data = []
@@ -3506,22 +3581,38 @@ async def get_provider_breakdown():
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/scan-history")
-async def get_scan_history(days: int = 30):
+async def get_scan_history(days: int = 30, scan_ids: str = None):
     try:
         conn = get_conn()
+        
+        # Default to latest scan if no scan_ids provided
+        if not scan_ids:
+            latest_ids = get_latest_scan_ids(limit=1)
+            ids = latest_ids if latest_ids else None
+        else:
+            ids = [int(x) for x in scan_ids.split(',')]
+        
+        query = """
+            SELECT 
+                DATE(s.started_at) as scan_date,
+                COUNT(DISTINCT s.id) as scan_count,
+                COUNT(DISTINCT f.id) as findings_count,
+                COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
+            FROM scans s
+            LEFT JOIN findings f ON s.id = f.scan_id
+            WHERE s.started_at >= NOW() - INTERVAL %s
+        """
+        
+        params = [f"{days} days"]
+        
+        if ids:
+            query += " AND s.id = ANY(%s) "
+            params.append(ids)
+            
+        query += " GROUP BY DATE(s.started_at) ORDER BY scan_date ASC "
+        
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    DATE(s.started_at) as scan_date,
-                    COUNT(DISTINCT s.id) as scan_count,
-                    COUNT(DISTINCT f.id) as findings_count,
-                    COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
-                FROM scans s
-                LEFT JOIN findings f ON s.id = f.scan_id
-                WHERE s.started_at >= NOW() - INTERVAL %s
-                GROUP BY DATE(s.started_at)
-                ORDER BY scan_date ASC
-            """, (f"{days} days",))
+            cur.execute(query, params)
             results = cur.fetchall()
         
         return {
@@ -3540,24 +3631,73 @@ async def get_scan_history(days: int = 30):
         logger.exception("Failed to get scan history")
         return {"status": "error", "message": str(e), "data": []}
 
+def get_latest_scan_ids(limit: int = 1) -> List[int]:
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM scans ORDER BY created_at DESC LIMIT %s", (limit,))
+        rows = cur.fetchall()
+        return [row[0] for row in rows]
+
 @app.get("/api/latest-findings")
-async def get_latest_findings(limit: int = 10):
+async def get_latest_findings(limit: int = 100, scan_ids: str = None):
     try:
         conn = get_conn()
+        
+        # Default to latest scan if no scan_ids provided
+        if not scan_ids:
+            latest_ids = get_latest_scan_ids(limit=1)
+            ids = latest_ids if latest_ids else None
+        else:
+            ids = [int(x) for x in scan_ids.split(',')]
+        
+        query = """
+            SELECT 
+                r.name as resource_name,
+                r.cloud,
+                f.severity,
+                f.description,
+                f.validated_by as tool,
+                f.created_at
+            FROM findings f
+            JOIN resources r ON f.id = f.resource_id -- Simplified join if table uses resource_id correctly
+        """
+        # Wait, I should double check the join. In Step 35 I saw:
+        # FROM findings f JOIN resources r ON f.resource_id = r.id
+        
+        query = """
+            SELECT 
+                r.name as resource_name,
+                r.cloud,
+                f.severity,
+                f.description,
+                f.validated_by as tool,
+                f.created_at
+            FROM findings f
+            JOIN resources r ON f.resource_id = r.id
+        """
+        
+        params = []
+        if ids:
+            query += " WHERE r.scan_id = ANY(%s) "
+            params.append(ids)
+            
+        # Priority-based sorting for severity
+        query += """ 
+            ORDER BY 
+                CASE f.severity 
+                    WHEN 'CRITICAL' THEN 1 
+                    WHEN 'HIGH' THEN 2 
+                    WHEN 'MEDIUM' THEN 3 
+                    WHEN 'LOW' THEN 4 
+                    ELSE 5 
+                END ASC,
+                f.created_at DESC 
+            LIMIT %s 
+        """
+        params.append(limit)
+        
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    r.name as resource_name,
-                    r.cloud,
-                    f.severity,
-                    f.description,
-                    f.validated_by as tool,
-                    f.created_at
-                FROM findings f
-                JOIN resources r ON f.resource_id = r.id
-                ORDER BY f.created_at DESC
-                LIMIT %s
-            """, (limit,))
+            cur.execute(query, params)
             results = cur.fetchall()
         
         return {
@@ -3568,6 +3708,7 @@ async def get_latest_findings(limit: int = 10):
                     "cloud": cloud,
                     "severity": severity,
                     "description": description,
+                    "recommendation": "Review security documentation for remediation steps.",
                     "tool": tool,
                     "timestamp": created_at.isoformat() if created_at else None
                 }
@@ -4581,6 +4722,17 @@ async def initialize_mcp_server(provider: str, credentials: Dict[str, Any]):
                 "server_info": server.get_info()
             }
         
+        elif provider == "gcp":
+            server = create_gcp_server(credentials)
+            mcp_server_manager.register_server(server)
+            await server.start()
+            
+            return {
+                "status": "initialized",
+                "provider": provider,
+                "server_info": server.get_info()
+            }
+        
         else:
             raise HTTPException(
                 status_code=400,
@@ -4645,14 +4797,14 @@ async def call_mcp_tool(provider: str, tool_name: str, arguments: Dict[str, Any]
 
 async def store_scan_result(
     result: ScanResult,
-    aws_credential_id: int | None = None,
+    credential_id: int | None = None,
 ) -> int:
     conn = get_conn()
     try:
         account_id = result.account_id or "default"
-        logger.info(f"DEBUG store_scan_result got aws_credential_id={aws_credential_id}")
+        logger.info(f"DEBUG store_scan_result got credential_id={credential_id}")
 
-        scan_id = create_scan_record(account_id, result.provider, aws_credential_id)
+        scan_id = create_scan_record(account_id, result.provider, credential_id)
 
         resource_id_map: dict[str, int] = {}
 
@@ -4692,6 +4844,7 @@ async def store_scan_result(
                 f.severity.value,
                 description_with_tool,
                 result.provider,
+                recommendation=f.recommendation
             )
 
             if getattr(f, "vuln_metadata", None):
