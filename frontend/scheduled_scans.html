@@ -1,25 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudGuard - Scheduled Scans</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: #f1f5f9;
             min-height: 100vh;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 24px;
         }
-        
+
         .header {
             display: flex;
             justify-content: space-between;
@@ -31,7 +36,7 @@
             margin-bottom: 24px;
             border: 1px solid rgba(148, 163, 184, 0.1);
         }
-        
+
         .title {
             font-size: 2rem;
             font-weight: 700;
@@ -39,7 +44,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
         .btn {
             padding: 12px 24px;
             border-radius: 12px;
@@ -49,23 +54,23 @@
             transition: all 0.3s;
             font-size: 0.95rem;
         }
-        
+
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             color: white;
         }
-        
+
         .btn-secondary {
             background: rgba(255, 255, 255, 0.1);
             color: #e2e8f0;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
-        
+
         /* Stats Cards */
         .stats-grid {
             display: grid;
@@ -73,27 +78,27 @@
             gap: 20px;
             margin-bottom: 32px;
         }
-        
+
         .stat-card {
             background: rgba(30, 41, 59, 0.7);
             border-radius: 16px;
             padding: 24px;
             border: 1px solid rgba(148, 163, 184, 0.1);
         }
-        
+
         .stat-value {
             font-size: 2rem;
             font-weight: 700;
             color: white;
             margin: 8px 0;
         }
-        
+
         .stat-label {
             font-size: 0.9rem;
             color: #94a3b8;
             text-transform: uppercase;
         }
-        
+
         /* Tabs */
         .tabs {
             display: flex;
@@ -104,7 +109,7 @@
             border-radius: 16px;
             border: 1px solid rgba(148, 163, 184, 0.1);
         }
-        
+
         .tab {
             padding: 12px 24px;
             border-radius: 12px;
@@ -116,18 +121,18 @@
             transition: all 0.3s;
             flex: 1;
         }
-        
+
         .tab.active {
             background: rgba(59, 130, 246, 0.2);
             color: #60a5fa;
         }
-        
+
         /* Schedule Cards */
         .schedules-grid {
             display: grid;
             gap: 20px;
         }
-        
+
         .schedule-card {
             background: rgba(30, 41, 59, 0.7);
             border-radius: 16px;
@@ -135,25 +140,25 @@
             border: 1px solid rgba(148, 163, 184, 0.1);
             transition: all 0.3s;
         }
-        
+
         .schedule-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
-        
+
         .schedule-header {
             display: flex;
             justify-content: space-between;
             align-items: start;
             margin-bottom: 16px;
         }
-        
+
         .schedule-name {
             font-size: 1.2rem;
             font-weight: 700;
             color: white;
         }
-        
+
         .status-badge {
             padding: 6px 16px;
             border-radius: 20px;
@@ -161,148 +166,150 @@
             font-weight: 700;
             text-transform: uppercase;
         }
-        
+
         .status-scheduled {
             background: rgba(59, 130, 246, 0.2);
             color: #93c5fd;
         }
-        
+
         .status-completed {
             background: rgba(34, 197, 94, 0.2);
             color: #4ade80;
         }
-        
+
         .status-failed {
             background: rgba(239, 68, 68, 0.2);
             color: #fca5a5;
         }
-        
+
         .schedule-info {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
             margin: 16px 0;
         }
-        
+
         .info-item {
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
-        
+
         .info-label {
             font-size: 0.85rem;
             color: #94a3b8;
         }
-        
+
         .info-value {
             font-size: 1rem;
             color: #e2e8f0;
             font-weight: 600;
         }
-        
+
         .providers-list {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
         }
-        
+
         .provider-badge {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
         }
-        
+
         .provider-aws {
             background: rgba(255, 153, 0, 0.2);
             color: #ff9900;
         }
-        
+
         .provider-gcp {
             background: rgba(66, 133, 244, 0.2);
             color: #4285f4;
         }
-        
+
         .provider-openai {
             background: rgba(16, 163, 127, 0.2);
             color: #10a37f;
         }
-        
+
         .scan-results {
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid rgba(148, 163, 184, 0.1);
         }
-        
+
         .results-header {
             font-size: 1rem;
             font-weight: 600;
             color: #cbd5e1;
             margin-bottom: 12px;
         }
-        
+
         .results-summary {
             display: flex;
             gap: 24px;
             flex-wrap: wrap;
         }
-        
+
         .result-metric {
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        
+
         .metric-label {
             color: #94a3b8;
             font-size: 0.9rem;
         }
-        
+
         .metric-value {
             font-weight: 700;
             font-size: 1.1rem;
         }
-        
+
         .actions {
             display: flex;
             gap: 12px;
             margin-top: 16px;
         }
-        
+
         .btn-small {
             padding: 8px 16px;
             font-size: 0.85rem;
         }
-        
+
         .btn-danger {
             background: rgba(239, 68, 68, 0.2);
             color: #fca5a5;
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
-        
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
             color: #64748b;
         }
-        
+
         .empty-icon {
             font-size: 4rem;
             margin-bottom: 16px;
             opacity: 0.5;
         }
-        
+
         .loading {
             text-align: center;
             padding: 40px;
             color: #64748b;
         }
-        
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .spinner {
             display: inline-block;
             width: 40px;
@@ -314,6 +321,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -385,31 +393,31 @@
             try {
                 const response = await fetch('/api/schedules');
                 const data = await response.json();
-                
+
                 allSchedules = data.schedules || [];
-                
+
                 // Update stats
                 document.getElementById('total-schedules').textContent = allSchedules.length;
-                document.getElementById('active-schedules').textContent = 
+                document.getElementById('active-schedules').textContent =
                     allSchedules.filter(s => s.status === 'scheduled').length;
-                document.getElementById('completed-runs').textContent = 
+                document.getElementById('completed-runs').textContent =
                     allSchedules.filter(s => s.status === 'completed').length;
-                
+
                 // Calculate next scan
                 const nextScan = allSchedules
                     .filter(s => s.status === 'scheduled' && s.next_run_at)
                     .sort((a, b) => new Date(a.next_run_at) - new Date(b.next_run_at))[0];
-                
+
                 if (nextScan) {
                     const timeUntil = getTimeUntil(nextScan.next_run_at);
                     document.getElementById('next-scan').textContent = timeUntil;
                 } else {
                     document.getElementById('next-scan').textContent = 'None';
                 }
-                
+
                 // Render schedules
                 renderSchedules();
-                
+
             } catch (error) {
                 console.error('Failed to load schedules:', error);
                 document.getElementById('schedules-list').innerHTML = `
@@ -424,12 +432,12 @@
 
         function renderSchedules() {
             const container = document.getElementById('schedules-list');
-            
+
             let filtered = allSchedules;
             if (currentFilter !== 'all') {
                 filtered = allSchedules.filter(s => s.status === currentFilter);
             }
-            
+
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -443,7 +451,7 @@
                 `;
                 return;
             }
-            
+
             container.innerHTML = filtered.map(schedule => `
                 <div class="schedule-card">
                     <div class="schedule-header">
@@ -464,18 +472,18 @@
                         <div class="info-item">
                             <div class="info-label">Type</div>
                             <div class="info-value">
-                                ${schedule.schedule?.type === 'recurring' ? 
-                                    `🔄 ${schedule.schedule.frequency || 'daily'}` : 
-                                    '⏰ One-time'}
+                                ${schedule.schedule?.type === 'recurring' ?
+                    `🔄 ${schedule.schedule.frequency || 'daily'}` :
+                    '⏰ One-time'}
                             </div>
                         </div>
                         
                         <div class="info-item">
                             <div class="info-label">Next Run</div>
                             <div class="info-value">
-                                ${schedule.next_run_at ? 
-                                    new Date(schedule.next_run_at).toLocaleString() : 
-                                    'N/A'}
+                                ${schedule.next_run_at ?
+                    new Date(schedule.next_run_at).toLocaleString() :
+                    'N/A'}
                             </div>
                         </div>
                         
@@ -534,7 +542,7 @@
                     </div>
                 </div>
             `).join('');
-            
+
             // Load scan results for completed schedules
             filtered
                 .filter(s => s.status === 'completed' && s.schedule?.last_run_scan_ids)
@@ -546,18 +554,18 @@
         async function loadScanResults(scheduleId, scanIds) {
             const container = document.getElementById(`results-${scheduleId}`);
             if (!container) return;
-            
+
             try {
                 // Fetch results for all scan IDs
                 const results = await Promise.all(
                     scanIds.map(id => fetch(`/report/${id}`).then(r => r.json()))
                 );
-                
+
                 const totalResources = results.reduce((sum, r) => sum + r.total_resources, 0);
                 const totalFindings = results.reduce((sum, r) => sum + r.total_findings, 0);
-                const criticalFindings = results.reduce((sum, r) => 
+                const criticalFindings = results.reduce((sum, r) =>
                     sum + r.findings.filter(f => f.severity === 'CRITICAL').length, 0);
-                
+
                 container.innerHTML = `
                     <div class="result-metric">
                         <span class="metric-label">Resources:</span>
@@ -583,21 +591,21 @@
 
         function switchTab(filter) {
             currentFilter = filter;
-            
+
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             event.target.classList.add('active');
-            
+
             renderSchedules();
         }
 
         async function runScheduleNow(scheduleId) {
             if (!confirm('Run this scan now?')) return;
-            
+
             try {
                 const response = await fetch(`/api/schedules/${scheduleId}/run`, {
                     method: 'POST'
                 });
-                
+
                 if (response.ok) {
                     alert('Scan started! Refresh the page to see progress.');
                     loadSchedules();
@@ -611,12 +619,12 @@
 
         async function deleteSchedule(scheduleId) {
             if (!confirm('Delete this schedule? This cannot be undone.')) return;
-            
+
             try {
                 const response = await fetch(`/api/schedules/${scheduleId}`, {
                     method: 'DELETE'
                 });
-                
+
                 if (response.ok) {
                     alert('Schedule deleted successfully');
                     loadSchedules();
@@ -629,22 +637,22 @@
         }
 
         function viewScanResults(scanId) {
-            window.location.href = `/dashboard?scanId=${scanId}`;
+            window.location.href = `/dashboard?scanIds=${scanId}`;
         }
 
         function formatDate(dateString) {
             const date = new Date(dateString);
             const now = new Date();
             const diff = now - date;
-            
+
             const minutes = Math.floor(diff / 60000);
             const hours = Math.floor(minutes / 60);
             const days = Math.floor(hours / 24);
-            
+
             if (minutes < 60) return `${minutes} minutes ago`;
             if (hours < 24) return `${hours} hours ago`;
             if (days < 7) return `${days} days ago`;
-            
+
             return date.toLocaleDateString();
         }
 
@@ -652,17 +660,18 @@
             const target = new Date(dateString);
             const now = new Date();
             const diff = target - now;
-            
+
             if (diff < 0) return 'Overdue';
-            
+
             const minutes = Math.floor(diff / 60000);
             const hours = Math.floor(minutes / 60);
             const days = Math.floor(hours / 24);
-            
+
             if (days > 0) return `${days}d ${hours % 24}h`;
             if (hours > 0) return `${hours}h ${minutes % 60}m`;
             return `${minutes}m`;
         }
     </script>
 </body>
+
 </html>

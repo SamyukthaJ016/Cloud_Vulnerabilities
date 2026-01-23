@@ -1505,9 +1505,7 @@
                 credential_id: selectedCredentialId ? parseInt(selectedCredentialId) : null  // NEW: Selected credential
             };
 
-            // 🔥 DEBUG ALERT: Show exactly what is being sent
-            alert(`🚀 Starting scan for providers: ${JSON.stringify(selectedProviders)}\nUser ID: ${userId}`);
-            console.log('📤 Sending scan request:', scanRequest);
+            console.log('📤 Sending scan request:', scanRequest)
 
             // Handle different schedule types
             if (currentScheduleTab === 'scheduled') {
@@ -1528,28 +1526,40 @@
                     name: scheduleName || `Scan on ${scheduleDate}`
                 };
 
-                // ⚠️ PERMISSION CHECK: Show custom modal before scheduling
-                openIamCommandsModal(selectedCredentialId, async () => {
-                    try {
-                        const resp = await fetch('/scan/schedule', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(scanRequest),
-                        });
-                        const result = await resp.json();
+                // Validate that the scheduled time is in the future
+                const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+                const now = new Date();
+                if (scheduledDateTime <= now) {
+                    alert('⚠️ Scheduled time must be in the future!\n\nPlease select a date and time that hasn\'t passed yet.');
+                    return;
+                }
 
-                        if (resp.ok) {
-                            alert('✅ Scan scheduled successfully!');
-                            closeScanModal();
-                            loadRecentScans();
-                        } else {
-                            alert(`Error scheduling scan: ${result.detail || 'Unknown error'}`);
-                        }
-                    } catch (error) {
-                        console.error('Failed to schedule scan:', error);
-                        alert('Failed to connect to scanner API');
+                // Send schedule request directly
+                try {
+                    console.log('📅 Scheduling one-time scan:', scanRequest);
+                    const resp = await fetch('/scan/schedule', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(scanRequest),
+                    });
+
+                    console.log('Response status:', resp.status, resp.statusText);
+                    const result = await resp.json();
+                    console.log('Response data:', result);
+
+                    if (resp.ok) {
+                        const nextRunLocal = new Date(result.next_run_at).toLocaleString();
+                        alert(`✅ Scan scheduled successfully!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
+                        console.log('✅ Schedule created:', result);
+                        closeScanModal();
+                        loadRecentScans();
+                    } else {
+                        alert(`Error scheduling scan: ${result.detail || 'Unknown error'}`);
                     }
-                });
+                } catch (error) {
+                    console.error('Failed to schedule scan:', error);
+                    //alert(`Failed to schedule scan: ${error.message}\n\nCheck the browser console for details.`);
+                }
                 return;
             } else if (currentScheduleTab === 'recurring') {
                 const recurringName = document.getElementById('recurringName').value;
@@ -1569,24 +1579,26 @@
                     name: recurringName
                 };
 
-                // ⚠️ PERMISSION CHECK: Show custom modal before scheduling
-                openIamCommandsModal(selectedCredentialId, async () => {
-                    try {
-                        const resp = await fetch('/scan/schedule', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(scanRequest),
-                        });
-                        const result = await resp.json();
-                        if (!resp.ok) {
-                            throw new Error(result.detail || 'Failed to create recurring schedule');
-                        }
-                        alert(`Recurring ${selectedFrequency} scan "${recurringName}" created (id=${result.schedule_id})!`);
-                        closeScanModal(); // Close after success
-                    } catch (e) {
-                        alert('Failed to create recurring scan: ' + e.message);
+                // Send recurring schedule request directly
+                try {
+                    console.log('🔄 Scheduling recurring scan:', scanRequest);
+                    const resp = await fetch('/scan/schedule', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(scanRequest),
+                    });
+                    const result = await resp.json();
+                    if (!resp.ok) {
+                        throw new Error(result.detail || 'Failed to create recurring schedule');
                     }
-                });
+                    const nextRunLocal = new Date(result.next_run_at).toLocaleString();
+                    alert(`✅ Recurring ${selectedFrequency} scan "${recurringName}" created!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
+                    console.log('✅ Recurring schedule created:', result);
+                    closeScanModal();
+                } catch (e) {
+                    console.error('Failed to create recurring scan:', e);
+                    alert('Failed to create recurring scan: ' + e.message);
+                }
                 return;
             }
 

@@ -385,6 +385,7 @@ async def run_multi_cloud_scan_internal(
     account_ids: dict[str, str],
     deep_scan: bool,
     user_id: str,
+    credential_id: Optional[int] = None,
 ):
     """Core multi-cloud scan logic reused by API and scheduler."""
     logger.info(f"🚀 Multi-cloud scan for providers: {providers}")
@@ -2532,7 +2533,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
                     continue
                 logger.error(f"❌ Cannot initialize AWS for user {user_id}: No credentials.")
                 # We don't continue here - we want the scan to fail for this provider specifically
-                mcp_registry.unregister("aws") # Ensure we don't use a stale one
+                # Note: No need to unregister - register() will overwrite if needed
                 continue
 
             # If we HAVE a user credential, always (re)initialize to ensure it's used
@@ -2587,7 +2588,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
                     logger.info("ℹ️ Using existing GCP MCP server for anonymous user (env fallback)")
                     continue
                 logger.error(f"❌ Cannot initialize GCP for user {user_id}: No credentials.")
-                mcp_registry.unregister("gcp")
+                # Note: No need to unregister - register() will overwrite if needed
                 continue
 
             # If we HAVE a user credential, always (re)initialize to ensure it's used
