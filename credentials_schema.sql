@@ -41,11 +41,6 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
     openai_api_key TEXT,
     openai_org_id VARCHAR(255),
 
-    azure_client_id TEXT,
-    azure_client_secret TEXT,
-    azure_tenant_id TEXT,
-    azure_subscription_id TEXT,
-
     is_default BOOLEAN DEFAULT FALSE,
     is_valid BOOLEAN DEFAULT TRUE,
     last_used TIMESTAMP,
@@ -58,7 +53,7 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
     updated_at TIMESTAMP DEFAULT NOW(),
 
     CONSTRAINT valid_cloud_provider
-        CHECK (cloud_provider IN ('aws','gcp','openai','azure')),
+        CHECK (cloud_provider IN ('aws','gcp','openai')),
 
     CONSTRAINT valid_validation_status
         CHECK (validation_status IN ('pending','valid','invalid')),
@@ -91,7 +86,6 @@ CREATE TABLE IF NOT EXISTS scan_sessions (
     aws_credential_id INTEGER REFERENCES cloud_credentials(id),
     gcp_credential_id INTEGER REFERENCES cloud_credentials(id),
     openai_credential_id INTEGER REFERENCES cloud_credentials(id),
-    azure_credential_id INTEGER REFERENCES cloud_credentials(id),
 
     status VARCHAR(50) DEFAULT 'active',
     scan_config JSONB,
@@ -196,7 +190,6 @@ SELECT
     COUNT(*) FILTER (WHERE c.cloud_provider = 'aws') AS aws_credentials,
     COUNT(*) FILTER (WHERE c.cloud_provider = 'gcp') AS gcp_credentials,
     COUNT(*) FILTER (WHERE c.cloud_provider = 'openai') AS openai_credentials,
-    COUNT(*) FILTER (WHERE c.cloud_provider = 'azure') AS azure_credentials,
     COUNT(*) FILTER (WHERE c.is_valid) AS valid_credentials,
     MAX(c.last_used) AS last_used_credential
 FROM user_profiles u

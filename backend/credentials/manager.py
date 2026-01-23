@@ -43,11 +43,6 @@ class CloudCredential:
     openai_api_key: Optional[str] = None
     openai_org_id: Optional[str] = None
 
-    azure_client_id: Optional[str] = None
-    azure_client_secret: Optional[str] = None
-    azure_tenant_id: Optional[str] = None
-    azure_subscription_id: Optional[str] = None
-
     is_default: bool = False
     is_valid: bool = True
 
@@ -372,11 +367,6 @@ class CredentialManager:
                 openai_api_key=credential_dict["openai_api_key"],
                 openai_org_id=credential_dict["openai_org_id"],
 
-                azure_client_id=credential_dict["azure_client_id"],
-                azure_client_secret=credential_dict["azure_client_secret"],
-                azure_tenant_id=credential_dict["azure_tenant_id"],
-                azure_subscription_id=credential_dict["azure_subscription_id"],
-
                 is_default=credential_dict["is_default"],
                 is_valid=credential_dict["is_valid"],
             )
@@ -404,7 +394,6 @@ class CredentialManager:
                     SELECT 
                         id, user_id, cloud_provider, credential_name,
                         aws_region, gcp_project_id, openai_org_id,
-                        azure_tenant_id, azure_subscription_id,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
@@ -420,7 +409,6 @@ class CredentialManager:
                     SELECT 
                         id, user_id, cloud_provider, credential_name,
                         aws_region, gcp_project_id, openai_org_id,
-                        azure_tenant_id, azure_subscription_id,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
@@ -546,8 +534,6 @@ class CredentialManager:
                 validation_result = self._validate_openai_credential(credential)
             elif credential.cloud_provider == 'gcp':
                 validation_result = self._validate_gcp_credential(credential)
-            elif credential.cloud_provider == 'azure':
-                validation_result = self._validate_azure_credential(credential)
             else:
                 validation_result['message'] = f'Unknown provider: {credential.cloud_provider}'
             
@@ -697,53 +683,7 @@ class CredentialManager:
                 'details': {}
             }
     
-    def _validate_azure_credential(self, credential: CloudCredential) -> Dict[str, Any]:
-        """Validate Azure credentials"""
-        try:
-            from azure.identity import ClientSecretCredential
-            from azure.mgmt.resource import ResourceManagementClient
-            
-            if not all([credential.azure_client_id, credential.azure_client_secret, credential.azure_tenant_id]):
-                return {
-                    'valid': False,
-                    'message': 'Missing Azure credentials (client_id, client_secret, or tenant_id)',
-                    'details': {}
-                }
-            
-            # Create credential object
-            credential_obj = ClientSecretCredential(
-                tenant_id=credential.azure_tenant_id,
-                client_id=credential.azure_client_id,
-                client_secret=credential.azure_client_secret
-            )
-            
-            # Test by trying to get subscription
-            if credential.azure_subscription_id:
-                client = ResourceManagementClient(credential_obj, credential.azure_subscription_id)
-                subscriptions = list(client.subscriptions.list())
-                
-                return {
-                    'valid': True,
-                    'message': 'Azure credentials validated successfully',
-                    'details': {
-                        'subscription_id': credential.azure_subscription_id,
-                        'subscription_count': len(subscriptions)
-                    }
-                }
-            else:
-                # Just validate credentials without subscription
-                return {
-                    'valid': True,
-                    'message': 'Azure credentials validated (subscription not tested)',
-                    'details': {}
-                }
-                
-        except Exception as e:
-            return {
-                'valid': False,
-                'message': f'Azure validation failed: {str(e)}',
-                'details': {}
-            }
+
     
     def _update_validation_status(self, credential_id: Optional[int], user_id: str, 
                                  is_valid: bool, message: str) -> None:

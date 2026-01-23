@@ -3459,29 +3459,65 @@ async def posture_dashboard(scan_ids: str = None):
     
     summary = get_multi_cloud_summary(ids)
     
+    active_tools = [name for name, available in vuln_scanner.tools_available.items() if available]
+    
     dashboard = {
         "clouds": [],
         "total_resources": 0,
         "total_findings": 0,
         "public_resources": 0,
+        "vulnerability_tools": active_tools,
         "vulnerability_tools_available": vuln_scanner.tools_available,
         "timestamp": datetime.utcnow().isoformat()
     }
     
-    for provider, res, find, public in summary:
+    for row in summary:
+        provider = row[0]
+        res = row[1]
+        find = row[2]
+        public = row[3]
+        critical = row[4]
+        high = row[5]
+        medium = row[6]
+        low = row[7]
+        
         dashboard["clouds"].append({
             "provider": provider,
             "resources": res,
             "findings": find,
             "public": public,
+            "severity_counts": {
+                "critical": critical,
+                "high": high,
+                "medium": medium,
+                "low": low
+            }
         })
         dashboard["total_resources"] += res
         dashboard["total_findings"] += find
         dashboard["public_resources"] += public
-    
-    if dashboard["total_resources"]:
-        risk_ratio = dashboard["total_findings"] / dashboard["total_resources"]
-        score = max(0, 100 - (risk_ratio * 100))
+        
+    # Improved Balanced Security Scoring
+    if dashboard["total_resources"] > 0:
+        total_crit = sum(c["severity_counts"]["critical"] for c in dashboard["clouds"])
+        total_high = sum(c["severity_counts"]["high"] for c in dashboard["clouds"])
+        total_med = sum(c["severity_counts"]["medium"] for c in dashboard["clouds"])
+        total_low = sum(c["severity_counts"]["low"] for c in dashboard["clouds"])
+        
+        # Deduction weights (Balanced for real-world impact)
+        weighted_deduction = (
+            (total_crit * 12) + 
+            (total_high * 6) + 
+            (total_med * 2) + 
+            (total_low * 0.5)
+        )
+        
+        # Density-based deduction with environment scaling
+        # We use a linear-root hybrid to ensure small projects aren't zeroed out instantly
+        # while large projects remain sensitive to clusters of findings.
+        impact_factor = weighted_deduction / (dashboard["total_resources"] * 0.6 + 2)
+        
+        score = max(0, min(100, 100 - impact_factor))
     else:
         score = 100
     
@@ -3649,20 +3685,6 @@ async def get_latest_findings(limit: int = 100, scan_ids: str = None):
             ids = latest_ids if latest_ids else None
         else:
             ids = [int(x) for x in scan_ids.split(',')]
-        
-        query = """
-            SELECT 
-                r.name as resource_name,
-                r.cloud,
-                f.severity,
-                f.description,
-                f.validated_by as tool,
-                f.created_at
-            FROM findings f
-            JOIN resources r ON f.id = f.resource_id -- Simplified join if table uses resource_id correctly
-        """
-        # Wait, I should double check the join. In Step 35 I saw:
-        # FROM findings f JOIN resources r ON f.resource_id = r.id
         
         query = """
             SELECT 

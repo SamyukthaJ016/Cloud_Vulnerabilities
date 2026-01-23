@@ -264,9 +264,13 @@ def get_multi_cloud_summary(scan_ids: List[int] = None):
         query = """
             SELECT
                 r.cloud,
-                COUNT(DISTINCT r.id),
-                COUNT(DISTINCT f.id),
-                COUNT(DISTINCT CASE WHEN r.public THEN r.id END)
+                COUNT(DISTINCT r.id) as res_count,
+                COUNT(DISTINCT f.id) as find_count,
+                COUNT(DISTINCT CASE WHEN r.public THEN r.id END) as public_count,
+                COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count,
+                COUNT(DISTINCT CASE WHEN f.severity = 'HIGH' THEN f.id END) as high_count,
+                COUNT(DISTINCT CASE WHEN f.severity = 'MEDIUM' THEN f.id END) as medium_count,
+                COUNT(DISTINCT CASE WHEN f.severity = 'LOW' THEN f.id END) as low_count
             FROM resources r
             LEFT JOIN findings f ON r.id = f.resource_id
         """

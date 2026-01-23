@@ -1268,6 +1268,64 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'trusted-scripts.
                     'OWASP Top 10 Project',
                     'MDN Web Security Guidelines'
                 ]
+            },
+            gcp_iam: {
+                title: 'GCP IAM Security Hardening',
+                priority: 'CRITICAL',
+                estimatedTime: '30 minutes',
+                steps: [
+                    'Apply principle of least privilege: replace roles/owner with specific roles',
+                    'Restrict Service Account Key creation',
+                    'Disable Service Account impersonation unless strictly required',
+                    'Review and rotate long-lived service account keys',
+                    'Implement IAM Conditions for time-bound access'
+                ],
+                code: (resourceName) => `# 1. Remove owner role from user/service account
+gcloud projects remove-iam-policy-binding PROJECT_ID \\
+  --member="user:NAME@DOMAIN.COM" \\
+  --role="roles/owner"
+
+# 2. Add restrictive role instead
+gcloud projects add-iam-policy-binding PROJECT_ID \\
+  --member="user:NAME@DOMAIN.COM" \\
+  --role="roles/viewer"
+
+# 3. Disable service account key creation (Org Policy)
+gcloud resource-manager org-policies disable-policy \\
+  iam.disableServiceAccountKeyCreation --project=PROJECT_ID`,
+                validation: 'Audit IAM policy with: gcloud projects get-iam-policy PROJECT_ID',
+                references: [
+                    'GCP IAM Best Practices',
+                    'Privilege Escalation in GCP IAM'
+                ]
+            },
+            web_exposure: {
+                title: 'Exposed Sensitive File Protection',
+                priority: 'CRITICAL',
+                estimatedTime: '15 minutes',
+                steps: [
+                    '🚨 IMMEDIATELY remove the exposed files from the deployment',
+                    'Update .gcloudignore or .gitignore to prevent re-upload',
+                    'Modify application logic to block access to these paths',
+                    'If secrets were in files, rotate them immediately',
+                    'Implement WAF rules to block access to sensitive file extensions'
+                ],
+                code: (resourceName) => `# Update .gcloudignore to exclude sensitive files
+cat >> .gcloudignore << 'EOF'
+.env
+.git/
+config.json
+Dockerfile
+web.config
+EOF
+
+# For Cloud Functions, redeploy without these files
+gcloud functions deploy ${resourceName.split('/').pop()} --ignore-file=.gcloudignore`,
+                validation: 'Run a curl request to verify the files are no longer accessible (403/404)',
+                references: [
+                    'OWASP Information Leakage',
+                    'GCP Deployment Best Practices'
+                ]
             }
         };
 
@@ -1336,7 +1394,7 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'trusted-scripts.
                 document.getElementById('critical-count').innerHTML =
                     `${summary.total_findings || 0} total vulnerabilities`;
                 document.getElementById('active-tools').textContent =
-                    Object.keys(summary.vulnerability_tools_available || {}).length;
+                    summary.vulnerability_tools ? summary.vulnerability_tools.length : 0;
 
                 await loadTrendChart();
                 await loadCloudChart(providers.data || []);
@@ -1356,18 +1414,26 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'trusted-scripts.
             const desc = vuln.description?.toLowerCase() || '';
             const resourceName = vuln.resource_name?.toLowerCase() || '';
             const tool = vuln.tool?.toLowerCase() || '';
+            const cloud = vuln.cloud?.toLowerCase() || vuln.provider?.toLowerCase() || '';
 
             let type = 'vulnerability';
 
-            if (desc.includes('s3') || (desc.includes('bucket') && !vuln.cloud?.toLowerCase().includes('gcp'))) {
-                type = 's3';
-            } else if (desc.includes('gcs') || (desc.includes('bucket') && vuln.cloud?.toLowerCase().includes('gcp'))) {
-                type = 'gcp_storage';
-            } else if (desc.includes('cloud function') || desc.includes('unauthenticated invocation')) {
+            // Priority matching logic
+            if (desc.includes('unauthenticated invocation') || (desc.includes('cloud function') && desc.includes('public'))) {
                 type = 'gcp_function';
+            } else if (desc.includes('sensitive file') || desc.includes('publicly accessible at')) {
+                type = 'web_exposure';
+            } else if (desc.includes('privilege escalation') || desc.includes('iam policy modification') || desc.includes('service account key creation') || desc.includes('service account impersonation')) {
+                type = 'gcp_iam';
+            } else if (desc.includes('highly privileged') || (desc.includes('iam') && cloud.includes('gcp'))) {
+                type = 'gcp_iam';
             } else if (desc.includes('firewall rule') || desc.includes('port 22') || desc.includes('ssh') || desc.includes('rdp') || desc.includes('port 3389')) {
                 type = 'gcp_firewall';
-            } else if (desc.includes('instance') || desc.includes('compute engine') || desc.includes('public ip') || desc.includes('service account')) {
+            } else if (desc.includes('s3') || (desc.includes('bucket') && !cloud.includes('gcp'))) {
+                type = 's3';
+            } else if (desc.includes('gcs') || (desc.includes('bucket') && cloud.includes('gcp'))) {
+                type = 'gcp_storage';
+            } else if (desc.includes('instance') || desc.includes('compute engine') || desc.includes('public ip')) {
                 type = 'gcp_compute';
             } else if (desc.includes('iam') || desc.includes('access key') || desc.includes('mfa')) {
                 type = 'iam';
@@ -1385,10 +1451,10 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'trusted-scripts.
                 type = 'vulnerability';
             }
 
-            const template = remediationTemplates[type];
+            const template = remediationTemplates[type] || remediationTemplates['vulnerability'];
             return {
                 ...template,
-                code: template.code(vuln.resource_name || 'RESOURCE_NAME')
+                code: typeof template.code === 'function' ? template.code(vuln.resource_name || 'RESOURCE_NAME') : template.code
             };
         }
 

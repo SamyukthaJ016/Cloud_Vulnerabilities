@@ -906,7 +906,8 @@
                         <label for="deepScan" class="option-label">
                             🔍 Deep Scan
                             <span class="option-hint">
-                                Detects OWASP Top 10, XSS, IDOR, SSRF & sensitive data exposure (adds 2-4 min)
+                                Performs comprehensive vulnerability detection including OWASP Top 10, XSS, SSRF, and
+                                sensitive data exposure (adds 2-4 min).
                             </span>
                         </label>
                     </div>
@@ -1245,6 +1246,9 @@
                 selectedProviders.splice(index, 1);
                 option.classList.remove('selected');
             }
+
+            // Update UI
+            updateScanButtonText();
         }
 
         // Load recent scans
