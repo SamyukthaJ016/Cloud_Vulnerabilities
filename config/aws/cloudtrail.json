@@ -1,0 +1,5 @@
+aws cloudtrail create-trail ^
+ --cli-input-json file: //config/aws/cloudtrail.json
+
+aws cloudtrail start-logging ^
+ --name account-cloudtrail
