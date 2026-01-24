@@ -929,9 +929,13 @@
                                     🔄 Scan Frequency
                                 </div>
                                 <div class="frequency-selector">
-                                    <button class="frequency-btn" data-frequency="hourly">Every Hour</button>
+                                    <button class="frequency-btn" data-frequency="10m">10 Mins</button>
+                                    <button class="frequency-btn" data-frequency="30m">30 Mins</button>
+                                    <button class="frequency-btn" data-frequency="hourly">Hourly</button>
                                     <button class="frequency-btn selected" data-frequency="daily">Daily</button>
+                                    <button class="frequency-btn" data-frequency="6h">Every 6h</button>
                                     <button class="frequency-btn" data-frequency="weekly">Weekly</button>
+                                    <button class="frequency-btn" data-frequency="2w">2 Weeks</button>
                                     <button class="frequency-btn" data-frequency="monthly">Monthly</button>
                                 </div>
                             </div>
@@ -998,16 +1002,25 @@
                         </label>
                     </div>
 
-                    <div class="option-item">
-                        <div class="checkbox-wrapper">
-                            <input type="checkbox" id="emailNotification" class="checkbox">
+                    <div class="option-item" style="flex-direction: column; align-items: flex-start;">
+                        <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="emailNotification" class="checkbox"
+                                    onchange="toggleEmailInput()">
+                            </div>
+                            <label for="emailNotification" class="option-label">
+                                Email Notification
+                                <span class="option-hint">
+                                    Receive scan results and critical alerts via email
+                                </span>
+                            </label>
                         </div>
-                        <label for="emailNotification" class="option-label">
-                            Email Notification
-                            <span class="option-hint">
-                                Receive scan results and critical alerts via email
-                            </span>
-                        </label>
+                        <div id="emailInputWrapper"
+                            style="display: none; width: 100%; padding-left: 32px; margin-top: 8px;">
+                            <input type="email" id="notificationEmail" class="form-input"
+                                placeholder="Enter notification email"
+                                style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; padding: 8px;">
+                        </div>
                     </div>
                 </div>
 
@@ -1501,8 +1514,11 @@
                 providers: selectedProviders,
                 account_ids: {},
                 deep_scan: deepScan,
-                user_id: userId,  // 🔥 ADDED: Send user ID
-                credential_id: selectedCredentialId ? parseInt(selectedCredentialId) : null  // NEW: Selected credential
+                user_id: userId,
+                credential_id: selectedCredentialId ? parseInt(selectedCredentialId) : null,
+                notify_email: document.getElementById('emailNotification').checked,
+                email_address: document.getElementById('notificationEmail').value || null,
+                test_permissions: true // 🛡️ NEW: Check permissions before scheduling
             };
 
             console.log('📤 Sending scan request:', scanRequest)
@@ -1545,20 +1561,24 @@
 
                     console.log('Response status:', resp.status, resp.statusText);
                     const result = await resp.json();
-                    console.log('Response data:', result);
+
+                    // 🛡️ HANDLE PERMISSION REQUIRED FOR SCHEDULE
+                    if (result.status === 'permission_required') {
+                        handlePermissionError(result.permission_error);
+                        return;
+                    }
 
                     if (resp.ok) {
                         const nextRunLocal = new Date(result.next_run_at).toLocaleString();
                         alert(`✅ Scan scheduled successfully!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
                         console.log('✅ Schedule created:', result);
-                        closeScanModal();
+                        closeScanModal(); // Fixed: was closeScanModal
                         loadRecentScans();
                     } else {
                         alert(`Error scheduling scan: ${result.detail || 'Unknown error'}`);
                     }
                 } catch (error) {
                     console.error('Failed to schedule scan:', error);
-                    //alert(`Failed to schedule scan: ${error.message}\n\nCheck the browser console for details.`);
                 }
                 return;
             } else if (currentScheduleTab === 'recurring') {
@@ -1587,17 +1607,24 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(scanRequest),
                     });
+
                     const result = await resp.json();
-                    if (!resp.ok) {
-                        throw new Error(result.detail || 'Failed to create recurring schedule');
+
+                    // 🛡️ HANDLE PERMISSION REQUIRED FOR RECURRING
+                    if (result.status === 'permission_required') {
+                        handlePermissionError(result.permission_error);
+                        return;
                     }
-                    const nextRunLocal = new Date(result.next_run_at).toLocaleString();
-                    alert(`✅ Recurring ${selectedFrequency} scan "${recurringName}" created!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
-                    console.log('✅ Recurring schedule created:', result);
-                    closeScanModal();
-                } catch (e) {
-                    console.error('Failed to create recurring scan:', e);
-                    alert('Failed to create recurring scan: ' + e.message);
+
+                    if (resp.ok) {
+                        alert(`✅ Recurring scan '${scanRequest.schedule.name}' scheduled!\n\nFrequency: ${scanRequest.schedule.frequency}\nNext run: ${new Date(result.next_run_at).toLocaleString()}`);
+                        closeScanModal();
+                        loadRecentScans();
+                    } else {
+                        alert(`Error creating schedule: ${result.detail || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    console.error('Failed to create recurring schedule:', error);
                 }
                 return;
             }
@@ -1734,64 +1761,83 @@
 
         let pendingPermissionRequest = null;
 
+        function toggleEmailInput() {
+            const wrapper = document.getElementById('emailInputWrapper');
+            const checkbox = document.getElementById('emailNotification');
+            wrapper.style.display = checkbox.checked ? 'block' : 'none';
+        }
+
+        function handlePermissionError(error) {
+            console.warn('🛡️ Permission Required:', error);
+
+            pendingPermissionRequest = {
+                user_id: getUserId(),
+                credential_id: error.credential_id,
+                iam_user_name: error.iam_user_name,
+                policy_arn: error.policy_arn,
+                role_arn: error.role_arn
+            };
+
+            // Setup CLI command
+            const policyDoc = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "sts:AssumeRole",
+                    "Resource": error.role_arn || "*"
+                }]
+            };
+
+            const cmd = `aws iam put-user-policy --user-name ${error.iam_user_name} --policy-name CloudGuard-AssumeRole-Permission --policy-document '${JSON.stringify(policyDoc)}'`;
+            document.getElementById('permissionPolicyCommand').textContent = cmd;
+
+            // Show modal
+            document.getElementById('permissionModal').style.display = 'flex';
+        }
+
         async function grantPermissionAndScan() {
             if (!pendingPermissionRequest) return;
 
-            const btn = document.getElementById('btnGrantPerm');
-            btn.disabled = true;
+            const btn = document.querySelector('#permissionModal .btn-primary');
+            const oldText = btn.textContent;
             btn.textContent = '⏳ Granting...';
+            btn.disabled = true;
 
             try {
-                console.log('🛡️ Attempting auto-grant:', pendingPermissionRequest);
-
-                const adminCredId = document.getElementById('adminCredentialSelect').value;
-
                 const response = await fetch('/api/credentials/aws/auto-grant-permission', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        user_id: getUserId(),
+                        user_id: pendingPermissionRequest.user_id,
                         credential_id: pendingPermissionRequest.credential_id,
                         iam_user_name: pendingPermissionRequest.iam_user_name,
                         policy_arn: pendingPermissionRequest.policy_arn,
-                        role_arn: pendingPermissionRequest.role_arn,
-                        admin_credential_id: adminCredId ? parseInt(adminCredId) : null
+                        role_arn: pendingPermissionRequest.role_arn
                     })
                 });
 
                 const result = await response.json();
-
                 if (result.success) {
-                    alert('✅ Permission granted successfully! Starting scan now...');
+                    alert('✅ Permission granted successfully! Retrying your scan setup now...');
                     document.getElementById('permissionModal').style.display = 'none';
-                    // Retry the scan automatically
+                    // Retry the scan setup automatically
                     startScan();
                 } else {
-                    // Show manual fix section
-                    document.getElementById('permissionDetails').style.display = 'none';
-                    document.getElementById('manualFixContainer').style.display = 'block';
-                    document.getElementById('manualFixError').textContent = result.error_details || result.message;
-                    document.getElementById('btnGrantPerm').style.display = 'none';
+                    document.getElementById('manualFixCommand').textContent = "# Manual intervention required. Please attach the policy in the AWS console.";
+                }
 
-                    if (result.recommended_cli_command) {
-                        document.getElementById('manualFixCommand').textContent = result.recommended_cli_command;
-                    } else {
-                        document.getElementById('manualFixCommand').textContent = "# Manual intervention required. Please attach the policy in the AWS console.";
-                    }
+                // Populate Step 2: Trust Relationship command
+                if (result.trust_relationship_cli_command) {
+                    document.getElementById('trustRelationshipCommand').textContent = result.trust_relationship_cli_command;
+                } else {
+                    document.getElementById('trustRelationshipCommand').textContent = "# Trust relationship update not available.";
+                }
 
-                    // Populate Step 2: Trust Relationship command
-                    if (result.trust_relationship_cli_command) {
-                        document.getElementById('trustRelationshipCommand').textContent = result.trust_relationship_cli_command;
-                    } else {
-                        document.getElementById('trustRelationshipCommand').textContent = "# Trust relationship update not available.";
-                    }
-
-                    if (result.identity_policy_json) {
-                        document.getElementById('identityPolicyJSON').textContent = result.identity_policy_json;
-                    }
-                    if (result.trust_policy_json) {
-                        document.getElementById('trustPolicyJSON').textContent = result.trust_policy_json;
-                    }
+                if (result.identity_policy_json) {
+                    document.getElementById('identityPolicyJSON').textContent = result.identity_policy_json;
+                }
+                if (result.trust_policy_json) {
+                    document.getElementById('trustPolicyJSON').textContent = result.trust_policy_json;
                 }
             } catch (error) {
                 alert('❌ Error granting permission: ' + error.message);

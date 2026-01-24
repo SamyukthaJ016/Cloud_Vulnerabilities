@@ -105,7 +105,9 @@ class MultiCloudScanRequest(BaseModel):
     providers: list[str]
     account_ids: dict[str, str] = {}
     deep_scan: bool = False
+    offensive_scan: bool = True  # NEW: Enable CloudFox by default
     session_id: Optional[str] = None
+    user_id: Optional[str] = None
     credential_id: Optional[int] = None  # NEW: Allow selecting specific credential
 
 class ScheduledScanRequest(BaseModel):
@@ -115,6 +117,9 @@ class ScheduledScanRequest(BaseModel):
     schedule: dict
     user_id: Optional[str] = None
     credential_id: Optional[int] = None  # NEW: Allow selecting specific credential for scheduled scans
+    notify_email: bool = False           # NEW: Notification preference
+    email_address: Optional[str] = None  # NEW: Target email address
+    test_permissions: bool = True        # NEW: Validate permissions before scheduling
 
 
 class VulnScanRequest(BaseModel):
@@ -136,7 +141,6 @@ class AgentExplainScanRequest(BaseModel):
 class SessionRequest(BaseModel):
     user_id: str = "anonymous"
     credentials: Dict[str, int] = {}
-
 
 class SessionResponse(BaseModel):
     session_id: str
@@ -1577,42 +1581,61 @@ async def run_multi_cloud_scan_internal(
 #             raise HTTPException(status_code=500, detail=response.error)
         
 #         return response.result
-        
-#     except Exception as e:
 #         logger.error(f"CloudFox role trusts scan failed: {e}")
 #         raise HTTPException(status_code=500, detail=str(e))
-# @app.post("/api/schedules/{schedule_id}/run")
-# async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
-#     """Run a scheduled scan immediately"""
-#     conn = get_conn()
-#     try:
-#         with conn.cursor() as cur:
-#             # Get schedule details
-#             cur.execute("""
-#                 SELECT user_id, providers, account_ids, deep_scan
-#                 FROM scan_schedules
-#                 WHERE id = %s AND status = 'scheduled'
-#             """, (schedule_id,))
-            
-#             row = cur.fetchone()
-#             if not row:
-#                 raise HTTPException(status_code=404, detail="Schedule not found or already completed")
-            
-#             user_id, providers_json, account_ids_json, deep_scan = row
-            
-#             providers = json.loads(providers_json) if providers_json else []
-#             account_ids = json.loads(account_ids_json) if account_ids_json else {}
-            
-#             # Run scan in background
-#             background_tasks.add_task(
-#                 run_multi_cloud_scan_internal,
-#                 providers=providers,
-#                 account_ids=account_ids,
-#                 deep_scan=deep_scan,
-#                 user_id=user_id
-#             )
-            
-#             return {"status": "started", "message": "Scan started in background"}
+@app.post("/api/schedules/{schedule_id}/run")
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+    """Manually trigger a scheduled scan now"""
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT user_id, providers, account_ids, deep_scan, credential_id FROM scan_schedules WHERE id = %s",
+            (schedule_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Schedule not found")
+        
+        user_id, providers_text, account_ids_text, deep_scan, credential_id = row
+        providers = json.loads(providers_text)
+        account_ids = json.loads(account_ids_text)
+
+    # 🛡️ Permission Check
+    if "aws" in providers:
+        logger.info(f"🛡️ Testing AWS permissions for schedule {schedule_id} before run...")
+        try:
+            await initialize_mcp_servers_for_user(user_id, ["aws"], credential_id)
+        except Exception as e:
+            if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
+                logger.warning(f"🛡️ Permission check failed for schedule {schedule_id}")
+                iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "status": "permission_required",
+                        "permission_error": {
+                            "type": "missing_assume_role_permission",
+                            "iam_user_name": iam_user_name,
+                            "iam_user_arn": e.iam_user_arn,
+                            "role_arn": getattr(e, 'role_arn', None),
+                            "policy_arn": e.recommended_policy_arn,
+                            "credential_id": credential_id,
+                            "can_auto_grant": True
+                        }
+                    }
+                )
+
+    # Run MCP scan in background
+    background_tasks.add_task(
+        run_multi_cloud_scan_internal,
+        providers=providers,
+        account_ids=account_ids,
+        deep_scan=deep_scan,
+        user_id=user_id,
+        credential_id=credential_id,
+    )
+
+    return {"status": "started", "message": "Scan started in background"}
     
 #     except HTTPException:
 #         raise
@@ -2406,53 +2429,7 @@ multi_agent_analyzer = None
 # REQUEST MODELS
 # ============================================================
 
-class ScanRequest(BaseModel):
-    message: str
-    deep_scan: bool = False
-    session_id: Optional[str] = None
-
-class MultiCloudScanRequest(BaseModel):
-    providers: list[str]
-    account_ids: dict[str, str] = {}
-    deep_scan: bool = False
-    offensive_scan: bool = True  # NEW: Enable CloudFox by default
-    session_id: Optional[str] = None
-    user_id: Optional[str] = None
-    credential_id: Optional[int] = None  # NEW: Allow selecting specific credential
-
-
-class ScheduledScanRequest(BaseModel):
-    providers: list[str]
-    account_ids: dict[str, str] = {}
-    deep_scan: bool = False
-    schedule: dict
-    user_id: Optional[str] = None
-    credential_id: Optional[int] = None  # NEW: Allow selecting specific credential for scheduled scans
-
-class VulnScanRequest(BaseModel):
-    target_type: str
-    path: str
-    metadata: dict = {}
-    session_id: Optional[str] = None
-
-class AgentChatRequest(BaseModel):
-    message: str
-
-class AgentChatResponse(BaseModel):
-    reply: str
-
-class AgentExplainScanRequest(BaseModel):
-    scan_id: int
-    question: Optional[str] = None
-
-class SessionRequest(BaseModel):
-    user_id: str = "anonymous"
-    credentials: Dict[str, int] = {}
-
-class SessionResponse(BaseModel):
-    session_id: str
-    expires_at: datetime
-    providers_available: List[str]
+# Duplicate models removed. Using definitions from the top of the file.
 
 # ============================================================
 # CREDENTIAL INITIALIZATION FOR MCP SERVERS
@@ -2880,26 +2857,81 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
 
     else:  # recurring
         time_str = schedule.get("time")  # "HH:MM"
-        if not time_str:
-            raise HTTPException(status_code=400, detail="time is required for recurring schedule")
-
+        frequency = schedule.get("frequency", "daily") # "10m", "30m", "60m", "6h", "daily", "weekly", "monthly", "2w"
+        
         # Today in that timezone
-        today_local = datetime.now(tz).date()
+        now_local = datetime.now(tz)
+        
+        if frequency == "10m":
+            next_run_local = now_local + timedelta(minutes=10)
+        elif frequency == "30m":
+            next_run_local = now_local + timedelta(minutes=30)
+        elif frequency == "60m" or frequency == "hourly":
+            next_run_local = now_local + timedelta(hours=1)
+        elif frequency == "6h":
+            next_run_local = now_local + timedelta(hours=6)
+        elif frequency == "2w":
+            next_run_local = now_local + timedelta(weeks=2)
+        else: # daily/weekly/monthly/etc uses specific time
+            if not time_str:
+                 raise HTTPException(status_code=400, detail="time is required for recurring schedule (except for short intervals)")
+            
+            today_local_date = now_local.date()
+            try:
+                # build local datetime "YYYY-MM-DDTHH:MM"
+                local_naive = datetime.fromisoformat(f"{today_local_date}T{time_str}")
+                next_run_local = local_naive.replace(tzinfo=tz)
+                # If time already passed today, move to tomorrow
+                if next_run_local <= now_local:
+                    next_run_local += timedelta(days=1)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Invalid time format")
+
+        next_run_at = next_run_local.astimezone(timezone.utc)
+
+    # 🛡️ Optional Permission Check
+    if request.test_permissions and "aws" in request.providers:
+        logger.info(f"🛡️ Testing AWS permissions for user={user_id} before scheduling...")
         try:
-            # build local datetime "YYYY-MM-DDTHH:MM"
-            local_naive = datetime.fromisoformat(f"{today_local}T{time_str}")
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid time format")
-        local = local_naive.replace(tzinfo=tz)
-        next_run_at = local.astimezone(timezone.utc)
+            await initialize_mcp_servers_for_user(user_id, ["aws"], request.credential_id)
+        except Exception as e:
+            if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
+                logger.warning(f"🛡️ Permission check failed for user: {e.iam_user_arn}")
+                
+                # Fetch credential for ID
+                if request.credential_id:
+                    aws_cred = credential_manager.get_credential_by_id(user_id, request.credential_id)
+                else:
+                    aws_cred = credential_manager.get_default_credential(user_id, "aws")
+                cred_id = aws_cred.id if aws_cred else None
+                
+                iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
+                
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "status": "permission_required",
+                        "permission_error": {
+                            "type": "missing_assume_role_permission",
+                            "iam_user_name": iam_user_name,
+                            "iam_user_arn": e.iam_user_arn,
+                            "role_arn": getattr(e, 'role_arn', None),
+                            "policy_arn": e.recommended_policy_arn,
+                            "credential_id": cred_id,
+                            "can_auto_grant": True
+                        }
+                    }
+                )
+            logger.error(f"❌ Permission test failed: {e}")
+            # We don't block other errors, just the specific 'AccessDenied' one we can fix
 
     conn = get_conn()
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO scan_schedules
-            (user_id, providers, account_ids, deep_scan, schedule, status, next_run_at, credential_id, created_at)
-            VALUES (%s, %s, %s, %s, %s, 'scheduled', %s, %s, NOW())
+            (user_id, providers, account_ids, deep_scan, schedule, status, next_run_at, credential_id, notify_email, email_address, created_at)
+            VALUES (%s, %s, %s, %s, %s, 'scheduled', %s, %s, %s, %s, NOW())
             RETURNING id
             """,
             (
@@ -2909,7 +2941,9 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
                 request.deep_scan,
                 Json(schedule),
                 next_run_at,
-                request.credential_id,  # NEW: Save credential_id
+                request.credential_id,
+                request.notify_email,
+                request.email_address,
             ),
         )
         schedule_id = cur.fetchone()[0]
@@ -4380,31 +4414,57 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
         with conn.cursor() as cur:
             # Get schedule details
             cur.execute("""
-                SELECT user_id, providers, account_ids, deep_scan
+                SELECT user_id, providers, account_ids, deep_scan, credential_id
                 FROM scan_schedules
-                WHERE id = %s AND status = 'scheduled'
+                WHERE id = %s
             """, (schedule_id,))
             
             row = cur.fetchone()
             if not row:
-                raise HTTPException(status_code=404, detail="Schedule not found or already completed")
+                raise HTTPException(status_code=404, detail="Schedule not found")
             
-            user_id, providers_json, account_ids_json, deep_scan = row
+            user_id, providers_json, account_ids_json, deep_scan, credential_id = row
             
             providers = json.loads(providers_json) if providers_json else []
             account_ids = json.loads(account_ids_json) if account_ids_json else {}
             
+            # 🛡️ Permission Check
+            if "aws" in providers:
+                logger.info(f"🛡️ Testing AWS permissions for schedule {schedule_id} before run...")
+                try:
+                    await initialize_mcp_servers_for_user(user_id, ["aws"], credential_id)
+                except Exception as e:
+                    if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
+                        logger.warning(f"🛡️ Permission check failed for schedule {schedule_id}")
+                        iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
+                        return JSONResponse(
+                            status_code=200,
+                            content={
+                                "status": "permission_required",
+                                "permission_error": {
+                                    "type": "missing_assume_role_permission",
+                                    "iam_user_name": iam_user_name,
+                                    "iam_user_arn": e.iam_user_arn,
+                                    "role_arn": getattr(e, 'role_arn', None),
+                                    "policy_arn": e.recommended_policy_arn,
+                                    "credential_id": credential_id,
+                                    "can_auto_grant": True
+                                }
+                            }
+                        )
+
             # Run MCP scan in background
             background_tasks.add_task(
-                mcp_scanner.scan_multi_cloud,
-                user_id=user_id,
+                run_multi_cloud_scan_internal,
                 providers=providers,
                 account_ids=account_ids,
-                deep_scan=deep_scan
+                deep_scan=deep_scan,
+                user_id=user_id,
+                credential_id=credential_id,
             )
             
             return {"status": "started", "message": "Scan started in background"}
-    
+
     except HTTPException:
         raise
     except Exception as e:

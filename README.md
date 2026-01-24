@@ -1,354 +1,106 @@
-<h1 align="center">
-  <br>
-  <a href="https://nuclei.projectdiscovery.io"><img src="static/nuclei-logo.png" width="200px" alt="Nuclei"></a>
-</h1>
+# 🛡️ CloudGuard Security Scanner
 
-<h4 align="center">Fast and customisable vulnerability scanner based on simple YAML based DSL.</h4>
+**CloudGuard** is a high-performance, automated multi-cloud security scanner designed to identify vulnerabilities, misconfigurations, and over-privileged IAM identities across AWS and GCP environments. 
 
-
-<p align="center">
-<img src="https://img.shields.io/github/go-mod/go-version/projectdiscovery/nuclei">
-<a href="https://github.com/projectdiscovery/nuclei/releases"><img src="https://img.shields.io/github/downloads/projectdiscovery/nuclei/total">
-<a href="https://github.com/projectdiscovery/nuclei/graphs/contributors"><img src="https://img.shields.io/github/contributors-anon/projectdiscovery/nuclei">
-<a href="https://github.com/projectdiscovery/nuclei/releases/"><img src="https://img.shields.io/github/release/projectdiscovery/nuclei">
-<a href="https://github.com/projectdiscovery/nuclei/issues"><img src="https://img.shields.io/github/issues-raw/projectdiscovery/nuclei">
-<a href="https://github.com/projectdiscovery/nuclei/discussions"><img src="https://img.shields.io/github/discussions/projectdiscovery/nuclei">
-<a href="https://discord.gg/projectdiscovery"><img src="https://img.shields.io/discord/695645237418131507.svg?logo=discord"></a>
-<a href="https://twitter.com/pdnuclei"><img src="https://img.shields.io/twitter/follow/pdnuclei.svg?logo=twitter"></a>
-</p>
-      
-<p align="center">
-  <a href="#how-it-works">How</a> •
-  <a href="#install-nuclei">Install</a> •
-  <a href="#for-security-engineers">For Security Engineers</a> •
-  <a href="#for-developers-and-organizations">For Developers</a> •
-  <a href="https://docs.projectdiscovery.io/tools/nuclei/">Documentation</a> •
-  <a href="#credits">Credits</a> •
-  <a href="https://nuclei.projectdiscovery.io/faq/nuclei/">FAQs</a> •
-  <a href="https://discord.gg/projectdiscovery">Join Discord</a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/projectdiscovery/nuclei/blob/main/README.md">English</a> •
-  <a href="https://github.com/projectdiscovery/nuclei/blob/main/README_CN.md">中文</a> •
-  <a href="https://github.com/projectdiscovery/nuclei/blob/main/README_KR.md">Korean</a> •
-  <a href="https://github.com/projectdiscovery/nuclei/blob/main/README_ID.md">Indonesia</a>
-</p>
+Built on a modern **Control Plane (MCP)** architecture, CloudGuard combines deep-scan capabilities with AI-powered recommendations to provide a unified security posture for cloud-native infrastructure.
 
 ---
 
-Nuclei is used to send requests across targets based on a template, leading to zero false positives and providing fast scanning on a large number of hosts. Nuclei offers scanning for a variety of protocols, including TCP, DNS, HTTP, SSL, File, Whois, Websocket, Headless, Code etc. With powerful and flexible templating, Nuclei can be used to model all kinds of security checks.
+## ✨ Key Features
 
-We have a [dedicated repository](https://github.com/projectdiscovery/nuclei-templates) that houses various type of vulnerability templates contributed by **more than 300** security researchers and engineers.
+### 🌐 Multi-Cloud Visibility
+- **AWS Surface Analysis**: Scans S3 buckets, EC2 instances, IAM roles, and more.
+- **GCP Insights**: Identifies public cloud assets and security gaps in Google Cloud projects.
+- **Unified Dashboard**: View providers, assets, and findings in a sleek, interactive real-time interface.
 
-## How it works
+### ⏰ Advanced Scheduling & Automation
+- **Recurring Scans**: Configure scans to run every 10m, 30m, 1h, 6h, or at daily/weekly intervals.
+- **Custom Timezones**: Schedule scans to align with your organization's business hours.
+- **Continuous Monitoring**: Automatic re-runs ensure that new misconfigurations are caught within minutes.
 
+### 🛡️ Smart Permission Auto-Fix
+- **IAM "Access Denied" Handler**: If a scan fails due to missing permissions, CloudGuard generates the exact AWS CLI commands needed to fix the issue.
+- **Auto-Retry Flow**: Grant permissions via the UI and automatically retry the scan without re-entering configuration.
 
-<h3 align="center">
-  <img src="static/nuclei-flow.jpg" alt="nuclei-flow" width="700px"></a>
-</h3>
+### 🤖 AI Recommendations
+- Powered by OpenAI to summarize raw scanning results.
+- Provides actionable steps and risk assessment for every finding.
 
+### 📧 Real-time Notifications
+- **SMTP Alerts**: Receive HTML security summaries directly in your inbox as soon as a scan completes.
+- **Customizable Delivery**: Choose which email addresses receive alerts for specific schedules.
 
-| :exclamation:  **Disclaimer**  |
-|---------------------------------|
-| **This project is in active development**. Expect breaking changes with releases. Review the release changelog before updating. |
-| This project was primarily built to be used as a standalone CLI tool. **Running nuclei as a service may pose security risks.** It's recommended to use with caution and additional security measures. |
+---
 
-# Install Nuclei
+## 🏗️ Architecture
 
-Nuclei requires **go1.21** to install successfully. Run the following command to install the latest version -
+CloudGuard uses a distributed architecture for scalability:
+- **Backend**: Python (FastAPI) handles the API, scan logic, and AI integration.
+- **Worker**: Standalone Scheduler Worker manages background task execution and email dispatch.
+- **Database**: PostgreSQL for persistent storage of scan history, findings, and schedules.
+- **Task Queue**: Redis-backed queue for reliable background processing.
 
-```sh
-go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
-```
+---
 
-<details>
-  <summary>Brew</summary>
-  
-  ```sh
-  brew install nuclei
-  ```
-  
-</details>
-<details>
-  <summary>Docker</summary>
-  
-  ```sh
-  docker pull projectdiscovery/nuclei:latest
-  ```
-  
-</details>
+## 🚀 Getting Started
 
-**More installation [methods can be found here](https://docs.projectdiscovery.io/tools/nuclei/install).**
+### Prerequisites
+- Docker & Docker Compose
+- AWS/GCP Credentials
+- OpenAI API Key (optional, for AI features)
+- SMTP Server (e.g., Gmail App Password) for email alerts
 
-<table>
-<tr>
-<td>  
+### Setup & Installation
 
-### Nuclei Templates
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/yourusername/CloudGuard.git
+   cd CloudGuard
+   ```
 
-Nuclei has built-in support for automatic template download/update as default since version [v2.5.2](https://github.com/projectdiscovery/nuclei/releases/tag/v2.5.2). [**Nuclei-Templates**](https://github.com/projectdiscovery/nuclei-templates) project provides a community-contributed list of ready-to-use templates that is constantly updated.
+2. **Configure Environment Variables**:
+   Copy `.env.example` to `.env` and fill in your details:
+   ```bash
+   DATABASE_URL=postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+   OPENAI_API_KEY=sk-your-key
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-app-password
+   ```
 
-You may still use the `update-templates` flag to update the nuclei templates at any time; You can write your own checks for your individual workflow and needs following Nuclei's [templating guide](https://docs.projectdiscovery.io/templates/).
+3. **Launch with Docker Compose**:
+   ```bash
+   docker compose --profile dev up --build
+   ```
 
-The YAML DSL reference syntax is available [here](SYNTAX-REFERENCE.md).
+4. **Access the UI**:
+   Open [http://localhost:8000](http://localhost:8000) in your browser.
 
-</td>
-</tr>
-</table>
+---
 
-### Usage
+## 📖 Usage Guide
 
-```sh
-nuclei -h
-```
+### Running an Immediate Scan
+1. Navigate to the **Scan** tab.
+2. Enter your Cloud Provider details (Account IDs/Region).
+3. Click "Scan Now". CloudGuard will initialize the MCP servers and stream results in real-time.
 
-This will display help for the tool. Here are all the switches it supports.
+### Setting Up Recurring Scans
+1. Navigate to the **Recurring Scan** tab.
+2. Select your frequency (e.g., every 10 minutes) and enter your notification email.
+3. Save the schedule. The worker will handle the rest!
 
+---
 
-```console
-Nuclei is a fast, template based vulnerability scanner focusing
-on extensive configurability, massive extensibility and ease of use.
+## 🛠️ Technology Stack
+- **Backend**: FastAPI, Psycopg2, Pydantic, OpenAI.
+- **Frontend**: Vanilla HTML5, CSS3 (Glassmorphism), Vanilla JavaScript.
+- **Infrastructure**: Docker, Nginx, Redis, PostgreSQL.
+- **Scanning Tools**: Integrated with CloudFox, Nuclei, and custom MCP Plugins.
 
-Usage:
-  ./nuclei [flags]
+---
 
-Flags:
-TARGET:
-   -u, -target string[]             target URLs/hosts to scan
-   -l, -list string                 path to file containing a list of target URLs/hosts to scan (one per line)
-   -eh, -exclude-hosts string[]     hosts to exclude to scan from the input list (ip, cidr, hostname)
-   -resume string                   resume scan using resume.cfg (clustering will be disabled)
-   -sa, -scan-all-ips               scan all the IP's associated with dns record
-   -iv, -ip-version string[]        IP version to scan of hostname (4,6) - (default 4)
+## 🤝 Contributing
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-TEMPLATES:
-   -nt, -new-templates                    run only new templates added in latest nuclei-templates release
-   -ntv, -new-templates-version string[]  run new templates added in specific version
-   -as, -automatic-scan                   automatic web scan using wappalyzer technology detection to tags mapping
-   -t, -templates string[]                list of template or template directory to run (comma-separated, file)
-   -turl, -template-url string[]          template url or list containing template urls to run (comma-separated, file)
-   -w, -workflows string[]                list of workflow or workflow directory to run (comma-separated, file)
-   -wurl, -workflow-url string[]          workflow url or list containing workflow urls to run (comma-separated, file)
-   -validate                              validate the passed templates to nuclei
-   -nss, -no-strict-syntax                disable strict syntax check on templates
-   -td, -template-display                 displays the templates content
-   -tl                                    list all available templates
-   -sign                                  signs the templates with the private key defined in NUCLEI_SIGNATURE_PRIVATE_KEY env variable
-   -code                                  enable loading code protocol-based templates
-
-FILTERING:
-   -a, -author string[]               templates to run based on authors (comma-separated, file)
-   -tags string[]                     templates to run based on tags (comma-separated, file)
-   -etags, -exclude-tags string[]     templates to exclude based on tags (comma-separated, file)
-   -itags, -include-tags string[]     tags to be executed even if they are excluded either by default or configuration
-   -id, -template-id string[]         templates to run based on template ids (comma-separated, file, allow-wildcard)
-   -eid, -exclude-id string[]         templates to exclude based on template ids (comma-separated, file)
-   -it, -include-templates string[]   templates to be executed even if they are excluded either by default or configuration
-   -et, -exclude-templates string[]   template or template directory to exclude (comma-separated, file)
-   -em, -exclude-matchers string[]    template matchers to exclude in result
-   -s, -severity value[]              templates to run based on severity. Possible values: info, low, medium, high, critical, unknown
-   -es, -exclude-severity value[]     templates to exclude based on severity. Possible values: info, low, medium, high, critical, unknown
-   -pt, -type value[]                 templates to run based on protocol type. Possible values: dns, file, http, headless, tcp, workflow, ssl, websocket, whois, code, javascript
-   -ept, -exclude-type value[]        templates to exclude based on protocol type. Possible values: dns, file, http, headless, tcp, workflow, ssl, websocket, whois, code, javascript
-   -tc, -template-condition string[]  templates to run based on expression condition
-
-OUTPUT:
-   -o, -output string            output file to write found issues/vulnerabilities
-   -sresp, -store-resp           store all request/response passed through nuclei to output directory
-   -srd, -store-resp-dir string  store all request/response passed through nuclei to custom directory (default "output")
-   -silent                       display findings only
-   -nc, -no-color                disable output content coloring (ANSI escape codes)
-   -j, -jsonl                    write output in JSONL(ines) format
-   -irr, -include-rr -omit-raw   include request/response pairs in the JSON, JSONL, and Markdown outputs (for findings only) [DEPRECATED use -omit-raw] (default true)
-   -or, -omit-raw                omit request/response pairs in the JSON, JSONL, and Markdown outputs (for findings only)
-   -ot, -omit-template           omit encoded template in the JSON, JSONL output
-   -nm, -no-meta                 disable printing result metadata in cli output
-   -ts, -timestamp               enables printing timestamp in cli output
-   -rdb, -report-db string       nuclei reporting database (always use this to persist report data)
-   -ms, -matcher-status          display match failure status
-   -me, -markdown-export string  directory to export results in markdown format
-   -se, -sarif-export string     file to export results in SARIF format
-   -je, -json-export string      file to export results in JSON format
-   -jle, -jsonl-export string    file to export results in JSONL(ine) format
-
-CONFIGURATIONS:
-   -config string                        path to the nuclei configuration file
-   -fr, -follow-redirects                enable following redirects for http templates
-   -fhr, -follow-host-redirects          follow redirects on the same host
-   -mr, -max-redirects int               max number of redirects to follow for http templates (default 10)
-   -dr, -disable-redirects               disable redirects for http templates
-   -rc, -report-config string            nuclei reporting module configuration file
-   -H, -header string[]                  custom header/cookie to include in all http request in header:value format (cli, file)
-   -V, -var value                        custom vars in key=value format
-   -r, -resolvers string                 file containing resolver list for nuclei
-   -sr, -system-resolvers                use system DNS resolving as error fallback
-   -dc, -disable-clustering              disable clustering of requests
-   -passive                              enable passive HTTP response processing mode
-   -fh2, -force-http2                    force http2 connection on requests
-   -ev, -env-vars                        enable environment variables to be used in template
-   -cc, -client-cert string              client certificate file (PEM-encoded) used for authenticating against scanned hosts
-   -ck, -client-key string               client key file (PEM-encoded) used for authenticating against scanned hosts
-   -ca, -client-ca string                client certificate authority file (PEM-encoded) used for authenticating against scanned hosts
-   -sml, -show-match-line                show match lines for file templates, works with extractors only
-   -ztls                                 use ztls library with autofallback to standard one for tls13 [Deprecated] autofallback to ztls is enabled by default
-   -sni string                           tls sni hostname to use (default: input domain name)
-   -dt, -dialer-timeout value            timeout for network requests.
-   -dka, -dialer-keep-alive value        keep-alive duration for network requests.
-   -lfa, -allow-local-file-access        allows file (payload) access anywhere on the system
-   -lna, -restrict-local-network-access  blocks connections to the local / private network
-   -i, -interface string                 network interface to use for network scan
-   -at, -attack-type string              type of payload combinations to perform (batteringram,pitchfork,clusterbomb)
-   -sip, -source-ip string               source ip address to use for network scan
-   -rsr, -response-size-read int         max response size to read in bytes (default 10485760)
-   -rss, -response-size-save int         max response size to read in bytes (default 1048576)
-   -reset                                reset removes all nuclei configuration and data files (including nuclei-templates)
-   -tlsi, -tls-impersonate               enable experimental client hello (ja3) tls randomization
-
-INTERACTSH:
-   -iserver, -interactsh-server string  interactsh server url for self-hosted instance (default: oast.pro,oast.live,oast.site,oast.online,oast.fun,oast.me)
-   -itoken, -interactsh-token string    authentication token for self-hosted interactsh server
-   -interactions-cache-size int         number of requests to keep in the interactions cache (default 5000)
-   -interactions-eviction int           number of seconds to wait before evicting requests from cache (default 60)
-   -interactions-poll-duration int      number of seconds to wait before each interaction poll request (default 5)
-   -interactions-cooldown-period int    extra time for interaction polling before exiting (default 5)
-   -ni, -no-interactsh                  disable interactsh server for OAST testing, exclude OAST based templates
-
-FUZZING:
-   -ft, -fuzzing-type string  overrides fuzzing type set in template (replace, prefix, postfix, infix)
-   -fm, -fuzzing-mode string  overrides fuzzing mode set in template (multiple, single)
-
-UNCOVER:
-   -uc, -uncover                  enable uncover engine
-   -uq, -uncover-query string[]   uncover search query
-   -ue, -uncover-engine string[]  uncover search engine (shodan,censys,fofa,shodan-idb,quake,hunter,zoomeye,netlas,criminalip,publicwww,hunterhow) (default shodan)
-   -uf, -uncover-field string     uncover fields to return (ip,port,host) (default "ip:port")
-   -ul, -uncover-limit int        uncover results to return (default 100)
-   -ur, -uncover-ratelimit int    override ratelimit of engines with unknown ratelimit (default 60 req/min) (default 60)
-
-RATE-LIMIT:
-   -rl, -rate-limit int               maximum number of requests to send per second (default 150)
-   -rlm, -rate-limit-minute int       maximum number of requests to send per minute
-   -bs, -bulk-size int                maximum number of hosts to be analyzed in parallel per template (default 25)
-   -c, -concurrency int               maximum number of templates to be executed in parallel (default 25)
-   -hbs, -headless-bulk-size int      maximum number of headless hosts to be analyzed in parallel per template (default 10)
-   -headc, -headless-concurrency int  maximum number of headless templates to be executed in parallel (default 10)
-
-OPTIMIZATIONS:
-   -timeout int                     time to wait in seconds before timeout (default 10)
-   -retries int                     number of times to retry a failed request (default 1)
-   -ldp, -leave-default-ports       leave default HTTP/HTTPS ports (eg. host:80,host:443)
-   -mhe, -max-host-error int        max errors for a host before skipping from scan (default 30)
-   -te, -track-error string[]       adds given error to max-host-error watchlist (standard, file)
-   -nmhe, -no-mhe                   disable skipping host from scan based on errors
-   -project                         use a project folder to avoid sending same request multiple times
-   -project-path string             set a specific project path (default "/tmp")
-   -spm, -stop-at-first-match       stop processing HTTP requests after the first match (may break template/workflow logic)
-   -stream                          stream mode - start elaborating without sorting the input
-   -ss, -scan-strategy value        strategy to use while scanning(auto/host-spray/template-spray) (default auto)
-   -irt, -input-read-timeout value  timeout on input read (default 3m0s)
-   -nh, -no-httpx                   disable httpx probing for non-url input
-   -no-stdin                        disable stdin processing
-
-HEADLESS:
-   -headless                        enable templates that require headless browser support (root user on Linux will disable sandbox)
-   -page-timeout int                seconds to wait for each page in headless mode (default 20)
-   -sb, -show-browser               show the browser on the screen when running templates with headless mode
-   -ho, -headless-options string[]  start headless chrome with additional options
-   -sc, -system-chrome              use local installed Chrome browser instead of nuclei installed
-   -lha, -list-headless-action      list available headless actions
-
-DEBUG:
-   -debug                    show all requests and responses
-   -dreq, -debug-req         show all sent requests
-   -dresp, -debug-resp       show all received responses
-   -p, -proxy string[]       list of http/socks5 proxy to use (comma separated or file input)
-   -pi, -proxy-internal      proxy all internal requests
-   -ldf, -list-dsl-function  list all supported DSL function signatures
-   -tlog, -trace-log string  file to write sent requests trace log
-   -elog, -error-log string  file to write sent requests error log
-   -version                  show nuclei version
-   -hm, -hang-monitor        enable nuclei hang monitoring
-   -v, -verbose              show verbose output
-   -profile-mem string       optional nuclei memory profile dump file
-   -vv                       display templates loaded for scan
-   -svd, -show-var-dump      show variables dump for debugging
-   -ep, -enable-pprof        enable pprof debugging server
-   -tv, -templates-version   shows the version of the installed nuclei-templates
-   -hc, -health-check        run diagnostic check up
-
-UPDATE:
-   -up, -update                      update nuclei engine to the latest released version
-   -ut, -update-templates            update nuclei-templates to latest released version
-   -ud, -update-template-dir string  custom directory to install / update nuclei-templates
-   -duc, -disable-update-check       disable automatic nuclei/templates update check
-
-STATISTICS:
-   -stats                    display statistics about the running scan
-   -sj, -stats-json          display statistics in JSONL(ines) format
-   -si, -stats-interval int  number of seconds to wait between showing a statistics update (default 5)
-   -mp, -metrics-port int    port to expose nuclei metrics on (default 9092)
-
-CLOUD:
-   -auth                configure projectdiscovery cloud (pdcp) api key
-   -cup, -cloud-upload  upload scan results to pdcp dashboard
-
-
-EXAMPLES:
-Run nuclei on single host:
-	$ nuclei -target example.com
-
-Run nuclei with specific template directories:
-	$ nuclei -target example.com -t http/cves/ -t ssl
-
-Run nuclei against a list of hosts:
-	$ nuclei -list hosts.txt
-
-Run nuclei with a JSON output:
-	$ nuclei -target example.com -json-export output.json
-
-Run nuclei with sorted Markdown outputs (with environment variables):
-	$ MARKDOWN_EXPORT_SORT_MODE=template nuclei -target example.com -markdown-export nuclei_report/
-
-Additional documentation is available at: https://docs.nuclei.sh/getting-started/running
-```
-
-### Running Nuclei
-
-See https://docs.projectdiscovery.io/tools/nuclei/running for details on running Nuclei
-
-### Using Nuclei From Go Code
-
-Complete guide of using Nuclei as Library/SDK is available at [godoc](https://pkg.go.dev/github.com/projectdiscovery/nuclei/v3/lib#section-readme)
-
-
-### Resources
-
-You can access the main documentation for Nuclei at https://docs.projectdiscovery.io/tools/nuclei/, and learn more about Nuclei in the cloud with [ProjectDiscovery Cloud Platform](https://cloud.projectdiscovery.io)
-
-See https://docs.projectdiscovery.io/tools/nuclei/resources for more resources and videos about Nuclei!
-
-### Credits
-
-Thanks to all the amazing [community contributors for sending PRs](https://github.com/projectdiscovery/nuclei/graphs/contributors) and keeping this project updated. :heart:
-
-If you have an idea or some kind of improvement, you are welcome to contribute and participate in the Project, feel free to send your PR.
-
-<p align="center">
-<a href="https://github.com/projectdiscovery/nuclei/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=projectdiscovery/nuclei&max=500">
-</a>
-</p>
-
-
-Do also check out the below similar open-source projects that may fit in your workflow:
-
-[FFuF](https://github.com/ffuf/ffuf), [Qsfuzz](https://github.com/ameenmaali/qsfuzz), [Inception](https://github.com/proabiral/inception), [Snallygaster](https://github.com/hannob/snallygaster), [Gofingerprint](https://github.com/Static-Flow/gofingerprint), [Sn1per](https://github.com/1N3/Sn1per/tree/master/templates), [Google tsunami](https://github.com/google/tsunami-security-scanner), [Jaeles](https://github.com/jaeles-project/jaeles), [ChopChop](https://github.com/michelin/ChopChop)
-
-### License
-
-Nuclei is distributed under [MIT License](https://github.com/projectdiscovery/nuclei/blob/main/LICENSE.md)
-
-<h1 align="left">
-  <a href="https://discord.gg/projectdiscovery"><img src="static/Join-Discord.png" width="380" alt="Join Discord"></a> <a href="https://docs.projectdiscovery.io"><img src="static/check-nuclei-documentation.png" width="380" alt="Check Nuclei Documentation"></a>
-</h1>
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) file for details.

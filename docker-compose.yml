@@ -1016,6 +1016,11 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PYTHONPATH: /app
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
     volumes:
       - ./backend:/app/backend:rw
       - ./config:/app/config:ro

@@ -304,20 +304,66 @@
             color: #64748b;
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+        /* Permission Modal */
+        #permissionModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
         }
 
-        .spinner {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(148, 163, 184, 0.2);
-            border-top-color: #60a5fa;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .permission-modal-content {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .permission-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .permission-modal-header i {
+            font-size: 2rem;
+            color: #f59e0b;
+        }
+
+        .permission-info {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .permission-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        pre {
+            background: #000;
+            color: #10b981;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -597,6 +643,8 @@
 
             renderSchedules();
         }
+        let pendingPermissionRequest = null;
+        let pendingScheduleId = null;
 
         async function runScheduleNow(scheduleId) {
             if (!confirm('Run this scan now?')) return;
@@ -606,15 +654,86 @@
                     method: 'POST'
                 });
 
+                const result = await response.json();
+
+                // 🛡️ HANDLE PERMISSION REQUIRED
+                if (result.status === 'permission_required') {
+                    handlePermissionError(result.permission_error, scheduleId);
+                    return;
+                }
+
                 if (response.ok) {
                     alert('Scan started! Refresh the page to see progress.');
                     loadSchedules();
                 } else {
-                    throw new Error('Failed to start scan');
+                    throw new Error(result.detail || 'Failed to start scan');
                 }
             } catch (error) {
                 alert('Failed to run scan: ' + error.message);
             }
+        }
+
+        function handlePermissionError(error, scheduleId) {
+            console.warn('🛡️ Permission Required:', error);
+
+            pendingPermissionRequest = {
+                user_id: getUserId(),
+                credential_id: error.credential_id,
+                iam_user_name: error.iam_user_name,
+                policy_arn: error.policy_arn,
+                role_arn: error.role_arn
+            };
+            pendingScheduleId = scheduleId;
+
+            document.getElementById('manualFixCommand').textContent =
+                `aws iam put-user-policy --user-name ${error.iam_user_name} --policy-name CloudGuard-AssumeRole-Permission --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:AssumeRole","Resource":"${error.role_arn || "*"}"}]}'`;
+
+            document.getElementById('permissionModal').style.display = 'flex';
+        }
+
+        async function grantPermissionAndScan() {
+            if (!pendingPermissionRequest) return;
+
+            const btn = document.getElementById('btnGrantPerm');
+            const oldText = btn.textContent;
+            btn.textContent = '⏳ Granting...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/credentials/aws/auto-grant-permission', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pendingPermissionRequest)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ Permission granted successfully! Retrying the scan now...');
+                    document.getElementById('permissionModal').style.display = 'none';
+                    if (pendingScheduleId) {
+                        runScheduleNow(pendingScheduleId);
+                    }
+                } else {
+                    alert('❌ Failed to grant permission automatically: ' + (result.error_details || result.message));
+                    document.getElementById('manualFixContainer').style.display = 'block';
+                    document.getElementById('permissionDetails').style.display = 'none';
+                }
+            } catch (error) {
+                alert('Connection error: ' + error.message);
+            } finally {
+                btn.textContent = oldText;
+                btn.disabled = false;
+            }
+        }
+
+        function getUserId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('user_id') || 'anonymous';
+        }
+
+        function copyToClipboard(elementId) {
+            const content = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(content).then(() => alert('📋 Copied!'));
         }
 
         async function deleteSchedule(scheduleId) {
@@ -672,6 +791,30 @@
             return `${minutes}m`;
         }
     </script>
+    <!-- Permission Modal -->
+    <div id="permissionModal">
+        <div class="permission-modal-content">
+            <div class="permission-modal-header">
+                <h2>⚠️ Permission Required</h2>
+            </div>
+            <div id="permissionDetails" class="permission-info">
+                <p>The scanner lacks permission to assume the required AWS Role. You can try to grant it automatically
+                    below.</p>
+            </div>
+            <div id="manualFixContainer" class="permission-info" style="display: none;">
+                <p style="color: #fca5a5;"><strong>Manual Fix Required:</strong></p>
+                <pre id="manualFixCommand"></pre>
+                <button class="btn btn-secondary btn-small" onclick="copyToClipboard('manualFixCommand')">📋 Copy
+                    Command</button>
+            </div>
+            <div class="permission-actions">
+                <button class="btn btn-secondary"
+                    onclick="document.getElementById('permissionModal').style.display='none'">Cancel</button>
+                <button id="btnGrantPerm" class="btn btn-primary" onclick="grantPermissionAndScan()">✅ Grant &
+                    Retry</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

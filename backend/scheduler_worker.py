@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from backend.database import get_conn
 from backend.main import run_multi_cloud_scan_internal
+from backend.utils.email import send_scan_notification
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("scheduler")
@@ -40,8 +41,9 @@ async def run_due_schedules():
             
             # Parse JSON fields
             try:
-                providers = json.loads(providers_text) if providers_text else []
-                account_ids = json.loads(account_ids_text) if account_ids_text else {}
+                providers = json.loads(providers_text) if isinstance(providers_text, str) else providers_text
+                account_ids = json.loads(account_ids_text) if isinstance(account_ids_text, str) else account_ids_text
+                schedule_data = json.loads(schedule) if isinstance(schedule, str) else schedule
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to parse JSON for schedule {schedule_id}: {e}")
                 _mark_schedule_failed(schedule_id, f"JSON parse error: {e}")
@@ -65,6 +67,15 @@ async def run_due_schedules():
                 )
                 
                 scan_ids = result_ctx.get("scan_ids", [])
+                
+                # NEW: Email Notification logic
+                with conn.cursor() as cur:
+                    cur.execute("SELECT notify_email, email_address FROM scan_schedules WHERE id = %s", (schedule_id,))
+                    notify_row = cur.fetchone()
+                    if notify_row and notify_row[0]:
+                        email = notify_row[1] or f"{user_id}@cloudguard.local"
+                        logger.info(f"📧 Notification: Dispatching scan results for {scan_ids} to {email}")
+                        send_scan_notification(email, scan_ids)
 
                 # Update schedule as completed
                 with conn.cursor() as cur:
@@ -95,7 +106,7 @@ async def run_due_schedules():
                             """,
                             (next_run_at, scan_ids, schedule_id),
                         )
-                        logger.info(f"✅ Recurring scan {schedule_id} completed, next run: {next_run_at}")
+                        logger.info(f"✅ Recurring scan {schedule_id} ({schedule_data.get('frequency')}) completed, next run: {next_run_at}")
                     else:
                         # One-time schedule - mark as completed
                         cur.execute(
@@ -124,9 +135,26 @@ async def run_due_schedules():
 
             except Exception as e:
                 logger.error(f"❌ Scheduled scan {schedule_id} failed: {e}")
+                
+                # Capture permission error details for CLI commands
+                error_details = str(e)
+                if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
+                    iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
+                    
+                    # Store as structured JSON in the error message or extra field
+                    permission_error = {
+                        "type": "permission_required",
+                        "iam_user_arn": e.iam_user_arn,
+                        "iam_user_name": iam_user_name,
+                        "policy_arn": e.recommended_policy_arn,
+                        "role_arn": getattr(e, 'role_arn', None),
+                        "credential_id": credential_id
+                    }
+                    error_details = json.dumps(permission_error)
+
                 import traceback
                 logger.error(traceback.format_exc())
-                _mark_schedule_failed(schedule_id, str(e))
+                _mark_schedule_failed(schedule_id, error_details)
 
     except Exception as e:
         logger.error(f"Error in run_due_schedules: {e}")
@@ -137,7 +165,7 @@ async def run_due_schedules():
 def _calculate_next_run(schedule_data: dict) -> datetime:
     """Calculate next run time for recurring schedules"""
     try:
-        time_str = schedule_data.get("time", "00:00")  # HH:MM
+        frequency = schedule_data.get("frequency", "daily")
         tz_name = schedule_data.get("timezone", "UTC")
         
         try:
@@ -145,24 +173,46 @@ def _calculate_next_run(schedule_data: dict) -> datetime:
         except Exception:
             tz = ZoneInfo("UTC")
         
-        # Get tomorrow in the schedule's timezone
         now_local = datetime.now(tz)
-        tomorrow_local = now_local + timedelta(days=1)
         
-        # Parse time
-        hour, minute = map(int, time_str.split(":"))
+        # 🏎️ Short Intervals - Calculate from NOW
+        if frequency == "10m":
+            next_run_local = now_local + timedelta(minutes=10)
+        elif frequency == "30m":
+            next_run_local = now_local + timedelta(minutes=30)
+        elif frequency == "60m" or frequency == "hourly":
+            next_run_local = now_local + timedelta(hours=1)
+        elif frequency == "6h":
+            next_run_local = now_local + timedelta(hours=6)
         
-        # Create next run datetime
-        next_run_local = tomorrow_local.replace(hour=hour, minute=minute, second=0, microsecond=0)
-        
+        # 📅 Longer/Fixed Time Intervals
+        else:
+            time_str = schedule_data.get("time", "00:00")
+            hour, minute = map(int, time_str.split(":"))
+            
+            if frequency == "daily":
+                # Next run is tomorrow at the specified time
+                next_run_local = (now_local + timedelta(days=1)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            elif frequency == "weekly":
+                # Next run is 7 days from now at specified time
+                next_run_local = (now_local + timedelta(days=7)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            elif frequency == "2w":
+                # Next run is 14 days from now at specified time
+                next_run_local = (now_local + timedelta(days=14)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            elif frequency == "monthly":
+                # Next run is roughly 30 days from now (simple approach)
+                next_run_local = (now_local + timedelta(days=30)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+            else:
+                # Default fallback: 24h from now
+                next_run_local = now_local + timedelta(days=1)
+
         # Convert to UTC for storage
         next_run_utc = next_run_local.astimezone(timezone.utc)
-        
+        logger.info(f"🕒 Calculated next run for frequency='{frequency}': {next_run_utc} (UTC)")
         return next_run_utc
         
     except Exception as e:
         logger.error(f"Failed to calculate next run time: {e}")
-        # Default to 24 hours from now
         return datetime.now(timezone.utc) + timedelta(days=1)
 
 
