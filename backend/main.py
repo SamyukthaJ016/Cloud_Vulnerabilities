@@ -43,6 +43,7 @@ from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.mcp_servers.base_server import MCPMessage
 from backend.credentials.api import router as credentials_router
 from backend.credentials.manager import credential_manager, CloudCredential
+from backend.migration_manager import run_migrations  # NEW: Database Migrations
 
 from backend.mcp_servers.base_server import (
     mcp_server_manager,
@@ -79,6 +80,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Run on startup"""
+    logger.info("🚀 Starting CloudGuard Backend...")
+    try:
+        run_migrations()
+        logger.info("✅ Database migrations complete")
+    except Exception as e:
+        logger.error(f"❌ Failed to run database migrations: {e}")
 
 # Consolidating router inclusions...
 # app.include_router(credentials_router)
