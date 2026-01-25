@@ -1564,7 +1564,10 @@
 
                     // 🛡️ HANDLE PERMISSION REQUIRED FOR SCHEDULE
                     if (result.status === 'permission_required') {
-                        handlePermissionError(result.permission_error);
+                        // Ensure we pass the credential_id
+                        const errData = result.permission_error;
+                        if (!errData.credential_id) errData.credential_id = scanRequest.credential_id;
+                        handlePermissionError(errData);
                         return;
                     }
 
@@ -1612,7 +1615,10 @@
 
                     // 🛡️ HANDLE PERMISSION REQUIRED FOR RECURRING
                     if (result.status === 'permission_required') {
-                        handlePermissionError(result.permission_error);
+                        // Ensure we pass the credential_id
+                        const errData = result.permission_error;
+                        if (!errData.credential_id) errData.credential_id = scanRequest.credential_id;
+                        handlePermissionError(errData);
                         return;
                     }
 
@@ -1685,43 +1691,13 @@
 
                 // 🔥 HANDLE PERMISSION REQUIRED
                 if (result.status === 'permission_required') {
-                    console.log('🛡️ Permission required:', result.permission_error);
-                    pendingPermissionRequest = result.permission_error;
-
-                    document.getElementById('permIamUser').textContent = result.permission_error.iam_user_name || 'unknown';
-                    document.getElementById('permPolicyArn').textContent = result.permission_error.policy_arn || 'unknown';
-
-                    // Reset UI
-                    document.getElementById('permissionDetails').style.display = 'block';
-                    document.getElementById('manualFixContainer').style.display = 'none';
-                    document.getElementById('btnGrantPerm').style.display = 'block';
-                    document.getElementById('adminSelectionArea').style.display = 'none';
-
-                    // Check if we have other credentials that might be Admin
-                    const adminSelect = document.getElementById('adminCredentialSelect');
-                    adminSelect.innerHTML = '<option value="">-- Choose Admin Credential (Optional) --</option>';
-
-                    // userCredentials is a global array populated by loadSavedCredentials()
-                    if (typeof userCredentials !== 'undefined' && userCredentials.length > 1) {
-                        userCredentials.forEach(cred => {
-                            if (cred.cloud_provider === 'aws' && cred.id !== pendingPermissionRequest.credential_id) {
-                                const opt = document.createElement('option');
-                                opt.value = cred.id;
-                                opt.textContent = `${cred.credential_name} (${cred.aws_access_key_id.substr(0, 8)}...)`;
-                                adminSelect.appendChild(opt);
-                            }
-                        });
-                        if (adminSelect.options.length > 1) {
-                            document.getElementById('adminSelectionArea').style.display = 'block';
-                        }
-                    }
+                    handlePermissionError(result.permission_error);
 
                     // Hide scanning modal
-                    modal.classList.remove('active');
+                    const modal_immediate = document.getElementById('scanModal');
+                    if (modal_immediate) modal_immediate.classList.remove('active');
                     scanInProgress = false;
                     enableControls();
-
-                    document.getElementById('permissionModal').style.display = 'flex';
                     return;
                 }
 
@@ -1778,8 +1754,36 @@
                 role_arn: error.role_arn
             };
 
-            // Setup CLI command
-            const policyDoc = {
+            // Reset UI
+            document.getElementById('permissionDetails').style.display = 'block';
+            document.getElementById('manualFixContainer').style.display = 'none';
+            document.getElementById('btnGrantPerm').style.display = 'block';
+            document.getElementById('adminSelectionArea').style.display = 'none';
+
+            // Populate common labels
+            document.getElementById('permIamUser').textContent = error.iam_user_name || 'unknown';
+            document.getElementById('permPolicyArn').textContent = error.policy_arn || 'unknown';
+
+            // Check if we have other credentials that might be Admin
+            const adminSelect = document.getElementById('adminCredentialSelect');
+            adminSelect.innerHTML = '<option value="">-- Choose Admin Credential (Optional) --</option>';
+
+            if (typeof userCredentials !== 'undefined' && userCredentials.length > 1) {
+                userCredentials.forEach(cred => {
+                    if (cred.cloud_provider === 'aws' && cred.id !== pendingPermissionRequest.credential_id) {
+                        const opt = document.createElement('option');
+                        opt.value = cred.id;
+                        opt.textContent = `${cred.credential_name} (${cred.aws_access_key_id.substr(0, 8)}...)`;
+                        adminSelect.appendChild(opt);
+                    }
+                });
+                if (adminSelect.options.length > 1) {
+                    document.getElementById('adminSelectionArea').style.display = 'block';
+                }
+            }
+
+            // --- Pre-generate CLI & JSON for Manual Fix ---
+            const identityPolicy = {
                 "Version": "2012-10-17",
                 "Statement": [{
                     "Effect": "Allow",
@@ -1788,8 +1792,34 @@
                 }]
             };
 
-            const cmd = `aws iam put-user-policy --user-name ${error.iam_user_name} --policy-name CloudGuard-AssumeRole-Permission --policy-document '${JSON.stringify(policyDoc)}'`;
-            document.getElementById('permissionPolicyCommand').textContent = cmd;
+            const trustPolicy = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": { "AWS": error.iam_user_arn || "arn:aws:iam::ACCOUNT_ID:user/YOUR_USER" },
+                    "Action": "sts:AssumeRole",
+                    "Condition": {
+                        "StringEquals": { "sts:ExternalId": "CloudGuard-Scanner-Validation" }
+                    }
+                }]
+            };
+
+            const identityJson = JSON.stringify(identityPolicy, null, 4);
+            const trustJson = JSON.stringify(trustPolicy, null, 4);
+            const identityCmd = `aws iam put-user-policy --user-name ${error.iam_user_name || 'YOUR_USER'} --policy-name CloudGuard-AssumeRole-Permission --policy-document '${JSON.stringify(identityPolicy)}'`;
+
+            const roleName = error.role_arn ? (error.role_arn.split('/').pop()) : 'CloudGuardReadOnlyRole';
+            const trustCmd = `aws iam update-assume-role-policy --role-name ${roleName} --policy-document '${JSON.stringify(trustPolicy)}'`;
+
+            document.getElementById('manualFixCommand').textContent = identityCmd;
+            document.getElementById('trustRelationshipCommand').textContent = trustCmd;
+            document.getElementById('identityPolicyJSON').textContent = identityJson;
+            document.getElementById('trustPolicyJSON').textContent = trustJson;
+
+            // Show manual fix toggle (if user wants to see it)
+            document.getElementById('permissionDetails').insertAdjacentHTML('beforeend',
+                `<p style="margin-top: 15px; font-size: 0.8rem;"><a href="#" onclick="event.preventDefault(); document.getElementById('manualFixContainer').style.display='block'; this.parentElement.style.display='none';">Fix manually using CLI or AWS Console instead</a></p>`
+            );
 
             // Show modal
             document.getElementById('permissionModal').style.display = 'flex';

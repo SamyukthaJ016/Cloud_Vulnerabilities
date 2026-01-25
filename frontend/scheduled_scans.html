@@ -685,9 +685,46 @@
             };
             pendingScheduleId = scheduleId;
 
-            document.getElementById('manualFixCommand').textContent =
-                `aws iam put-user-policy --user-name ${error.iam_user_name} --policy-name CloudGuard-AssumeRole-Permission --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:AssumeRole","Resource":"${error.role_arn || "*"}"}]}'`;
+            // Reset UI
+            document.getElementById('permissionDetails').style.display = 'block';
+            document.getElementById('manualFixContainer').style.display = 'none';
+            document.getElementById('btnGrantPerm').style.display = 'block';
 
+            // --- Pre-generate CLI & JSON for Manual Fix ---
+            const identityPolicy = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Action": "sts:AssumeRole",
+                    "Resource": error.role_arn || "*"
+                }]
+            };
+
+            const trustPolicy = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": { "AWS": error.iam_user_arn || "arn:aws:iam::ACCOUNT_ID:user/YOUR_USER" },
+                    "Action": "sts:AssumeRole",
+                    "Condition": {
+                        "StringEquals": { "sts:ExternalId": "CloudGuard-Scanner-Validation" }
+                    }
+                }]
+            };
+
+            const identityJson = JSON.stringify(identityPolicy, null, 4);
+            const trustJson = JSON.stringify(trustPolicy, null, 4);
+            const identityCmd = `aws iam put-user-policy --user-name ${error.iam_user_name || 'YOUR_USER'} --policy-name CloudGuard-AssumeRole-Permission --policy-document '${JSON.stringify(identityPolicy)}'`;
+
+            const roleName = error.role_arn ? (error.role_arn.split('/').pop()) : 'CloudGuardReadOnlyRole';
+            const trustCmd = `aws iam update-assume-role-policy --role-name ${roleName} --policy-document '${JSON.stringify(trustPolicy)}'`;
+
+            document.getElementById('manualFixCommand').textContent = identityCmd;
+            document.getElementById('trustRelationshipCommand').textContent = trustCmd;
+            document.getElementById('identityPolicyJSON').textContent = identityJson;
+            document.getElementById('trustPolicyJSON').textContent = trustJson;
+
+            // Show modal
             document.getElementById('permissionModal').style.display = 'flex';
         }
 
@@ -795,26 +832,81 @@
     <div id="permissionModal">
         <div class="permission-modal-content">
             <div class="permission-modal-header">
-                <h2>⚠️ Permission Required</h2>
+                <i class="fas fa-shield-alt"></i>
+                <h2>Permission Required</h2>
             </div>
             <div id="permissionDetails" class="permission-info">
                 <p>The scanner lacks permission to assume the required AWS Role. You can try to grant it automatically
                     below.</p>
+
+                <p style="margin-top: 15px; font-size: 0.8rem;">
+                    <a href="#"
+                        onclick="event.preventDefault(); document.getElementById('manualFixContainer').style.display='block'; document.getElementById('permissionDetails').style.display='none';">
+                        Fix manually using CLI or AWS Console instead
+                    </a>
+                </p>
             </div>
-            <div id="manualFixContainer" class="permission-info" style="display: none;">
-                <p style="color: #fca5a5;"><strong>Manual Fix Required:</strong></p>
-                <pre id="manualFixCommand"></pre>
-                <button class="btn btn-secondary btn-small" onclick="copyToClipboard('manualFixCommand')">📋 Copy
-                    Command</button>
+
+            <!-- Manual Fix Container -->
+            <div id="manualFixContainer" class="permission-info"
+                style="display: none; border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
+                <p style="color: #fca5a5; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i> Manual Fix
+                    Required</p>
+
+                <div class="tabs"
+                    style="display: flex; gap: 10px; margin-bottom: 15px; background: none; border: none; padding: 0;">
+                    <button class="btn btn-secondary btn-small" onclick="switchManualTab('cli')" style="flex: 1;">CLI
+                        Command</button>
+                    <button class="btn btn-secondary btn-small" onclick="switchManualTab('json')"
+                        style="flex: 1;">Console JSON</button>
+                </div>
+
+                <div id="manualTabCLI">
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Run these commands with
+                        <strong>administrator credentials</strong>:</p>
+
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 1:</strong> Grant
+                        User Permission</p>
+                    <pre id="manualFixCommand"></pre>
+                    <button class="btn btn-secondary btn-small" style="width: 100%; margin-bottom: 15px;"
+                        onclick="copyToClipboard('manualFixCommand')">📋 Copy Step 1</button>
+
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 2:</strong> Update
+                        Trust Relationship</p>
+                    <pre id="trustRelationshipCommand"></pre>
+                    <button class="btn btn-secondary btn-small" style="width: 100%;"
+                        onclick="copyToClipboard('trustRelationshipCommand')">📋 Copy Step 2</button>
+                </div>
+
+                <div id="manualTabJSON" style="display: none;">
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 1: Identity
+                            Policy</strong></p>
+                    <pre id="identityPolicyJSON"></pre>
+                    <button class="btn btn-secondary btn-small" style="width: 100%; margin-bottom: 15px;"
+                        onclick="copyToClipboard('identityPolicyJSON')">📋 Copy Identity JSON</button>
+
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 2: Trust
+                            Relationship</strong></p>
+                    <pre id="trustPolicyJSON"></pre>
+                    <button class="btn btn-secondary btn-small" style="width: 100%;"
+                        onclick="copyToClipboard('trustPolicyJSON')">📋 Copy Trust JSON</button>
+                </div>
             </div>
+
             <div class="permission-actions">
                 <button class="btn btn-secondary"
                     onclick="document.getElementById('permissionModal').style.display='none'">Cancel</button>
-                <button id="btnGrantPerm" class="btn btn-primary" onclick="grantPermissionAndScan()">✅ Grant &
-                    Retry</button>
+                <button id="btnGrantPerm" class="btn btn-primary" onclick="grantPermissionAndScan()">✅ Grant & Retry
+                    Scan</button>
             </div>
         </div>
     </div>
+    <script>
+        function switchManualTab(tab) {
+            document.getElementById('manualTabCLI').style.display = tab === 'cli' ? 'block' : 'none';
+            document.getElementById('manualTabJSON').style.display = tab === 'json' ? 'block' : 'none';
+        }
+    </script>
 </body>
 
 </html>
