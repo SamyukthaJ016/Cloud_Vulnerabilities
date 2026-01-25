@@ -85,6 +85,10 @@ CloudGuard uses a distributed architecture for scalability:
   ```bash
   docker compose logs -f backend-dev
   ```
+ - **Error related to aws_credential_id and database**:
+  ```bash
+  ALTER TABLE scans ADD COLUMN aws_credential_id INTEGER REFERENCES cloud_credentials(id) ON DELETE SET NULL;
+  ``` 
 
 ---
 
