@@ -56,7 +56,7 @@ RUN curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh |
 # Install Safety
 RUN pip install --no-cache-dir safety
 
-# Install CloudFox (Architecture-aware binary)
+# Install CloudFox (Architecture-aware binary) 
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
         CLOUDFOX_ARCH="arm64"; \
     else \
@@ -64,15 +64,10 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
     fi && \
     wget https://github.com/BishopFox/cloudfox/releases/download/v1.17.0/cloudfox-linux-${CLOUDFOX_ARCH}.zip -O cloudfox.zip && \
     unzip cloudfox.zip && \
-    echo "DEBUG: CloudFox unzip contents:" && ls -R && \
-    # Find the executable (it might be named cloudfox or cloudfox-linux-amd64)
-    # Search recursively in case it's in a subdirectory
-    EXE_PATH=$(find . -type f -name "cloudfox*" | head -n 1) && \
-    if [ -z "$EXE_PATH" ]; then echo "❌ Could not find cloudfox binary!"; ls -la; exit 1; fi && \
-    echo "DEBUG: Found binary at $EXE_PATH" && \
-    mv "$EXE_PATH" /usr/local/bin/cloudfox && \
+    mv cloudfox/cloudfox /usr/local/bin/cloudfox && \
     chmod +x /usr/local/bin/cloudfox && \
-    rm cloudfox.zip
+    rm -rf cloudfox cloudfox.zip
+ 
 
 # Install Nuclei (Architecture-aware)
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
