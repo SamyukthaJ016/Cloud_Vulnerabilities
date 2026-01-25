@@ -75,6 +75,17 @@ CloudGuard uses a distributed architecture for scalability:
 4. **Access the UI**:
    Open [http://localhost:8000](http://localhost:8000) in your browser.
 
+### 🛠️ Maintenance & Troubleshooting
+
+- **Access PostgreSQL Database**:
+  ```bash
+  docker exec -it security-scanner-db psql -U scanner_user -d scanner_db
+  ```
+- **View Logs**:
+  ```bash
+  docker compose logs -f backend-dev
+  ```
+
 ---
 
 ## 📖 Usage Guide

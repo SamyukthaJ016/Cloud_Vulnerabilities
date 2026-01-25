@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS scans (
     duration_seconds INTEGER,
     error_message TEXT,
     scan_metadata JSONB,
+    aws_credential_id INTEGER REFERENCES cloud_credentials(id) ON DELETE SET NULL, -- Improved: Link to credentials
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -143,6 +144,7 @@ CREATE TABLE IF NOT EXISTS scans (
 CREATE INDEX IF NOT EXISTS idx_scans_cloud ON scans (cloud);
 CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);
 CREATE INDEX IF NOT EXISTS idx_scans_started_at_desc ON scans (started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scans_credential_id ON scans (aws_credential_id);
 
 
 -- ===================================================
