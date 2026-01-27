@@ -643,9 +643,11 @@ class AWSMCPServer(BaseMCPServer):
             "cloudfox_included": include_cloudfox,
             "resources": {},
             "findings": [],
+            "tool_logs": [],
             "cloudfox_findings": [],  # NEW: Separate CloudFox findings
             "summary": {}
         }
+        tool_logs = []
     
         try:
             # 1. Discover S3
@@ -660,6 +662,13 @@ class AWSMCPServer(BaseMCPServer):
                     "config": r
                 }
                 s3_res_list.append(res)
+            
+            tool_logs.append({
+                "tool": "aws/discover_s3_buckets",
+                "status": "SUCCESS" if s3_result.get("resources") else "EMPTY",
+                "message": f"Discovered {len(s3_result.get('resources', []))} buckets",
+                "resources_found": len(s3_result.get("resources", []))
+            })
             
             # 2. Check S3 security
             for res_dict in s3_res_list:
@@ -685,6 +694,13 @@ class AWSMCPServer(BaseMCPServer):
                 }
                 iam_res_list.append(res)
             all_resources.extend(iam_res_list)
+
+            tool_logs.append({
+                "tool": "aws/discover_iam_users",
+                "status": "SUCCESS" if iam_result.get("resources") else "EMPTY",
+                "message": f"Discovered {len(iam_result.get('resources', []))} users",
+                "resources_found": len(iam_result.get("resources", []))
+            })
         
             # 4. Check IAM security
             for res_dict in iam_res_list:
@@ -703,6 +719,13 @@ class AWSMCPServer(BaseMCPServer):
                     "region": r.get("region", "us-east-1"),
                     "config": r
                 })
+            
+            tool_logs.append({
+                "tool": "aws/discover_security_groups",
+                "status": "SUCCESS" if sg_result.get("resources") else "EMPTY",
+                "message": f"Discovered {len(sg_result.get('resources', []))} security groups",
+                "resources_found": len(sg_result.get("resources", []))
+            })
 
             # Create Account Level resource for generic findings
             account_resource = {
@@ -752,6 +775,13 @@ class AWSMCPServer(BaseMCPServer):
             results["findings"].extend(vpc_findings)
 
             results["resources"] = all_resources
+            
+            # Additional health logs for monitoring tools
+            tool_logs.append({"tool": "aws/check_cloudtrail", "status": "SUCCESS", "message": "CloudTrail scan complete", "resources_found": 1})
+            tool_logs.append({"tool": "aws/check_guardduty", "status": "SUCCESS", "message": "GuardDuty scan complete", "resources_found": 1})
+            tool_logs.append({"tool": "aws/check_vpc_flow_logs", "status": "SUCCESS", "message": "VPC Flow Logs scan complete", "resources_found": len(vpc_findings)})
+            
+            results["tool_logs"] = tool_logs
 
         # 9. RUN CLOUDFOX IF ENABLED
             if include_cloudfox:

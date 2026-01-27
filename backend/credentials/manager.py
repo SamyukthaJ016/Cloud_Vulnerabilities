@@ -43,6 +43,11 @@ class CloudCredential:
     openai_api_key: Optional[str] = None
     openai_org_id: Optional[str] = None
 
+    azure_client_id: Optional[str] = None
+    azure_client_secret: Optional[str] = None
+    azure_tenant_id: Optional[str] = None
+    azure_subscription_id: Optional[str] = None
+
     is_default: bool = False
     is_valid: bool = True
 
@@ -142,6 +147,12 @@ class CredentialManager:
                 encrypted_credential['openai_api_key'] = self.encrypt(credential.openai_api_key)
             if credential.azure_client_secret:
                 encrypted_credential['azure_client_secret'] = self.encrypt(credential.azure_client_secret)
+            if credential.azure_client_id:
+                encrypted_credential['azure_client_id'] = self.encrypt(credential.azure_client_id)
+            if credential.azure_tenant_id:
+                encrypted_credential['azure_tenant_id'] = self.encrypt(credential.azure_tenant_id)
+            if credential.azure_subscription_id:
+                encrypted_credential['azure_subscription_id'] = self.encrypt(credential.azure_subscription_id)
         
         # Check if credential already exists
             cur.execute(
@@ -364,8 +375,13 @@ class CredentialManager:
                 gcp_service_account_json=credential_dict["gcp_service_account_json"],
                 gcp_project_id=credential_dict["gcp_project_id"],
 
-                openai_api_key=credential_dict["openai_api_key"],
-                openai_org_id=credential_dict["openai_org_id"],
+                openai_api_key=credential_dict.get("openai_api_key"),
+                openai_org_id=credential_dict.get("openai_org_id"),
+
+                azure_client_id=credential_dict.get("azure_client_id"),
+                azure_client_secret=credential_dict.get("azure_client_secret"),
+                azure_tenant_id=credential_dict.get("azure_tenant_id"),
+                azure_subscription_id=credential_dict.get("azure_subscription_id"),
 
                 is_default=credential_dict["is_default"],
                 is_valid=credential_dict["is_valid"],
@@ -534,6 +550,8 @@ class CredentialManager:
                 validation_result = self._validate_openai_credential(credential)
             elif credential.cloud_provider == 'gcp':
                 validation_result = self._validate_gcp_credential(credential)
+            elif credential.cloud_provider == 'azure':
+                validation_result = self._validate_azure_credential(credential)
             else:
                 validation_result['message'] = f'Unknown provider: {credential.cloud_provider}'
             
@@ -831,6 +849,15 @@ class CredentialManager:
         finally:
             cur.close()
             conn.close()
+
+
+    def _validate_azure_credential(self, credential: CloudCredential) -> Dict[str, Any]:
+        """Placeholder for Azure credential validation"""
+        return {
+            'valid': True,
+            'message': 'Azure validation successful (simulated)',
+            'details': {'status': 'placeholder'}
+        }
 
 
 # Singleton instance

@@ -212,6 +212,52 @@ async def save_openai_credential(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/azure", response_model=CredentialResponse)
+async def save_azure_credential(
+    request: AzureCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save Azure credentials"""
+    try:
+        request.user_id = user_id
+        
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            azure_client_id=request.azure_client_id,
+            azure_client_secret=request.azure_client_secret,
+            azure_tenant_id=request.azure_tenant_id,
+            azure_subscription_id=request.azure_subscription_id,
+            is_default=request.is_default
+        )
+        
+        credential_id = credential_manager.save_credential(credential)
+        
+        # bg_tasks.add_task(
+        #     credential_manager.validate_credential,
+        #     credential
+        # )
+        
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow()
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to save Azure credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/gcp", response_model=CredentialResponse)
 async def save_gcp_credential(
     request: GCPCredentialRequest,

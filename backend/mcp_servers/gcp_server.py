@@ -1787,6 +1787,7 @@ class GCPMCPServer(BaseMCPServer):
             }
         ]
         all_findings = []
+        tool_logs = []
         
         try:
             # Check if we are scanning the right project (useful for multi-project credentials)
@@ -1879,10 +1880,36 @@ class GCPMCPServer(BaseMCPServer):
             # Process results
             for i, result in enumerate(discovery_results):
                 key = discovery_keys[i]
+                status = "SUCCESS"
+                message = "Completed successfully"
+                count = 0
+                
                 if isinstance(result, dict):
+                    if "error" in result:
+                        status = "FAILED"
+                        message = result["error"]
+                    else:
+                        count = result.get("count", len(result.get("resources", [])))
+                        if count == 0:
+                            status = "EMPTY"
+                            message = "No resources found"
+                    
                     process_scanner_result(result, key)
-                else:
+                elif isinstance(result, Exception):
+                    status = "FAILED"
+                    message = str(result)
                     logger.error(f"[GCP] Discovery task {key} failed: {result}")
+                else:
+                    status = "FAILED"
+                    message = "Unknown error"
+                    logger.error(f"[GCP] Discovery task {key} returned unexpected type: {type(result)}")
+
+                tool_logs.append({
+                    "tool": key,
+                    "status": status,
+                    "message": message,
+                    "resources_found": count
+                })
             
             
             # 12. (NEW) Web Application Vulnerability Scanning (ALWAYS RUN - Critical OWASP Vulnerabilities)
@@ -1907,6 +1934,13 @@ class GCPMCPServer(BaseMCPServer):
                     "detection_tool": finding.get("detection_tool", "web_scanner")
                 }
                 all_findings.append(finding_obj)
+            
+            tool_logs.append({
+                "tool": "web_vulnerability_scanner",
+                "status": "SUCCESS" if findings_count > 0 else "EMPTY",
+                "message": f"Found {findings_count} web vulnerabilities" if findings_count > 0 else "No web vulnerabilities found",
+                "resources_found": findings_count
+            })
             
             # Report disabled APIs if any
             for api in web_scan_result.get("disabled_apis", []):
@@ -1945,6 +1979,7 @@ class GCPMCPServer(BaseMCPServer):
                 "deep_scan": deep_scan,
                 "resources": all_resources,
                 "findings": all_findings,
+                "tool_logs": tool_logs,
                 "summary": {
                     "total_resources": len(all_resources),
                     "total_findings": len(all_findings),

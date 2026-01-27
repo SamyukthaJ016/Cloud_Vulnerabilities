@@ -45,6 +45,7 @@
             font-weight: 700;
             background: linear-gradient(135deg, #60a5fa, #8b5cf6);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             display: flex;
             align-items: center;
@@ -783,6 +784,86 @@
                 justify-content: space-between;
             }
         }
+
+        /* Health Cards */
+        .health-section {
+            margin-bottom: 32px;
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            display: none;
+            /* Hidden by default */
+        }
+
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .health-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.2s;
+        }
+
+        .health-card:hover {
+            transform: scale(1.02);
+            border-color: rgba(96, 165, 250, 0.3);
+        }
+
+        .health-status-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .status-failed {
+            background: rgba(239, 104, 104, 0.15);
+            color: #ef4444;
+        }
+
+        .status-empty {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+        }
+
+        .health-info {
+            overflow: hidden;
+        }
+
+        .health-info h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #f1f5f9;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .health-info p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
     </style>
 </head>
 
@@ -871,6 +952,17 @@
         <!-- Cloud Providers Overview -->
         <div class="cloud-grid" id="cloud-providers">
             <div class="loading">Loading cloud providers...</div>
+        </div>
+
+        <!-- Tool Execution Health (NEW) -->
+        <div class="health-section" id="health-section">
+            <div class="section-header" style="margin-bottom: 0;">
+                <div class="section-title">🩺 Execution Health & Tool Logs</div>
+                <div style="color: #94a3b8; font-size: 0.85rem;">Status of tools used in this scan</div>
+            </div>
+            <div class="health-grid" id="health-grid">
+                <!-- Health cards will be injected here -->
+            </div>
         </div>
 
         <!-- Vulnerabilities Section -->
@@ -1401,6 +1493,7 @@ gcloud functions deploy ${resourceName.split('/').pop()} --ignore-file=.gcloudig
                 await loadCloudProviders(providers.data || []);
 
                 await loadVulnerabilities(findings.data || []);
+                await loadExecutionHealth(rawScanIds);
 
                 console.log('Dashboard loaded successfully');
 
@@ -1872,6 +1965,55 @@ gcloud functions deploy ${resourceName.split('/').pop()} --ignore-file=.gcloudig
                     </div>
                 `;
             }).join('');
+        }
+
+        async function loadExecutionHealth(rawScanIds) {
+            const container = document.getElementById('health-section');
+            const grid = document.getElementById('health-grid');
+
+            if (!rawScanIds) {
+                container.style.display = 'none';
+                return;
+            }
+
+            try {
+                // If multiple IDs, just use the first one for now (simplification)
+                const scanId = rawScanIds.split(',')[0];
+                const res = await fetch(`/api/scans/${scanId}/logs`);
+
+                if (!res.ok) throw new Error('Scan logs not found');
+
+                const data = await res.json();
+
+                if (!data.tool_logs || data.tool_logs.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                container.style.display = 'block';
+                grid.innerHTML = data.tool_logs.map(log => {
+                    let statusClass = 'status-success';
+                    let icon = '✅';
+                    if (log.status === 'FAILED') { statusClass = 'status-failed'; icon = '❌'; }
+                    else if (log.status === 'EMPTY') { statusClass = 'status-empty'; icon = '⚠️'; }
+
+                    return `
+                        <div class="health-card">
+                            <div class="health-status-icon ${statusClass}">${icon}</div>
+                            <div class="health-info">
+                                <h4>${log.tool.replace(/_/g, ' ').toUpperCase()}</h4>
+                                <p>${log.message}</p>
+                                <p style="font-size: 0.75rem; margin-top: 4px;">
+                                    Findings/Resources: <strong style="color: #e2e8f0;">${log.resources_found}</strong>
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to load health logs:', err);
+                container.style.display = 'none';
+            }
         }
 
         function filterVulnerabilities(severity) {

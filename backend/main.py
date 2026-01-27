@@ -2400,6 +2400,7 @@ from backend.database import (
     get_scan_report,
     get_multi_cloud_summary,
     get_conn,
+    update_scan_metadata,
 )
 
 from backend.ai.multi_agent_analyzer import get_multi_agent_analyzer
@@ -5060,7 +5061,41 @@ async def _store_mcp_scan_result(
             )
     
     logger.info(f"✅ Stored MCP scan result: scan_id={scan_id}, cloudfox_findings={len([f for f in result.get('findings', []) if f.get('source') == 'cloudfox'])}")
+    
+    # Store tool execution logs in metadata if present
+    if "tool_logs" in result:
+        update_scan_metadata(scan_id, {"tool_logs": result["tool_logs"]})
+        logger.info(f"📊 Saved {len(result['tool_logs'])} tool logs for scan {scan_id}")
+        
     return scan_id
+
+
+@app.get("/api/scans/{scan_id}/logs")
+async def get_scan_tool_logs(scan_id: int):
+    """Retrieve tool execution logs for a specific scan"""
+    try:
+        conn = get_conn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT cloud, scan_metadata FROM scans WHERE id = %s", (scan_id,))
+            row = cur.fetchone()
+            
+            if not row:
+                raise HTTPException(status_code=404, detail="Scan not found")
+            
+            provider, metadata = row
+            logs = metadata.get("tool_logs", []) if metadata else []
+            
+            return {
+                "scan_id": scan_id,
+                "provider": provider,
+                "tool_logs": logs,
+                "count": len(logs)
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to fetch scan logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 def _mcp_to_scan_result(provider: str, mcp_result: Dict[str, Any]):
     """

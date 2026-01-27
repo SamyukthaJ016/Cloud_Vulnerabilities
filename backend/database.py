@@ -101,6 +101,29 @@ def create_scan_record(account_id, cloud, credential_id=None):
         cur.close()
 
 
+def update_scan_metadata(scan_id: int, metadata: Dict[str, Any]):
+    """Update scan_metadata column for a scan"""
+    conn = ensure_connection()
+    cur = conn.cursor()
+    try:
+        query = """
+            UPDATE scans 
+            SET scan_metadata = %s,
+                status = 'completed',
+                completed_at = NOW()
+            WHERE id = %s
+        """
+        cur.execute(query, (json.dumps(metadata), scan_id))
+        conn.commit()
+        logger.info(f"Updated metadata for scan: {scan_id}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to update scan metadata: {e}")
+        raise
+    finally:
+        cur.close()
+
+
 # -------------------------------------------------------------------
 # Resources
 # -------------------------------------------------------------------
