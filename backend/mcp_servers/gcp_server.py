@@ -594,7 +594,7 @@ class GCPMCPServer(BaseMCPServer):
             
             # List service accounts and their keys
             try:
-                import dateutil.parser as date_parser
+                from dateutil import parser as date_parser
                 sa_parent = f"projects/{self.project_id}"
                 service_accounts = []
                 
@@ -651,8 +651,7 @@ class GCPMCPServer(BaseMCPServer):
                                 if valid_after:
                                     # Handle timestamp string from Discovery API
                                     try:
-                                        from dateutil import parser
-                                        create_time = parser.parse(valid_after)
+                                        create_time = date_parser.parse(valid_after)
                                         age = datetime.now(timezone.utc) - create_time
                                         if age.days > 90:
                                             findings.append({
