@@ -27,7 +27,9 @@ google-auth==2.27.0            # Google authentication library
 google-api-python-client==2.116.0  # Google API client library
 google-cloud-compute==1.15.0   # Google Compute Engine client library
 google-cloud-resource-manager==1.12.0  # Resource Manager (IAM policies)
-google-cloud-iam>=2.20.0        # IAM service accounts and admin management
+google-cloud-iam>=2.21.0
+python-dateutil==2.8.2
+
 #google-cloud-sql-connector==1.7.0  # Cloud SQL connectivity
 google-cloud-functions==1.16.0 # Cloud Functions client
 google-cloud-container==2.39.0 # GKE (Kubernetes Engine) client
@@ -82,4 +84,5 @@ reportlab
 cryptography>=41.0.0
 boto3>=1.28.0
 openai>=1.0.0
-google-auth>=2.23.0
+
+

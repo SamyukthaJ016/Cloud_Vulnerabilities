@@ -83,15 +83,32 @@ def create_scan_record(account_id, cloud, credential_id=None):
     cred_column = cred_column_map.get(cloud.lower(), "aws_credential_id")
     
     try:
-        query = f"""
-            INSERT INTO scans (account_id, cloud, status, {cred_column})
-            VALUES (%s, %s, 'running', %s)
-            RETURNING id
-        """
-        cur.execute(query, (account_id, cloud, credential_id))
+        # Check if the specific credential column exists
+        cur.execute(f"""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='scans' AND column_name='{cred_column}';
+        """)
+        has_col = cur.fetchone() is not None
+        
+        if has_col and credential_id is not None:
+            query = f"""
+                INSERT INTO scans (account_id, cloud, status, {cred_column})
+                VALUES (%s, %s, 'running', %s)
+                RETURNING id
+            """
+            cur.execute(query, (account_id, cloud, credential_id))
+        else:
+            query = """
+                INSERT INTO scans (account_id, cloud, status)
+                VALUES (%s, %s, 'running')
+                RETURNING id
+            """
+            cur.execute(query, (account_id, cloud))
+            
         scan_id = cur.fetchone()[0]
         conn.commit()
-        logger.info(f"Created scan record: {scan_id} ({cred_column}={credential_id})")
+        logger.info(f"Created scan record: {scan_id} ({cred_column if has_col else 'N/A'}={credential_id})")
         return scan_id
     except Exception as e:
         conn.rollback()

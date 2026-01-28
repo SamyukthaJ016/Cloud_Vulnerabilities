@@ -19,7 +19,8 @@ except ImportError:
     try:
         from google.iam import admin_v1 as iam_admin_v1
     except ImportError:
-        import google.cloud.iam_admin_v1 as iam_admin_v1
+        logger.warning("[GCP] google-cloud-iam (iam_admin_v1) not found, will use discovery fallback")
+        iam_admin_v1 = None
 # from google.cloud.sql.connector import Connector  # Not compatible with Python 3.11 yet
 from google.cloud import functions_v1
 from google.cloud import container_v1
@@ -110,7 +111,15 @@ class GCPMCPServer(BaseMCPServer):
                 self.networks_client = compute_v1.NetworksClient(credentials=self.credentials)
                 
                 # Initialize IAM clients
-                self.iam_client = iam_admin_v1.IAMClient(credentials=self.credentials)
+                if iam_admin_v1:
+                    try:
+                        self.iam_client = iam_admin_v1.IAMClient(credentials=self.credentials)
+                    except Exception as e:
+                        logger.warning(f"[GCP] Failed to initialize IAMClient: {e}. Falling back to discovery.")
+                        self.iam_client = discovery.build('iam', 'v1', credentials=self.credentials, cache_discovery=False)
+                else:
+                    self.iam_client = discovery.build('iam', 'v1', credentials=self.credentials, cache_discovery=False)
+                
                 self.resource_manager_client = resourcemanager_v3.ProjectsClient(credentials=self.credentials)
                 
                 # Initialize Cloud Functions client
@@ -585,65 +594,128 @@ class GCPMCPServer(BaseMCPServer):
             
             # List service accounts and their keys
             try:
+                import dateutil.parser as date_parser
                 sa_parent = f"projects/{self.project_id}"
-                service_accounts = self.iam_client.list_service_accounts(name=sa_parent)
+                service_accounts = []
                 
-                for sa in service_accounts:
-                    resources.append({
-                        "name": sa.email,
-                        "type": "service_account",
-                        "unique_id": sa.unique_id
-                    })
-                    
-                    # NEW: Check IAM policy on the Service Account itself (Resource-level IAM)
-                    try:
-                        # Resource format: projects/-/serviceAccounts/{email}
-                        sa_resource = f"projects/{self.project_id}/serviceAccounts/{sa.email}"
-                        # In the Python library, we might need to use the sa.name directly if it's already in the right format
-                        target_resource = sa.name if "/" in sa.name else sa_resource
+                # Support both GAPIC and Discovery clients
+                if hasattr(self.iam_client, 'projects'):
+                    # Discovery client logic
+                    resp = self.iam_client.projects().serviceAccounts().list(name=sa_parent).execute()
+                    sa_list = resp.get('accounts', [])
+                    # Normalize to simple objects or dicts
+                    for sa_dict in sa_list:
+                        email = sa_dict.get('email')
+                        unique_id = sa_dict.get('uniqueId')
+                        name = sa_dict.get('name')
                         
-                        sa_policy = self.iam_client.get_iam_policy(request={"resource": target_resource})
-                        
-                        if sa_policy and hasattr(sa_policy, 'bindings'):
-                            for binding in sa_policy.bindings:
-                                if any(role in binding.role for role in ["serviceAccountUser", "serviceAccountTokenCreator"]):
-                                    findings.append({
-                                        "severity": "HIGH",
-                                        "issue": "Service Account Impersonation Allowed",
-                                        "description": f"Role {binding.role} is granted on service account {sa.email} to {list(binding.members)}. This allows those members to act as this service account.",
-                                        "resource_name": sa.email,
-                                        "recommendation": f"Review and restrict who can impersonate the service account {sa.email}. Ensure only required users/groups have roles like 'iam.serviceAccountUser'."
-                                    })
-                    except Exception as e:
-                        logger.debug(f"[GCP] Could not get IAM policy for service account {sa.email}: {e}")
-
-                    # Check for Default Compute Service Account (often has Editor role by default)
-                    if "developer.gserviceaccount.com" in sa.email:
-                         findings.append({
-                            "severity": "MEDIUM",
-                            "issue": "Default Compute Service Account in Use",
-                            "description": f"Default Service Account {sa.email} is present. It often has broad default permissions and should be replaced with a custom SA.",
-                            "resource_name": sa.email,
-                            "recommendation": f"Create custom service accounts with limited permissions instead of using the Default Compute Service Account. This follows the principle of least privilege."
+                        resources.append({
+                            "name": email,
+                            "type": "service_account",
+                            "unique_id": unique_id
                         })
-                    
-                    # Deep check: List keys
-                    try:
-                        keys = self.iam_client.list_service_account_keys(name=sa.name)
-                        for key in keys:
-                            # Check key age
-                            create_time = key.valid_after_time
-                            if create_time:
-                                age = datetime.now(timezone.utc) - create_time
-                                if age.days > 90:
-                                    findings.append({
-                                        "severity": "HIGH",
-                                        "issue": "Stale Service Account Key",
-                                        "description": f"Key {key.name.split('/')[-1]} for {sa.email} is {age.days} days old. Rotate keys every 90 days.",
-                                        "recommendation": f"Immediately rotate the stale service account key for {sa.email}. Implement an automated key rotation policy (e.g., using a script or Cloud Function)."
-                                    })
-                    except Exception as e:
-                        logger.debug(f"[GCP] Could not list keys for {sa.email}: {e}")
+                        
+                        # NEW: Check IAM policy on the Service Account itself
+                        try:
+                            sa_policy = self.iam_client.projects().serviceAccounts().getIamPolicy(resource=name).execute()
+                            if sa_policy and 'bindings' in sa_policy:
+                                for binding in sa_policy['bindings']:
+                                    role = binding.get('role', '')
+                                    members = binding.get('members', [])
+                                    if any(r in role for r in ["serviceAccountUser", "serviceAccountTokenCreator"]):
+                                        findings.append({
+                                            "severity": "HIGH",
+                                            "issue": "Service Account Impersonation Allowed",
+                                            "description": f"Role {role} is granted on service account {email} to {members}. This allows those members to act as this service account.",
+                                            "resource_name": email,
+                                            "recommendation": f"Review and restrict who can impersonate the service account {email}."
+                                        })
+                        except Exception as e:
+                            logger.debug(f"[GCP] Could not get IAM for SA {email}: {e}")
+
+                        # Check for Default Compute Service Account
+                        if "developer.gserviceaccount.com" in email:
+                             findings.append({
+                                "severity": "MEDIUM",
+                                "issue": "Default Compute Service Account in Use",
+                                "description": f"Default Service Account {email} is present.",
+                                "resource_name": email,
+                                "recommendation": "Use custom service accounts instead of the Default Compute SA."
+                            })
+
+                        # List keys
+                        try:
+                            keys_resp = self.iam_client.projects().serviceAccounts().keys().list(name=name).execute()
+                            for key in keys_resp.get('keys', []):
+                                valid_after = key.get('validAfterTime')
+                                if valid_after:
+                                    # Handle timestamp string from Discovery API
+                                    try:
+                                        from dateutil import parser
+                                        create_time = parser.parse(valid_after)
+                                        age = datetime.now(timezone.utc) - create_time
+                                        if age.days > 90:
+                                            findings.append({
+                                                "severity": "HIGH",
+                                                "issue": "Stale Service Account Key",
+                                                "description": f"Key for {email} is {age.days} days old.",
+                                                "recommendation": f"Rotate the stale key for {email}."
+                                            })
+                                    except: pass
+                        except Exception as e:
+                            logger.debug(f"[GCP] Could not list keys for {email}: {e}")
+                else:
+                    # GAPIC client logic
+                    service_accounts = self.iam_client.list_service_accounts(name=sa_parent)
+                    for sa in service_accounts:
+                        resources.append({
+                            "name": sa.email,
+                            "type": "service_account",
+                            "unique_id": sa.unique_id
+                        })
+                        
+                        try:
+                            sa_resource = f"projects/{self.project_id}/serviceAccounts/{sa.email}"
+                            target_resource = sa.name if "/" in sa.name else sa_resource
+                            sa_policy = self.iam_client.get_iam_policy(request={"resource": target_resource})
+                            
+                            if sa_policy and hasattr(sa_policy, 'bindings'):
+                                for binding in sa_policy.bindings:
+                                    if any(role in binding.role for role in ["serviceAccountUser", "serviceAccountTokenCreator"]):
+                                        findings.append({
+                                            "severity": "HIGH",
+                                            "issue": "Service Account Impersonation Allowed",
+                                            "description": f"Role {binding.role} is granted on service account {sa.email} to {list(binding.members)}.",
+                                            "resource_name": sa.email,
+                                            "recommendation": f"Review and restrict who can impersonate the service account {sa.email}."
+                                        })
+                        except Exception as e:
+                            logger.debug(f"[GCP] Could not get IAM policy for service account {sa.email}: {e}")
+
+                        if "developer.gserviceaccount.com" in sa.email:
+                             findings.append({
+                                "severity": "MEDIUM",
+                                "issue": "Default Compute Service Account in Use",
+                                "description": f"Default Service Account {sa.email} is present.",
+                                "resource_name": sa.email,
+                                "recommendation": "Use custom service accounts instead of the Default Compute SA."
+                            })
+                        
+                        try:
+                            keys = self.iam_client.list_service_account_keys(name=sa.name)
+                            for key in keys:
+                                create_time = key.valid_after_time
+                                if create_time:
+                                    age = datetime.now(timezone.utc) - create_time
+                                    if age.days > 90:
+                                        findings.append({
+                                            "severity": "HIGH",
+                                            "issue": "Stale Service Account Key",
+                                            "description": f"Key for {sa.email} is {age.days} days old.",
+                                            "recommendation": f"Rotate the stale key for {sa.email}."
+                                        })
+                        except Exception as e:
+                            logger.debug(f"[GCP] Could not list keys for {sa.email}: {e}")
                 
                 # Check for project-level IAM roles that allow escalation (additional check)
                 risky_members = {}
