@@ -71,8 +71,13 @@ def get_aws_session(region: str = "us-east-1", creds: dict = None):
                     # Example policy: arn:aws:iam::809567033449:policy/CloudGuard-Scanner-Policy-xxx
                     if 'role/' in role_arn:
                         account_id = role_arn.split(':')[4]
-                        role_suffix = role_arn.split('role/CloudGuardReadOnlyRole-')[-1]
-                        e.recommended_policy_arn = f"arn:aws:iam::{account_id}:policy/CloudGuard-Scanner-Policy-{role_suffix}"
+                        # Support both direct match and prefixed roles (like CloudGuard-Scanner-xxx-CloudGuardReadOnlyRole-yyy)
+                        if 'CloudGuardReadOnlyRole-' in role_arn:
+                            role_suffix = role_arn.split('CloudGuardReadOnlyRole-')[-1]
+                            e.recommended_policy_arn = f"arn:aws:iam::{account_id}:policy/CloudGuard-Scanner-Policy-{role_suffix}"
+                        else:
+                            # Fallback if naming convention is totally different
+                            e.recommended_policy_arn = f"arn:aws:iam::{account_id}:policy/CloudGuard-Scanner-Policy-Default"
                 except Exception:
                     pass
             
