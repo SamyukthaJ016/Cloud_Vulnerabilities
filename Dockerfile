@@ -63,16 +63,14 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
         CLOUDFOX_ARCH="amd64"; \
     fi && \
     wget https://github.com/BishopFox/cloudfox/releases/download/v1.17.0/cloudfox-linux-${CLOUDFOX_ARCH}.zip -O cloudfox.zip && \
-    unzip cloudfox.zip && \
-    echo "DEBUG: CloudFox unzip contents:" && ls -R && \
-    # Find the executable (it might be named cloudfox or cloudfox-linux-amd64)
-    # Search recursively in case it's in a subdirectory
-    EXE_PATH=$(find . -type f -name "cloudfox*" | head -n 1) && \
-    if [ -z "$EXE_PATH" ]; then echo "❌ Could not find cloudfox binary!"; ls -la; exit 1; fi && \
-    echo "DEBUG: Found binary at $EXE_PATH" && \
+    mkdir -p cloudfox_install && \
+    unzip cloudfox.zip -d cloudfox_install && \
+    # Find the executable specifically within the install directory
+    EXE_PATH=$(find cloudfox_install -type f -name "cloudfox*" | head -n 1) && \
+    if [ -z "$EXE_PATH" ]; then echo "❌ Could not find cloudfox binary!"; ls -la cloudfox_install; exit 1; fi && \
     mv "$EXE_PATH" /usr/local/bin/cloudfox && \
     chmod +x /usr/local/bin/cloudfox && \
-    rm cloudfox.zip
+    rm -rf cloudfox.zip cloudfox_install
 
 # Install Nuclei (Architecture-aware)
 RUN if [ "$TARGETARCH" = "arm64" ]; then \
