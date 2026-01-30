@@ -95,7 +95,7 @@ async def run_due_schedules():
                                     jsonb_set(
                                         schedule,
                                         '{last_run_scan_ids}',
-                                        to_jsonb(%s::text[]),
+                                        to_jsonb(%s::int[]),
                                         true
                                     ),
                                     '{last_run_at}',
@@ -107,6 +107,7 @@ async def run_due_schedules():
                             (next_run_at, scan_ids, schedule_id),
                         )
                         logger.info(f"✅ Recurring scan {schedule_id} ({schedule_data.get('frequency')}) completed, next run: {next_run_at}")
+
                     else:
                         # One-time schedule - mark as completed
                         cur.execute(
@@ -117,7 +118,7 @@ async def run_due_schedules():
                                 jsonb_set(
                                     schedule,
                                         '{last_run_scan_ids}',
-                                        to_jsonb(ARRAY[%s]::text[]),
+                                        to_jsonb(%s::int[]),
                                         true
                                     ),
                                     '{last_run_at}',
@@ -130,6 +131,7 @@ async def run_due_schedules():
                             (scan_ids, schedule_id),
                         )
                         logger.info(f"✅ One-time scan {schedule_id} completed, scan_ids={scan_ids}")
+
                     
                     conn.commit()
 

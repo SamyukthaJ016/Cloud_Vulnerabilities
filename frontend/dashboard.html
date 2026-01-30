@@ -1183,6 +1183,22 @@ gcloud compute instances delete-access-config ${resourceName} \\
                     'GCP Compute Engine Security Best Practices',
                     'IAP Documentation'
                 ]
+            },
+            gcp_api: {
+                title: 'GCP Service API Activation',
+                priority: 'CRITICAL',
+                estimatedTime: '2 minutes',
+                steps: [
+                    'Identify the missing GCP Service API (e.g., Compute, IAM)',
+                    'Enable the API using the gcloud command',
+                    'Wait 60 seconds for propagation and retry the scan'
+                ],
+                code: (remediation) => remediation || 'gcloud services enable [SERVICE_NAME].googleapis.com',
+                validation: 'Verify with: gcloud services list --enabled',
+                references: [
+                    'GCP Service Usage Documentation',
+                    'Enabling and Disabling Services'
+                ]
             }
         };
 
@@ -1283,7 +1299,9 @@ gcloud compute instances delete-access-config ${resourceName} \\
 
             let type = 'vulnerability';
 
-            if (desc.includes('s3') || desc.includes('bucket')) {
+            if (vuln.remediation) {
+                type = 'gcp_api';
+            } else if (desc.includes('s3') || desc.includes('bucket')) {
                 type = 's3';
             } else if (desc.includes('iam') || desc.includes('access key') || desc.includes('mfa')) {
                 type = 'iam';
@@ -1304,9 +1322,18 @@ gcloud compute instances delete-access-config ${resourceName} \\
             }
 
             const template = remediationTemplates[type];
+
+            // Prioritize backend remediation if available
+            let codeSnippet = '';
+            if (vuln.remediation) {
+                codeSnippet = vuln.remediation;
+            } else {
+                codeSnippet = template.code(vuln.resource_name || 'RESOURCE_NAME');
+            }
+
             return {
                 ...template,
-                code: template.code(vuln.resource_name || 'RESOURCE_NAME')
+                code: codeSnippet
             };
         }
 

@@ -11,6 +11,7 @@ from typing import Dict, List, Any
 from google.cloud import storage
 from google.cloud import compute_v1
 from google.oauth2 import service_account
+from google.api_core import exceptions as gcp_exceptions
 from datetime import datetime
 
 from backend.mcp_servers.base_server import (
@@ -336,6 +337,15 @@ class GCPMCPServer(BaseMCPServer):
                 }
             }
         
+        except gcp_exceptions.PermissionDenied:
+            return {
+                "error": "Permission Denied",
+                "bucket": bucket_name,
+                "findings": [],
+                "remediation": f"gcloud projects add-iam-policy-binding {self.project_id} --member='serviceAccount:{self.credentials.service_account_email}' --role='roles/viewer'"
+            }
+        except gcp_exceptions.NotFound:
+             return {"error": "Bucket not found", "bucket": bucket_name, "findings": []}
         except Exception as e:
             return {"error": str(e), "bucket": bucket_name, "findings": []}
             
@@ -383,6 +393,22 @@ class GCPMCPServer(BaseMCPServer):
                 "count": len(resources),
                 "timestamp": datetime.utcnow().isoformat()
             }
+        except gcp_exceptions.Forbidden as e:
+            logger.error(f"[GCP] Compute API access forbidden: {e}")
+            api_name = "compute.googleapis.com"
+            return {
+                "error": "API Not Enabled",
+                "remediation": f"gcloud services enable {api_name} --project {self.project_id}",
+                "resources": [], 
+                "count": 0
+            }
+        except gcp_exceptions.PermissionDenied:
+            return {
+                "error": "Permission Denied",
+                "remediation": f"gcloud projects add-iam-policy-binding {self.project_id} --member='serviceAccount:{self.credentials.service_account_email}' --role='roles/viewer'",
+                "resources": [],
+                "count": 0
+            }
         except Exception as e:
             logger.error(f"[GCP] Compute discovery failed: {e}")
             return {"error": str(e), "resources": [], "count": 0}
@@ -420,6 +446,13 @@ class GCPMCPServer(BaseMCPServer):
                 "findings": findings,
                 "count": len(findings),
                 "timestamp": datetime.utcnow().isoformat()
+            }
+        except gcp_exceptions.Forbidden as e:
+            api_name = "compute.googleapis.com"
+            return {
+                "error": "API Not Enabled",
+                "remediation": f"gcloud services enable {api_name} --project {self.project_id}",
+                "findings": []
             }
         except Exception as e:
             logger.error(f"[GCP] Firewall check failed: {e}")
@@ -462,6 +495,12 @@ class GCPMCPServer(BaseMCPServer):
                 "findings": findings,
                 "count": len(findings),
                 "timestamp": datetime.utcnow().isoformat()
+            }
+        except gcp_exceptions.PermissionDenied:
+            return {
+                "error": "Permission Denied",
+                "findings": [],
+                "remediation": f"gcloud projects add-iam-policy-binding {self.project_id} --member='serviceAccount:{self.credentials.service_account_email}' --role='roles/iam.securityReviewer'"
             }
         except Exception as e:
             logger.error(f"[GCP] IAM security check failed: {e}")
@@ -660,7 +699,17 @@ class GCPMCPServer(BaseMCPServer):
         
         except Exception as e:
             logger.error(f"[GCP] Full scan failed: {e}")
+            
+            # Check for common GCP API errors in the main loop
+            remediation = None
+            if "Forbidden" in str(e) or "enabled" in str(e).lower():
+                remediation = f"gcloud services enable [api-name].googleapis.com --project {active_project}"
+            elif "PermissionDenied" in str(e):
+                remediation = f"gcloud projects add-iam-policy-binding {active_project} --member='serviceAccount:...' --role='roles/viewer'"
+
             results["error"] = str(e)
+            if remediation:
+                results["remediation"] = remediation
             return results
 
 
