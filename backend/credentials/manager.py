@@ -38,6 +38,7 @@ class CloudCredential:
     aws_role_arn: Optional[str] = None
     aws_session_token: Optional[str] = None
 
+
     gcp_service_account_json: Optional[str] = None
     gcp_project_id: Optional[str] = None
 
