@@ -92,75 +92,86 @@ class PersistentMemorySystem:
     def _ensure_tables_exist(self):
         """Create memory tables if they don't exist"""
         conn = get_conn()
-        with conn.cursor() as cur:
-            # Finding memory table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS finding_memory (
-                    id SERIAL PRIMARY KEY,
-                    finding_hash VARCHAR(64) UNIQUE NOT NULL,
-                    first_seen TIMESTAMP NOT NULL,
-                    last_seen TIMESTAMP NOT NULL,
-                    occurrence_count INTEGER DEFAULT 1,
-                    resource_name VARCHAR(500),
-                    provider VARCHAR(50),
-                    issue TEXT,
-                    severity VARCHAR(20),
-                    status VARCHAR(50) DEFAULT 'new',
-                    scan_ids JSONB DEFAULT '[]',
-                    metadata JSONB DEFAULT '{}'
-                )
-            """)
-            
-            # Security tasks table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS security_tasks (
-                    id SERIAL PRIMARY KEY,
-                    finding_id INTEGER REFERENCES findings(id),
-                    finding_hash VARCHAR(64),
-                    resource_name VARCHAR(500),
-                    provider VARCHAR(50),
-                    issue TEXT,
-                    description TEXT,
-                    recommendation TEXT,
-                    priority VARCHAR(20),
-                    status VARCHAR(50) DEFAULT 'open',
-                    created_at TIMESTAMP DEFAULT NOW(),
-                    updated_at TIMESTAMP DEFAULT NOW(),
-                    resolved_at TIMESTAMP,
-                    related_tasks JSONB DEFAULT '[]',
-                    metadata JSONB DEFAULT '{}'
-                )
-            """)
-            
-            # Security notes table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS security_notes (
-                    id SERIAL PRIMARY KEY,
-                    finding_hash VARCHAR(64),
-                    task_id INTEGER REFERENCES security_tasks(id),
-                    note_type VARCHAR(50),
-                    content TEXT,
-                    author VARCHAR(200) DEFAULT 'system',
-                    created_at TIMESTAMP DEFAULT NOW(),
-                    tags JSONB DEFAULT '[]'
-                )
-            """)
-            
-            # Knowledge base table (for learned patterns)
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS security_knowledge (
-                    id SERIAL PRIMARY KEY,
-                    pattern_type VARCHAR(100),
-                    pattern_data JSONB,
-                    confidence FLOAT DEFAULT 0.5,
-                    evidence_count INTEGER DEFAULT 1,
-                    last_updated TIMESTAMP DEFAULT NOW(),
-                    metadata JSONB DEFAULT '{}'
-                )
-            """)
-            
-            conn.commit()
-            logger.info("✅ Persistent memory tables initialized")
+        try:
+            with conn.cursor() as cur:
+                # Use advisory lock to prevent race conditions during migration
+                cur.execute("SELECT pg_advisory_lock(123456789)")
+                try:
+                    # Finding memory table
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS finding_memory (
+                            id SERIAL PRIMARY KEY,
+                            finding_hash VARCHAR(64) UNIQUE NOT NULL,
+                            first_seen TIMESTAMP NOT NULL,
+                            last_seen TIMESTAMP NOT NULL,
+                            occurrence_count INTEGER DEFAULT 1,
+                            resource_name VARCHAR(500),
+                            provider VARCHAR(50),
+                            issue TEXT,
+                            severity VARCHAR(20),
+                            status VARCHAR(50) DEFAULT 'new',
+                            scan_ids JSONB DEFAULT '[]',
+                            metadata JSONB DEFAULT '{}'
+                        )
+                    """)
+                    
+                    # Security tasks table
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS security_tasks (
+                            id SERIAL PRIMARY KEY,
+                            finding_id INTEGER REFERENCES findings(id),
+                            finding_hash VARCHAR(64),
+                            resource_name VARCHAR(500),
+                            provider VARCHAR(50),
+                            issue TEXT,
+                            description TEXT,
+                            recommendation TEXT,
+                            priority VARCHAR(20),
+                            status VARCHAR(50) DEFAULT 'open',
+                            created_at TIMESTAMP DEFAULT NOW(),
+                            updated_at TIMESTAMP DEFAULT NOW(),
+                            resolved_at TIMESTAMP,
+                            related_tasks JSONB DEFAULT '[]',
+                            metadata JSONB DEFAULT '{}'
+                        )
+                    """)
+                    
+                    # Security notes table
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS security_notes (
+                            id SERIAL PRIMARY KEY,
+                            finding_hash VARCHAR(64),
+                            task_id INTEGER REFERENCES security_tasks(id),
+                            note_type VARCHAR(50),
+                            content TEXT,
+                            author VARCHAR(200) DEFAULT 'system',
+                            created_at TIMESTAMP DEFAULT NOW(),
+                            tags JSONB DEFAULT '[]'
+                        )
+                    """)
+                    
+                    # Knowledge base table (for learned patterns)
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS security_knowledge (
+                            id SERIAL PRIMARY KEY,
+                            pattern_type VARCHAR(100),
+                            pattern_data JSONB,
+                            confidence FLOAT DEFAULT 0.5,
+                            evidence_count INTEGER DEFAULT 1,
+                            last_updated TIMESTAMP DEFAULT NOW(),
+                            metadata JSONB DEFAULT '{}'
+                        )
+                    """)
+                    
+                    conn.commit()
+                    logger.info("✅ Persistent memory tables initialized")
+                finally:
+                    cur.execute("SELECT pg_advisory_unlock(123456789)")
+                    
+        except Exception as e:
+            # If tables already exist or another worker did it, just log and continue
+            logger.warning(f"⚠️ Table initialization noticed existing structures or race: {e}")
+            conn.rollback()
     
     def process_scan_findings(self, scan_id: int, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
