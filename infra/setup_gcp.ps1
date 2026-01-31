@@ -2,11 +2,6 @@
 .SYNOPSIS
     CloudGuard GCP Setup Script (PowerShell)
     Automatically enables APIs and configures permissions for the scanner.
-
-.DESCRIPTION
-    This script checks for the gcloud CLI, enables required GCP APIs,
-    creates a service account (if not exists), assigns Viewer and Security Reviewer roles,
-    and generates a JSON key file for authentication.
 #>
 
 $ErrorActionPreference = "Stop"
@@ -16,44 +11,42 @@ $SERVICE_ACCOUNT_NAME = "cloudguard-scanner"
 $DISPLAY_NAME = "CloudGuard Vulnerability Scanner"
 $KEY_FILE = "gcp-service-account.json"
 
-# Check if gcloud is installed
+Write-Host "Checking gcloud installation..."
 if (-not (Get-Command "gcloud" -ErrorAction SilentlyContinue)) {
-    Write-Error "❌ Error: 'gcloud' CLI is not installed."
+    Write-Error "Error: 'gcloud' CLI is not installed."
     Write-Host "Please install it from: https://cloud.google.com/sdk/docs/install"
     exit 1
 }
 
-# Get current project
-try {
-    $PROJECT_ID = gcloud config get-value project 2>$null
-} catch {
-    Write-Error "❌ Failed to get current GCP project. Please run 'gcloud init' or 'gcloud config set project <PROJECT_ID>'."
-    exit 1
-}
+# Get current project safely
+Write-Host "Retrieving current GCP project..."
+$PROJECT_ID = (gcloud config get-value project 2>$null).Trim()
 
 if (-not $PROJECT_ID) {
-    Write-Error "❌ No GCP project selected. Please run 'gcloud config set project <PROJECT_ID>'."
+    Write-Error "Error: No GCP project selected. Please run 'gcloud config set project <PROJECT_ID>'."
     exit 1
 }
 
-Write-Host "🚀 Starting CloudGuard GCP Setup for project: $PROJECT_ID"
+Write-Host "Project ID detected: '$PROJECT_ID'"
+Write-Host "Starting CloudGuard GCP Setup..."
 Write-Host "--------------------------------------------------------"
 
 # 1. Enable Required APIs
-Write-Host "📡 Enabling required APIs..."
+Write-Host "Enabling required APIs..."
 gcloud services enable `
     cloudresourcemanager.googleapis.com `
     compute.googleapis.com `
     storage.googleapis.com `
     iam.googleapis.com `
     --project "$PROJECT_ID"
-Write-Host "✅ APIs enabled."
+Write-Host "APIs enabled."
 
 # 2. Create Service Account
-Write-Host "👤 Creating Service Account: $SERVICE_ACCOUNT_NAME..."
+Write-Host "Creating Service Account: $SERVICE_ACCOUNT_NAME..."
 $SA_EMAIL = "$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
-$SA_EXISTS = $false
+Write-Host "Target Service Account Email: $SA_EMAIL"
 
+$SA_EXISTS = $false
 try {
     gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID" 2>$null | Out-Null
     $SA_EXISTS = $true
@@ -68,13 +61,13 @@ if ($SA_EXISTS) {
         --description "$DISPLAY_NAME" `
         --display-name "$DISPLAY_NAME" `
         --project "$PROJECT_ID"
-    Write-Host "✅ Service account created."
+    Write-Host "Service account created."
 }
 
 # 3. Assign Roles
-Write-Host "🔑 Assigning IAM Roles..."
+Write-Host "Assigning IAM Roles..."
 
-# Viewer (Basic read access)
+# Viewer
 gcloud projects add-iam-policy-binding "$PROJECT_ID" `
     --member="serviceAccount:$SA_EMAIL" `
     --role="roles/viewer" `
@@ -82,7 +75,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" `
     --quiet | Out-Null
 Write-Host "   - Assigned 'Viewer' role"
 
-# Security Reviewer (IAM policy analysis)
+# Security Reviewer
 gcloud projects add-iam-policy-binding "$PROJECT_ID" `
     --member="serviceAccount:$SA_EMAIL" `
     --role="roles/iam.securityReviewer" `
@@ -90,21 +83,21 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" `
     --quiet | Out-Null
 Write-Host "   - Assigned 'Security Reviewer' role"
 
-Write-Host "✅ Permissions granted."
+Write-Host "Permissions granted."
 
 # 4. Generate Key
-Write-Host "📥 Generating JSON Key..."
+Write-Host "Generating JSON Key..."
 if (Test-Path "$KEY_FILE") {
-    Write-Host "   ⚠️  Key file '$KEY_FILE' already exists. Skipping download to prevent overwrite."
+    Write-Host "   Key file '$KEY_FILE' already exists. Skipping download."
 } else {
     gcloud iam service-accounts keys create "$KEY_FILE" `
         --iam-account="$SA_EMAIL" `
         --project "$PROJECT_ID"
-    Write-Host "✅ Key saved to: $(Get-Location)\$KEY_FILE"
+    Write-Host "Key saved to: $(Get-Location)\$KEY_FILE"
 }
 
 Write-Host "--------------------------------------------------------"
-Write-Host "🎉 Setup Complete!"
+Write-Host "Setup Complete!"
 Write-Host ""
 Write-Host "NEXT STEPS:"
 Write-Host "1. The credentials file '$KEY_FILE' is ready."
