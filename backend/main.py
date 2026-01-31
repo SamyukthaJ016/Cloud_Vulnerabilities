@@ -187,6 +187,7 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
             logger.info(f"🔑 Using AWS credential {is_def_str} for user {user_id} (id={aws_credential_id})")
 
             try:
+                # 1. Initialize Plugin (Old Architecture)
                 plugin = AWSPlugin({
                     "access_key_id": aws_cred.aws_access_key_id,
                     "secret_access_key": aws_cred.aws_secret_access_key,
@@ -196,8 +197,19 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
                 mcp_registry.register("aws", plugin)
                 providers_initialized["aws"] = plugin
                 logger.info("✅ AWS Plugin registered")
+
+                # 2. Initialize MCP Server (New Architecture - Required for Scan)
+                aws_server = create_aws_server({
+                    "access_key_id": aws_cred.aws_access_key_id,
+                    "secret_access_key": aws_cred.aws_secret_access_key,
+                    "session_token": aws_cred.aws_session_token,
+                    "region": aws_cred.aws_region or "us-east-1"
+                })
+                mcp_server_manager.register_server(aws_server)
+                logger.info("✅ AWS MCP Server registered")
+
             except Exception as e:
-                logger.error(f"❌ Failed to initialize AWS plugin: {e}")
+                logger.error(f"❌ Failed to initialize AWS plugin/server: {e}")
                 aws_credential_id = None
     else:
         logger.warning(f"⚠️ No AWS credentials found for user {user_id}")
@@ -217,7 +229,7 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
             logger.info(f"🔑 Using GCP credential {is_def_str} for user {user_id} (id={gcp_cred.id})")
             
             try:
-                # GCPPlugin expects 'service_account_json' (string/dict) and 'project_id' in config
+                # 1. Initialize Plugin (Old Architecture)
                 plugin = GCPPlugin({
                     "service_account_json": gcp_cred.gcp_service_account_json,
                     "project_id": gcp_cred.gcp_project_id
@@ -225,8 +237,17 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
                 mcp_registry.register("gcp", plugin)
                 providers_initialized["gcp"] = plugin
                 logger.info("✅ GCP Plugin registered")
+
+                # 2. Initialize MCP Server (New Architecture - Required for Scan)
+                gcp_server = create_gcp_server({
+                    "service_account_json": gcp_cred.gcp_service_account_json,
+                    "project_id": gcp_cred.gcp_project_id
+                })
+                mcp_server_manager.register_server(gcp_server)
+                logger.info("✅ GCP MCP Server registered")
+
             except Exception as e:
-                logger.error(f"❌ Failed to initialize GCP plugin: {e}")
+                logger.error(f"❌ Failed to initialize GCP plugin/server: {e}")
     else:
         logger.warning(f"⚠️ No GCP credentials found for user {user_id}")
 
