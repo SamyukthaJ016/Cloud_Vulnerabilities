@@ -17,3 +17,13 @@ gcp-service-account.json
 .DS_Store
 *.env
 logs/
+
+# Test & Coverage
+.pytest_cache/
+.coverage
+
+# specific logs
+**/*.log
+
+# Project Reports
+reports/
