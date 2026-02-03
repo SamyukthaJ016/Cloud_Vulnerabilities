@@ -2,6 +2,8 @@
 Fixed database.py - Connection Handling
 Add this to your backend/database.py
 """
+from passlib.hash import bcrypt
+import uuid
 import os
 import json
 import psycopg2
@@ -437,3 +439,72 @@ def store_cloudfox_finding(
         description=description,
         source="cloudfox"
     )
+
+# -------------------------------------------------------------------
+# AUTHENTICATION (JWT READY)
+# -------------------------------------------------------------------
+
+def create_user(username: str, email: str, password: str):
+    conn = ensure_connection()
+    cur = conn.cursor()
+
+    user_id = str(uuid.uuid4())
+    password_hash = bcrypt.hash(password)
+
+
+    try:
+        cur.execute(
+            """
+            INSERT INTO user_profiles (user_id, email, name, password_hash)
+            VALUES (%s, %s, %s, %s)
+            RETURNING user_id
+            """,
+            (user_id, email.lower(), username, password_hash)
+        )
+        uid = cur.fetchone()[0]
+        conn.commit()
+        return uid
+
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        raise ValueError("Email already registered")
+
+    finally:
+        cur.close()
+
+
+def authenticate_user(email: str, password: str):
+    conn = ensure_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT user_id, password_hash, is_active
+            FROM user_profiles
+            WHERE email = %s
+            """,
+            (email.lower(),)
+        )
+
+        row = cur.fetchone()
+        if not row:
+            return None
+
+        user_id, password_hash, is_active = row
+        if not is_active:
+            return None
+
+        if bcrypt.verify(password, password_hash):
+
+            cur.execute(
+                "UPDATE user_profiles SET last_login = NOW() WHERE user_id = %s",
+                (user_id,)
+            )
+            conn.commit()
+            return user_id
+
+        return None
+
+    finally:
+        cur.close()
