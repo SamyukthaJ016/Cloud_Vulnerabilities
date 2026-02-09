@@ -1,2 +1,0 @@
-aws ec2 create-flow-logs ^
- --cli-input-json file: //config/aws/flowlogs.json
