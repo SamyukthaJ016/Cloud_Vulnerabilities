@@ -41,6 +41,12 @@ REDIS_PASSWORD=redis_password
 SECRET_KEY=your-super-secret-key-change-this
 ENCRYPTION_KEY=your-encryption-key
 
+# Google OAuth (Required for authenticated scanning APIs)
+GOOGLE_OAUTH_CLIENT_ID=your_google_client_id
+GOOGLE_OAUTH_CLIENT_SECRET=your_google_client_secret
+OAUTH_SESSION_SECRET=your-long-random-session-secret
+OAUTH_REDIRECT_BASE_URL=http://localhost:8000
+
 # AWS Configuration (Required for Cloud Scans)
 # You can also map your ~/.aws folder in docker-compose.yml
 AWS_ACCESS_KEY_ID=your_access_key
@@ -54,6 +60,9 @@ GCP_SERVICE_ACCOUNT_JSON=/app/config/gcp-service-account.json
 # AI Analysis (Optional)
 OPENAI_API_KEY=your_openai_key
 ```
+
+Google OAuth callback URI must include:
+`http://localhost:8000/auth/google/callback`
 
 ### 3. Setup Cloud Permissions (AWS)
 To scan your AWS account, the scanner needs specific **Read-Only** permissions.

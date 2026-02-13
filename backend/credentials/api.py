@@ -18,12 +18,17 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, validator
 from starlette.responses import JSONResponse
 
+from backend.auth.session import require_authenticated_user, resolve_user_id
 from backend.credentials.manager import credential_manager, CloudCredential
 from backend.credentials import auto_permission
 
 logger = logging.getLogger("credentials_api")
 
-router = APIRouter(prefix="/api/credentials", tags=["credentials"])
+router = APIRouter(
+    prefix="/api/credentials",
+    tags=["credentials"],
+    dependencies=[Depends(require_authenticated_user)],
+)
 
 # Include auto-permission router
 router.include_router(auto_permission.router, prefix="/aws", tags=["auto-permission"])
@@ -119,13 +124,7 @@ class ScanSessionResponse(BaseModel):
 # Helper function to get user ID from request
 def get_user_id(request: Request) -> str:
     """Extract user ID from request"""
-    # 🔥 DEBUG: Log ALL cookies for session debugging
-    logger.info(f"🍪 Request Cookies: {request.cookies}")
-    
-    session_id = request.cookies.get("session_id")
-    if session_id:
-        return f"user_{session_id}"
-    return "anonymous"
+    return resolve_user_id(request)
 
 
 @router.post("/aws", response_model=CredentialResponse)

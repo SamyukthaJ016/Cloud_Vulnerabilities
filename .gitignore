@@ -27,3 +27,4 @@ logs/
 
 # Project Reports
 reports/
+.venv311/

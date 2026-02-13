@@ -12,6 +12,7 @@ import secrets
 from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -20,7 +21,16 @@ from reportlab.pdfgen import canvas
 from psycopg2.extras import Json
 
 # MCP & Cloud Architecture
-from backend.mcp.mcp_base import mcp_registry, ScanResult, CloudResource, SecurityFinding, Severity
+from backend.mcp.mcp_base import (
+    mcp_registry,
+    ScanResult,
+    CloudResource,
+    SecurityFinding,
+    Severity,
+    MCPPlugin,
+)
+from backend.mcp.mcp_aws_plugin import AWSPlugin
+from backend.mcp.mcp_gcp_plugin import GCPPlugin
 
 # MCP Server Architecture
 from backend.mcp_servers.base_server import mcp_server_manager, MCPMessage, MCPResponse
@@ -52,6 +62,9 @@ from backend.ai.agentic_core import ToolRegistry
 # Credential Management
 from backend.credentials.api import router as credentials_router
 from backend.credentials.manager import credential_manager, CloudCredential
+from backend.auth.google_oauth import router as oauth_router
+from backend.auth.session import get_current_user, resolve_user_id
+from backend.auth.settings import OAUTH_SESSION_SECRET
 
 # CloudFox (Offensive Security)
 from backend.cloudfox.cloudfox_scanner import (
@@ -87,7 +100,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=OAUTH_SESSION_SECRET or os.getenv("SECRET_KEY", "cloudguard-dev-session-secret"),
+    same_site="lax",
+    https_only=False,
+)
+
+PROTECTED_API_PREFIXES = (
+    "/scan",
+    "/api/schedules",
+    "/api/mcp",
+    "/api/credentials",
+)
+
+
+@app.middleware("http")
+async def auth_guard(request: Request, call_next):
+    path = request.url.path
+
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    if path.startswith("/auth/"):
+        return await call_next(request)
+
+    if any(path.startswith(prefix) for prefix in PROTECTED_API_PREFIXES):
+        if not get_current_user(request):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": "Authentication required. Sign in with Google.",
+                    "login_url": "/auth/google/login",
+                },
+            )
+
+    return await call_next(request)
+
 app.include_router(credentials_router)
+app.include_router(oauth_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -287,11 +338,7 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
 
 
 def get_user_id(request: Request) -> str:
-    # """Extract user ID from request"""
-    # session_id = request.cookies.get("cloudguard_session")
-    # if session_id:
-    #     return f"user_{session_id}"
-    return "anonymous"
+    return resolve_user_id(request)
 
 def _wrap_text(text: str, width: int = 95):
     text = text.replace("\r", " ").replace("\n", " ")
@@ -322,13 +369,18 @@ def build_scan_report(scan_id: int) -> dict:
 # ============================================================
 
 @app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Manually trigger a scheduled scan now"""
+    user_id = get_user_id(req)
     conn = get_conn()
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT user_id, providers, account_ids, deep_scan, credential_id FROM scan_schedules WHERE id = %s",
-            (schedule_id,)
+            """
+            SELECT user_id, providers, account_ids, deep_scan, credential_id
+            FROM scan_schedules
+            WHERE id = %s AND user_id = %s
+            """,
+            (schedule_id, user_id),
         )
         row = cur.fetchone()
         if not row:
@@ -742,7 +794,9 @@ async def run_multi_cloud_scan_internal(
     }
 @app.post("/scan/schedule")
 async def schedule_scan(request: ScheduledScanRequest, req: Request):
-    user_id = request.user_id or "anonymous"
+    user_id = get_user_id(req)
+    if request.user_id and request.user_id != user_id:
+        logger.warning("Ignoring overridden user_id in schedule request payload.")
     logger.info(f"📅 Received schedule scan request from user={user_id}: {request}")
 
     schedule = request.schedule or {}
@@ -925,9 +979,8 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     logger.info(f"📦 Payload: {request.dict()}")
 
     user_id = get_user_id(req)
-    # If the request has an explicit user_id, use it (though cookies are safer)
-    if "user_id" in request.dict() and request.user_id:
-        user_id = request.user_id
+    if request.user_id and request.user_id != user_id:
+        logger.warning("Ignoring overridden user_id in scan request payload.")
         
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
@@ -2239,26 +2292,22 @@ async def scheduled_scans_page():
             return HTMLResponse("<h1>Scheduled scans page not found</h1>")
 
 @app.get("/api/schedules")
-async def get_all_schedules(user_id: Optional[str] = None):
+async def get_all_schedules(req: Request, user_id: Optional[str] = None):
     """Get all scheduled scans"""
+    resolved_user_id = get_user_id(req)
+    if user_id and user_id != resolved_user_id:
+        logger.warning("Ignoring mismatched user_id in schedule list request.")
+
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            if user_id:
-                cur.execute("""
-                    SELECT id, user_id, providers, account_ids, deep_scan, 
-                           schedule, status, next_run_at, created_at
-                    FROM scan_schedules
-                    WHERE user_id = %s
-                    ORDER BY created_at DESC
-                """, (user_id,))
-            else:
-                cur.execute("""
-                    SELECT id, user_id, providers, account_ids, deep_scan, 
-                           schedule, status, next_run_at, created_at
-                    FROM scan_schedules
-                    ORDER BY created_at DESC
-                """)
+            cur.execute("""
+                SELECT id, user_id, providers, account_ids, deep_scan, 
+                       schedule, status, next_run_at, created_at
+                FROM scan_schedules
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+            """, (resolved_user_id,))
             
             rows = cur.fetchall()
             
@@ -2285,8 +2334,9 @@ async def get_all_schedules(user_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/schedules/{schedule_id}")
-async def get_schedule(schedule_id: int):
+async def get_schedule(schedule_id: int, req: Request):
     """Get a specific scheduled scan"""
+    user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -2294,8 +2344,8 @@ async def get_schedule(schedule_id: int):
                 SELECT id, user_id, providers, account_ids, deep_scan, 
                        schedule, status, next_run_at, created_at
                 FROM scan_schedules
-                WHERE id = %s
-            """, (schedule_id,))
+                WHERE id = %s AND user_id = %s
+            """, (schedule_id, user_id))
             
             row = cur.fetchone()
             if not row:
@@ -2322,8 +2372,9 @@ async def get_schedule(schedule_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Run a scheduled scan immediately"""
+    user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -2331,8 +2382,8 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
             cur.execute("""
                 SELECT user_id, providers, account_ids, deep_scan, credential_id
                 FROM scan_schedules
-                WHERE id = %s
-            """, (schedule_id,))
+                WHERE id = %s AND user_id = %s
+            """, (schedule_id, user_id))
             
             row = cur.fetchone()
             if not row:
@@ -2568,23 +2619,20 @@ async def system_status_page():
 
 
 @app.delete("/api/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: int, user_id: Optional[str] = None):
+async def delete_schedule(schedule_id: int, req: Request, user_id: Optional[str] = None):
     """Delete a scheduled scan"""
+    resolved_user_id = get_user_id(req)
+    if user_id and user_id != resolved_user_id:
+        logger.warning("Ignoring mismatched user_id in schedule delete request.")
+
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            if user_id:
-                cur.execute("""
-                    DELETE FROM scan_schedules
-                    WHERE id = %s AND user_id = %s
-                    RETURNING id
-                """, (schedule_id, user_id))
-            else:
-                cur.execute("""
-                    DELETE FROM scan_schedules
-                    WHERE id = %s
-                    RETURNING id
-                """, (schedule_id,))
+            cur.execute("""
+                DELETE FROM scan_schedules
+                WHERE id = %s AND user_id = %s
+                RETURNING id
+            """, (schedule_id, resolved_user_id))
             
             deleted = cur.fetchone()
             if not deleted:
@@ -2601,8 +2649,9 @@ async def delete_schedule(schedule_id: int, user_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/schedules/{schedule_id}")
-async def update_schedule(schedule_id: int, request: ScheduledScanRequest):
+async def update_schedule(schedule_id: int, request: ScheduledScanRequest, req: Request):
     """Update a scheduled scan"""
+    user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -2613,14 +2662,15 @@ async def update_schedule(schedule_id: int, request: ScheduledScanRequest):
                     deep_scan = %s,
                     schedule = %s,
                     updated_at = NOW()
-                WHERE id = %s
+                WHERE id = %s AND user_id = %s
                 RETURNING id
             """, (
                 json.dumps(request.providers),
                 json.dumps(request.account_ids),
                 request.deep_scan,
                 Json(request.schedule),
-                schedule_id
+                schedule_id,
+                user_id,
             ))
             
             updated = cur.fetchone()
