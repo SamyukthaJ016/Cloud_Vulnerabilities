@@ -14,7 +14,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U scanner_user -d scanner_db"]
       interval: 10s
@@ -46,7 +46,7 @@ services:
       --maxmemory-policy allkeys-lru
       --appendonly yes
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -93,12 +93,6 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_ORG_ID: ${OPENAI_ORG_ID}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-gpt-4o-mini}
-      
-      # Google OAuth
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
-      OAUTH_SESSION_SECRET: ${OAUTH_SESSION_SECRET:-dev-oauth-session-secret}
-      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-http://localhost:8000}
 
       # Application
       APP_ENV: development
@@ -214,10 +208,6 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_ORG_ID: ${OPENAI_ORG_ID}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-gpt-4o-mini}
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
-      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
-      OAUTH_SESSION_SECRET: ${OAUTH_SESSION_SECRET:-dev-oauth-session-secret}
-      OAUTH_REDIRECT_BASE_URL: ${OAUTH_REDIRECT_BASE_URL:-http://localhost:8000}
       APP_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SECRET_KEY: ${SECRET_KEY}
@@ -230,8 +220,6 @@ services:
       - ./reports:/app/reports:rw
       - ./logs:/app/logs:rw
       - ./db/init:/app/db/init:ro
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -244,17 +232,19 @@ services:
       - prod
 
   # ==========================================================================
-  # Nginx Reverse Proxy
+  # Caddy Reverse Proxy (automatic HTTPS)
   # ==========================================================================
-  nginx:
-    image: nginx:alpine
-    container_name: security-scanner-nginx
+  caddy:
+    image: caddy:2-alpine
+    container_name: security-scanner-caddy
+    environment:
+      DOMAIN: ${DOMAIN}
+      CADDY_EMAIL: ${CADDY_EMAIL}
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./config/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - nginx_cache:/var/cache/nginx
-      - ./logs/nginx:/var/log/nginx
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./logs/caddy:/var/log/caddy
     ports:
       - "${FRONTEND_PORT:-80}:80"
       - "${FRONTEND_SSL_PORT:-443}:443"
@@ -468,5 +458,7 @@ volumes:
     driver: local
   grafana_data:
     driver: local
-  nginx_cache:
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local

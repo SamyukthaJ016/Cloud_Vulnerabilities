@@ -55,81 +55,6 @@
             margin: 0 auto;
         }
 
-        .oauth-auth-bar {
-            margin: 24px auto 0;
-            max-width: 780px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            padding: 14px 18px;
-            border-radius: 12px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            background: rgba(15, 23, 42, 0.55);
-        }
-
-        .oauth-auth-user {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .oauth-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 1px solid rgba(148, 163, 184, 0.4);
-            object-fit: cover;
-            background: #0f172a;
-        }
-
-        .oauth-auth-copy {
-            font-size: 0.9rem;
-            color: #cbd5e1;
-        }
-
-        .oauth-auth-copy strong {
-            color: #f8fafc;
-        }
-
-        .oauth-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .oauth-google-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 14px;
-            border-radius: 8px;
-            border: 1px solid rgba(148, 163, 184, 0.25);
-            background: #ffffff;
-            color: #1f2937;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            transition: box-shadow 0.2s ease;
-        }
-
-        .oauth-google-btn:hover {
-            box-shadow: 0 6px 20px rgba(15, 23, 42, 0.25);
-        }
-
-        .oauth-inline-error {
-            margin-top: 12px;
-            max-width: 780px;
-            margin-left: auto;
-            margin-right: auto;
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid rgba(239, 68, 68, 0.4);
-            background: rgba(127, 29, 29, 0.35);
-            color: #fecaca;
-            display: none;
-        }
-
         /* Main Content */
         .content-grid {
             display: grid;
@@ -900,28 +825,6 @@
                 AI-powered multi-cloud security scanning with real-time vulnerability detection.
                 Protect your AWS, GCP and Azure environments.
             </p>
-            <div class="oauth-auth-bar">
-                <div class="oauth-auth-user" id="oauthAuthUser" style="display: none;">
-                    <img id="oauthUserAvatar" class="oauth-avatar" alt="User avatar">
-                    <div class="oauth-auth-copy">
-                        Signed in as <strong id="oauthUserName">-</strong>
-                        <div id="oauthUserEmail" style="font-size: 0.8rem; color: #94a3b8;"></div>
-                    </div>
-                </div>
-                <div class="oauth-auth-copy" id="oauthAuthGuest">
-                    Sign in with Google to run scans and manage credentials.
-                </div>
-                <div class="oauth-actions">
-                    <button id="oauthLoginButton" class="oauth-google-btn" onclick="redirectToGoogleLogin()">
-                        <span>🔐</span>
-                        <span>Sign in with Google</span>
-                    </button>
-                    <button id="oauthLogoutButton" class="btn btn-secondary" style="display: none;" onclick="logoutOAuth()">
-                        Logout
-                    </button>
-                </div>
-            </div>
-            <div id="oauthErrorBanner" class="oauth-inline-error"></div>
         </div>
 
         <!-- Main Content -->
@@ -939,7 +842,7 @@
                         <div class="status-dot" id="credentialsStatus"></div>
                         <span id="credentialsMessage">Checking credentials...</span>
                     </div>
-                    <button class="btn btn-credentials" data-auth-required="true" onclick="openCredentialsModal()">
+                    <button class="btn btn-credentials" onclick="openCredentialsModal()">
                         🔐 Manage Credentials
                     </button>
                 </div>
@@ -1126,7 +1029,7 @@
                     <button class="btn btn-secondary" onclick="goToDashboard()">
                         📊 View Dashboard
                     </button>
-                    <button class="btn btn-primary" data-auth-required="true" onclick="startScan()">
+                    <button class="btn btn-primary" onclick="startScan()">
                         <span id="scanButtonText">🚀 Start Security Scan</span>
                     </button>
                 </div>
@@ -1230,42 +1133,29 @@
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
         let allCredentialsMap = {}; // Global map ID -> detail
-        let authenticatedUser = null;
-        let isAuthenticated = false;
-
-        const nativeFetch = window.fetch.bind(window);
-        window.fetch = async (input, init = {}) => {
-            const requestUrl = typeof input === 'string' ? input : (input?.url || '');
-            const response = await nativeFetch(input, init);
-
-            const skipRedirect = Boolean(init && init.skipAuthRedirect);
-            const isAuthProbe = requestUrl.includes('/auth/me') || requestUrl.includes('/auth/google/');
-
-            if (response.status === 401 && !skipRedirect && !isAuthProbe) {
-                const next = encodeURIComponent(window.location.pathname + window.location.search);
-                window.location.href = `/auth/google/login?next=${next}`;
-            }
-
-            return response;
-        };
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('CloudGuard Scanner initializing...');
 
-            await bootstrapAuthState();
-            if (isAuthenticated) {
-                const userId = getUserId();
-                console.log('👤 Authenticated User ID:', userId);
-            } else {
-                console.log('👤 Anonymous user: scanning APIs locked until Google sign-in');
-            }
+            // Set user ID
+            const userId = getUserId();
+            console.log('👤 User ID:', userId);
 
             // Load recent scans
             await loadRecentScans();
 
+            // Check credentials status
+            await checkCredentialsStatus();
+
+            // Load providers with credential status
+            await loadProviders();
+
             // Setup event listeners
             setupEventListeners();
+
+            // Check for existing session
+            await checkExistingSession();
 
             // Setup frequency selector
             setupFrequencySelector();
@@ -1273,145 +1163,9 @@
             // Set default date/time for scheduled scan
             setDefaultDateTime();
 
-            if (isAuthenticated) {
-                // Check credentials status
-                await checkCredentialsStatus();
-
-                // Load providers with credential status
-                await loadProviders();
-
-                // Check for existing session
-                await checkExistingSession();
-
-                // Load credentials for selector dropdown
-                await loadCredentialSelector();
-            } else {
-                lockProtectedUI();
-            }
+            // Load credentials for selector dropdown
+            await loadCredentialSelector();
         });
-
-        async function bootstrapAuthState() {
-            try {
-                const response = await fetch('/auth/me', { skipAuthRedirect: true });
-                if (!response.ok) {
-                    isAuthenticated = false;
-                    authenticatedUser = null;
-                    applyAuthStateToUI();
-                    return;
-                }
-
-                const payload = await response.json();
-                isAuthenticated = Boolean(payload.authenticated);
-                authenticatedUser = payload.user || null;
-            } catch (error) {
-                console.error('Auth bootstrap failed:', error);
-                isAuthenticated = false;
-                authenticatedUser = null;
-            }
-
-            applyAuthStateToUI();
-        }
-
-        function applyAuthStateToUI() {
-            const userBlock = document.getElementById('oauthAuthUser');
-            const guestBlock = document.getElementById('oauthAuthGuest');
-            const loginButton = document.getElementById('oauthLoginButton');
-            const logoutButton = document.getElementById('oauthLogoutButton');
-            const nameEl = document.getElementById('oauthUserName');
-            const emailEl = document.getElementById('oauthUserEmail');
-            const avatarEl = document.getElementById('oauthUserAvatar');
-            const errorBanner = document.getElementById('oauthErrorBanner');
-
-            errorBanner.style.display = 'none';
-            errorBanner.textContent = '';
-
-            if (isAuthenticated && authenticatedUser) {
-                userBlock.style.display = 'flex';
-                guestBlock.style.display = 'none';
-                loginButton.style.display = 'none';
-                logoutButton.style.display = 'inline-flex';
-
-                nameEl.textContent = authenticatedUser.name || authenticatedUser.email || 'Google User';
-                emailEl.textContent = authenticatedUser.email || '';
-                avatarEl.src = authenticatedUser.picture || '';
-                unlockProtectedUI();
-                return;
-            }
-
-            userBlock.style.display = 'none';
-            guestBlock.style.display = 'block';
-            loginButton.style.display = 'inline-flex';
-            logoutButton.style.display = 'none';
-            lockProtectedUI();
-        }
-
-        function lockProtectedUI() {
-            document.querySelectorAll('[data-auth-required=\"true\"]').forEach(el => {
-                el.disabled = true;
-                el.style.opacity = '0.6';
-                el.style.cursor = 'not-allowed';
-            });
-
-            const providersGrid = document.getElementById('providersGrid');
-            if (providersGrid && !providersGrid.innerHTML.trim()) {
-                providersGrid.innerHTML = `
-                    <div class="provider-option" style="opacity: 0.6; pointer-events: none;">
-                        <div class="provider-icon aws-icon">☁️</div>
-                        <div class="provider-name">AWS</div>
-                    </div>
-                    <div class="provider-option" style="opacity: 0.6; pointer-events: none;">
-                        <div class="provider-icon gcp-icon">📊</div>
-                        <div class="provider-name">GCP</div>
-                    </div>
-                `;
-            }
-
-            const banner = document.getElementById('credentialsBanner');
-            if (banner) {
-                const statusDot = document.getElementById('credentialsStatus');
-                const message = document.getElementById('credentialsMessage');
-                statusDot.className = 'status-dot warning';
-                message.textContent = 'Sign in with Google to manage credentials and run scans';
-            }
-        }
-
-        function unlockProtectedUI() {
-            document.querySelectorAll('[data-auth-required=\"true\"]').forEach(el => {
-                el.disabled = false;
-                el.style.opacity = '';
-                el.style.cursor = '';
-            });
-        }
-
-        function redirectToGoogleLogin() {
-            const next = encodeURIComponent(window.location.pathname + window.location.search);
-            window.location.href = `/auth/google/login?next=${next}`;
-        }
-
-        async function logoutOAuth() {
-            try {
-                await fetch('/auth/logout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    skipAuthRedirect: true,
-                });
-            } catch (error) {
-                console.error('Logout failed:', error);
-            }
-
-            isAuthenticated = false;
-            authenticatedUser = null;
-            applyAuthStateToUI();
-        }
-
-        function requireAuthForAction(actionLabel = 'this action') {
-            if (isAuthenticated) return true;
-
-            const errorBanner = document.getElementById('oauthErrorBanner');
-            errorBanner.textContent = `Google sign-in is required for ${actionLabel}.`;
-            errorBanner.style.display = 'block';
-            return false;
-        }
 
         // --- IAM Permission Modal Helpers ---
         function openIamCommandsModal(credentialId, onConfirm) {
@@ -1477,8 +1231,6 @@
 
         // Load credentials for selector dropdown
         async function loadCredentialSelector() {
-            if (!isAuthenticated) return;
-
             try {
                 const userId = getUserId();
                 const response = await fetch(`/api/credentials?user_id=${userId}`);
@@ -1556,8 +1308,6 @@
 
         // Check credentials status
         async function checkCredentialsStatus() {
-            if (!isAuthenticated) return;
-
             try {
                 const response = await fetch('/api/credentials/providers/status');
                 if (response.ok) {
@@ -1588,8 +1338,6 @@
 
         // Load providers with credential status
         async function loadProviders() {
-            if (!isAuthenticated) return;
-
             try {
                 // Add cache busting timestamp
                 const response = await fetch('/api/credentials/providers/status?t=' + Date.now());
@@ -1625,10 +1373,8 @@
                     // Preserve any providers the user has already manually selected
                     const currentSelected = new Set(selectedProviders);
 
-                    // Identify providers that actually have credentials
-                    const configuredProviders = providers
-                        .filter(p => Boolean(availableProviders[p.id]))
-                        .map(p => p.id);
+                    // Identify providers that actually have credentials (STRICT check)
+                    const configuredProviders = providers.filter(p => availableProviders[p.id] && availableProviders[p.id].configured).map(p => p.id);
 
                     // Additive Selection: if credentials for a provider are newly found AND 
                     // this is the first load or the provider was just added, select it.
@@ -1659,8 +1405,6 @@
 
         // Check for existing session
         async function checkExistingSession() {
-            if (!isAuthenticated) return;
-
             try {
                 const sessionId = localStorage.getItem('cloudguard_session_id');
                 if (sessionId) {
@@ -1686,8 +1430,6 @@
 
         // Provider selection
         function toggleProvider(provider) {
-            if (!requireAuthForAction('selecting cloud providers')) return;
-
             // Use querySelector to find the right element rather than relying on global 'event'
             const option = document.querySelector(`.provider-option[onclick*="'${provider}'"]`);
             const index = selectedProviders.indexOf(provider);
@@ -1738,7 +1480,6 @@
 
         // Start scan
         async function startScan() {
-            if (!requireAuthForAction('starting scans')) return;
             if (scanInProgress) return;
 
             const deepScan = document.getElementById('deepScan').checked;
@@ -2085,7 +1826,6 @@
         }
 
         async function grantPermissionAndScan() {
-            if (!requireAuthForAction('granting IAM permissions')) return;
             if (!pendingPermissionRequest) return;
 
             const btn = document.querySelector('#permissionModal .btn-primary');
@@ -2196,7 +1936,6 @@
 
         // Credentials Modal Functions (embedded from credentials_modal.html)
         function openCredentialsModal() {
-            if (!requireAuthForAction('managing credentials')) return;
             document.getElementById('credentialsModal').style.display = 'flex';
             loadSavedCredentials();
         }
@@ -2224,10 +1963,6 @@
         }
 
         function getUserId() {
-            if (authenticatedUser && authenticatedUser.user_id) {
-                return authenticatedUser.user_id;
-            }
-
             let userId = sessionStorage.getItem('cloudguard_user_id');
             if (!userId) {
                 // Generate new consistent user ID
@@ -2246,7 +1981,6 @@
 
 
         async function saveAWSCredentials() {
-            if (!requireAuthForAction('saving credentials')) return;
             const credentialName = document.getElementById('awsCredentialName').value;
             const accessKeyId = document.getElementById('awsAccessKeyId').value;
             const secretAccessKey = document.getElementById('awsSecretAccessKey').value;
@@ -2296,7 +2030,6 @@
 
 
         async function saveGCPCredentials() {
-            if (!requireAuthForAction('saving credentials')) return;
             const credentialName = document.getElementById('gcpCredentialName').value;
             const serviceAccountJson = document.getElementById('gcpServiceAccount').value;
             const projectId = document.getElementById('gcpProjectId').value;
@@ -2352,8 +2085,6 @@
         }
 
         async function loadSavedCredentials() {
-            if (!isAuthenticated) return;
-
             const container = document.getElementById('savedCredentialsList');
             container.innerHTML = '<div class="loading">Loading your credentials...</div>';
 
@@ -2436,12 +2167,10 @@
         }
 
         async function validateCredential(credentialId) {
-            if (!requireAuthForAction('validating credentials')) return;
             showAlert('Validating credential...', 'warning');
         }
 
         async function deleteCredential(credentialId) {
-            if (!requireAuthForAction('deleting credentials')) return;
             if (!confirm('Are you sure you want to delete this credential?')) {
                 return;
             }
@@ -2466,7 +2195,6 @@
         }
 
         async function refreshCredentials() {
-            if (!requireAuthForAction('refreshing credentials')) return;
             await loadSavedCredentials();
             showAlert('Credentials list refreshed', 'success');
         }
@@ -2498,7 +2226,6 @@
 
         // CloudFormation Stack Deployment Functions
         async function launchCloudFormationStack() {
-            if (!requireAuthForAction('launching CloudFormation')) return;
             try {
                 showAlert('🚀 Generating CloudFormation stack URL...', 'warning');
 
@@ -2536,7 +2263,6 @@
         }
 
         async function downloadCloudFormationTemplate() {
-            if (!requireAuthForAction('downloading CloudFormation template')) return;
             try {
                 showAlert('📥 Downloading CloudFormation template...', 'warning');
 

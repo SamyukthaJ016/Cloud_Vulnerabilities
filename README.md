@@ -41,12 +41,6 @@ REDIS_PASSWORD=redis_password
 SECRET_KEY=your-super-secret-key-change-this
 ENCRYPTION_KEY=your-encryption-key
 
-# Google OAuth (Required for authenticated scanning APIs)
-GOOGLE_OAUTH_CLIENT_ID=your_google_client_id
-GOOGLE_OAUTH_CLIENT_SECRET=your_google_client_secret
-OAUTH_SESSION_SECRET=your-long-random-session-secret
-OAUTH_REDIRECT_BASE_URL=http://localhost:8000
-
 # AWS Configuration (Required for Cloud Scans)
 # You can also map your ~/.aws folder in docker-compose.yml
 AWS_ACCESS_KEY_ID=your_access_key
@@ -59,10 +53,11 @@ GCP_SERVICE_ACCOUNT_JSON=/app/config/gcp-service-account.json
 
 # AI Analysis (Optional)
 OPENAI_API_KEY=your_openai_key
-```
 
-Google OAuth callback URI must include:
-`http://localhost:8000/auth/google/callback`
+# Public Deployment (HTTPS)
+DOMAIN=your-domain.com
+CADDY_EMAIL=you@example.com
+```
 
 ### 3. Setup Cloud Permissions (AWS)
 To scan your AWS account, the scanner needs specific **Read-Only** permissions.
@@ -105,3 +100,33 @@ Open your browser and navigate to:
 ## 🛡️ Security Note
 
 **Never commit your `.env` file.** It contains sensitive API keys and secrets. This repository includes a `.gitignore` to prevent accidental commits, but always double-check.
+
+## 🌐 Deploy Online (Production + HTTPS)
+
+This project includes a production profile with Caddy reverse proxy (automatic HTTPS).
+
+### 1. DNS + Firewall
+- Point your domain `A` record to your server public IP.
+- Open inbound ports: `80` and `443`.
+
+### 2. Set deployment env vars
+In your `.env` (or `.env.prod`) set:
+- `DOMAIN=your-domain.com`
+- `CADDY_EMAIL=you@example.com`
+- `SECRET_KEY`, `ENCRYPTION_KEY`, cloud credentials, DB/Redis passwords
+
+### 3. Start production stack
+```bash
+docker compose --profile prod up -d --build postgres redis backend caddy
+```
+
+### 4. Verify
+```bash
+docker compose --profile prod ps
+curl -I https://your-domain.com
+```
+
+### 5. Security defaults included
+- PostgreSQL port bound to localhost only.
+- Redis port bound to localhost only.
+- Backend is no longer exposed directly on host port in production.
