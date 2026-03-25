@@ -8,6 +8,7 @@ Implements MCP protocol for AWS penetration testing using CloudFox
 import json
 import logging
 import asyncio
+import os
 import subprocess
 import tempfile
 from typing import Dict, List, Any, Optional
@@ -29,8 +30,11 @@ class CloudFoxMCPServer(BaseMCPServer):
     
     def __init__(self, config: Dict[str, Any]):
         self.cloudfox_path = None
-        self.aws_profile = config.get('profile', 'default')
-        self.aws_region = config.get('region', 'us-east-1')
+        self.aws_profile = config.get("profile") or os.getenv("AWS_PROFILE", "default")
+        self.aws_region = config.get("region") or os.getenv("AWS_REGION", "us-east-1")
+        self.aws_access_key_id = config.get("access_key_id")
+        self.aws_secret_access_key = config.get("secret_access_key")
+        self.aws_session_token = config.get("session_token")
         
         super().__init__("cloudfox", config)
         
@@ -93,12 +97,12 @@ class CloudFoxMCPServer(BaseMCPServer):
                     "profile": {
                         "type": "string",
                         "description": "AWS profile name",
-                        "default": "default"
+                        "default": self.aws_profile
                     },
                     "region": {
                         "type": "string",
                         "description": "AWS region",
-                        "default": "us-east-1"
+                        "default": self.aws_region
                     }
                 }
             },
@@ -113,8 +117,8 @@ class CloudFoxMCPServer(BaseMCPServer):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "profile": {"type": "string", "default": "default"},
-                    "region": {"type": "string", "default": "us-east-1"}
+                    "profile": {"type": "string", "default": self.aws_profile},
+                    "region": {"type": "string", "default": self.aws_region}
                 }
             },
             handler=self._enumerate_attack_paths
@@ -128,7 +132,7 @@ class CloudFoxMCPServer(BaseMCPServer):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "profile": {"type": "string", "default": "default"}
+                    "profile": {"type": "string", "default": self.aws_profile}
                 }
             },
             handler=self._analyze_iam_principals
@@ -142,7 +146,7 @@ class CloudFoxMCPServer(BaseMCPServer):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "profile": {"type": "string", "default": "default"}
+                    "profile": {"type": "string", "default": self.aws_profile}
                 }
             },
             handler=self._check_endpoints
@@ -156,7 +160,7 @@ class CloudFoxMCPServer(BaseMCPServer):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "profile": {"type": "string", "default": "default"}
+                    "profile": {"type": "string", "default": self.aws_profile}
                 }
             },
             handler=self._analyze_role_trusts
@@ -170,8 +174,8 @@ class CloudFoxMCPServer(BaseMCPServer):
             input_schema={
                 "type": "object",
                 "properties": {
-                    "profile": {"type": "string", "default": "default"},
-                    "region": {"type": "string", "default": "us-east-1"},
+                    "profile": {"type": "string", "default": self.aws_profile},
+                    "region": {"type": "string", "default": self.aws_region},
                     "modules": {
                         "type": "array",
                         "items": {"type": "string"},
@@ -230,12 +234,37 @@ class CloudFoxMCPServer(BaseMCPServer):
             raise ValueError(f"Unknown resource URI: {uri}")
     
     # Tool Handlers
+
+    def _resolve_cloudfox_profile(self, profile: Optional[str] = None) -> str:
+        return profile or self.aws_profile
+
+    def _resolve_cloudfox_region(self, region: Optional[str] = None) -> str:
+        return region or self.aws_region
+
+    def _build_cloudfox_env(self, region: str) -> Dict[str, str]:
+        env = os.environ.copy()
+        env["AWS_REGION"] = region
+        env["AWS_DEFAULT_REGION"] = region
+        env["AWS_SDK_LOAD_CONFIG"] = env.get("AWS_SDK_LOAD_CONFIG", "1")
+
+        if self.aws_access_key_id and self.aws_secret_access_key:
+            env["AWS_ACCESS_KEY_ID"] = self.aws_access_key_id
+            env["AWS_SECRET_ACCESS_KEY"] = self.aws_secret_access_key
+            if self.aws_session_token:
+                env["AWS_SESSION_TOKEN"] = self.aws_session_token
+            else:
+                env.pop("AWS_SESSION_TOKEN", None)
+            env.pop("AWS_PROFILE", None)
+        else:
+            env["AWS_PROFILE"] = self.aws_profile
+
+        return env
     
     async def _run_cloudfox_command(
         self,
         command: str,
-        profile: str = "default",
-        region: str = "us-east-1",
+        profile: Optional[str] = None,
+        region: Optional[str] = None,
         extra_args: List[str] = None
     ) -> Dict[str, Any]:
         """Run a CloudFox command and return parsed results"""
@@ -248,24 +277,29 @@ class CloudFoxMCPServer(BaseMCPServer):
         
         # Create temporary output directory
         with tempfile.TemporaryDirectory() as temp_dir:
+            resolved_profile = self._resolve_cloudfox_profile(profile)
+            resolved_region = self._resolve_cloudfox_region(region)
             cmd = [
                 self.cloudfox_path,
                 "aws",
-                "--profile", profile,
-                "--region", region,
+                "--region", resolved_region,
                 "--output", "json",
                 "--output-dir", temp_dir,
                 command
             ]
+
+            if not (self.aws_access_key_id and self.aws_secret_access_key):
+                cmd[2:2] = ["--profile", resolved_profile]
             
             if extra_args:
                 cmd.extend(extra_args)
             
-            logger.info(f"[CloudFox] Running: {' '.join(cmd)}")
+            logger.info("[CloudFox] Running %s with profile=%s region=%s", command, resolved_profile, resolved_region)
             
             try:
                 process = await asyncio.create_subprocess_exec(
                     *cmd,
+                    env=self._build_cloudfox_env(resolved_region),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
                 )
@@ -310,7 +344,7 @@ class CloudFoxMCPServer(BaseMCPServer):
                 logger.error(f"[CloudFox] Execution failed: {e}")
                 return {"error": str(e)}
     
-    async def _discover_secrets(self, profile: str = "default", region: str = "us-east-1") -> Dict[str, Any]:
+    async def _discover_secrets(self, profile: Optional[str] = None, region: Optional[str] = None) -> Dict[str, Any]:
         """Discover exposed secrets"""
         logger.info(f"[CloudFox] Discovering secrets in AWS account...")
         
@@ -327,7 +361,7 @@ class CloudFoxMCPServer(BaseMCPServer):
         
         return result
     
-    async def _enumerate_attack_paths(self, profile: str = "default", region: str = "us-east-1") -> Dict[str, Any]:
+    async def _enumerate_attack_paths(self, profile: Optional[str] = None, region: Optional[str] = None) -> Dict[str, Any]:
         """Enumerate attack paths"""
         logger.info(f"[CloudFox] Enumerating attack paths...")
         
@@ -351,7 +385,7 @@ class CloudFoxMCPServer(BaseMCPServer):
             "modules_run": list(results.keys())
         }
     
-    async def _analyze_iam_principals(self, profile: str = "default") -> Dict[str, Any]:
+    async def _analyze_iam_principals(self, profile: Optional[str] = None) -> Dict[str, Any]:
         """Analyze IAM principals"""
         logger.info(f"[CloudFox] Analyzing IAM principals...")
         
@@ -368,7 +402,7 @@ class CloudFoxMCPServer(BaseMCPServer):
         
         return result
     
-    async def _check_endpoints(self, profile: str = "default") -> Dict[str, Any]:
+    async def _check_endpoints(self, profile: Optional[str] = None) -> Dict[str, Any]:
         """Check exposed endpoints"""
         logger.info(f"[CloudFox] Checking exposed endpoints...")
         
@@ -385,7 +419,7 @@ class CloudFoxMCPServer(BaseMCPServer):
         
         return result
     
-    async def _analyze_role_trusts(self, profile: str = "default") -> Dict[str, Any]:
+    async def _analyze_role_trusts(self, profile: Optional[str] = None) -> Dict[str, Any]:
         """Analyze role trust relationships"""
         logger.info(f"[CloudFox] Analyzing role trusts...")
         
@@ -404,12 +438,14 @@ class CloudFoxMCPServer(BaseMCPServer):
     
     async def _offensive_scan(
         self,
-        profile: str = "default",
-        region: str = "us-east-1",
+        profile: Optional[str] = None,
+        region: Optional[str] = None,
         modules: List[str] = None
     ) -> Dict[str, Any]:
         """Run full offensive security scan"""
         logger.info(f"[CloudFox] Running offensive security scan...")
+        resolved_profile = self._resolve_cloudfox_profile(profile)
+        resolved_region = self._resolve_cloudfox_region(region)
         
         if not modules:
             modules = [
@@ -428,7 +464,7 @@ class CloudFoxMCPServer(BaseMCPServer):
         
         for module in modules:
             logger.info(f"[CloudFox] Running module: {module}")
-            result = await self._run_cloudfox_command(module, profile, region)
+            result = await self._run_cloudfox_command(module, resolved_profile, resolved_region)
             results[module] = result
             
             if "error" not in result:
@@ -438,8 +474,8 @@ class CloudFoxMCPServer(BaseMCPServer):
         return {
             "scan_id": f"cloudfox-{datetime.utcnow().timestamp()}",
             "timestamp": datetime.utcnow().isoformat(),
-            "profile": profile,
-            "region": region,
+            "profile": resolved_profile,
+            "region": resolved_region,
             "modules_run": modules,
             "total_findings": len(all_findings),
             "findings": all_findings,

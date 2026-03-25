@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 import secrets
 
 from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
-from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -59,6 +59,14 @@ from backend.cloudfox.cloudfox_scanner import (
     full_offensive_scan,
     format_cloudfox_report
 )
+from backend.user_context import (
+    USER_ID_COOKIE,
+    authenticate_sso_user,
+    build_sso_login_redirect,
+    is_html_navigation,
+    is_public_path,
+    resolve_user_id,
+)
 
 # Database Migrations
 from backend.migration_manager import run_migrations
@@ -88,6 +96,29 @@ app.add_middleware(
 )
 
 app.include_router(credentials_router)
+
+
+@app.middleware("http")
+async def require_sso_session(request: Request, call_next):
+    if request.method == "OPTIONS" or is_public_path(request.url.path):
+        return await call_next(request)
+
+    user = authenticate_sso_user(request)
+    if not user:
+        if is_html_navigation(request):
+            return RedirectResponse(build_sso_login_redirect(request), status_code=307)
+        return JSONResponse(status_code=401, content={"detail": "Authentication required"})
+
+    response = await call_next(request)
+    response.set_cookie(
+        USER_ID_COOKIE,
+        user["id"],
+        max_age=60 * 60 * 24 * 30,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    return response
 
 @app.on_event("startup")
 async def startup_event():
@@ -287,18 +318,14 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
 
 
 def get_user_id(request: Request) -> str:
-    # """Extract user ID from request"""
-    # session_id = request.cookies.get("cloudguard_session")
-    # if session_id:
-    #     return f"user_{session_id}"
-    return "anonymous"
+    return resolve_user_id(request)
 
 def _wrap_text(text: str, width: int = 95):
     text = text.replace("\r", " ").replace("\n", " ")
     return textwrap.wrap(text, width=width)
 
-def build_scan_report(scan_id: int) -> dict:
-    rows = get_scan_report(scan_id)
+def build_scan_report(scan_id: int, user_id: Optional[str] = None) -> dict:
+    rows = get_scan_report(scan_id, user_id=user_id)
     if not rows:
         raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
 
@@ -322,13 +349,18 @@ def build_scan_report(scan_id: int) -> dict:
 # ============================================================
 
 @app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Manually trigger a scheduled scan now"""
+    auth_user_id = get_user_id(req)
     conn = get_conn()
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT user_id, providers, account_ids, deep_scan, credential_id FROM scan_schedules WHERE id = %s",
-            (schedule_id,)
+            """
+            SELECT user_id, providers, account_ids, deep_scan, credential_id
+            FROM scan_schedules
+            WHERE id = %s AND user_id = %s
+            """,
+            (schedule_id, auth_user_id)
         )
         row = cur.fetchone()
         if not row:
@@ -460,7 +492,10 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
                 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 
                 cloudfox_server = create_cloudfox_server({
-                    "profile": "default",
+                    "profile": os.getenv("AWS_PROFILE", "default"),
+                    "access_key_id": aws_cred.aws_access_key_id,
+                    "secret_access_key": aws_cred.aws_secret_access_key,
+                    "session_token": aws_cred.aws_session_token,
                     "region": aws_cred.aws_region or "us-east-1",
                 })
                 mcp_server_manager.register_server(cloudfox_server)
@@ -686,6 +721,7 @@ async def run_multi_cloud_scan_internal(
             # Store results with credential linkage
             scan_id = await store_scan_result(
                 result,
+                user_id=user_id,
                 aws_credential_id=aws_cred_id if provider == "aws" else None,
             )
             stored_ids.append(scan_id)
@@ -720,7 +756,11 @@ async def run_multi_cloud_scan_internal(
             try:
                 # Get appropriate credential ID if possible
                 aws_id = aws_cred_id if provider == "aws" else None
-                scan_id = await store_scan_result(failed_result, aws_credential_id=aws_id)
+                scan_id = await store_scan_result(
+                    failed_result,
+                    user_id=user_id,
+                    aws_credential_id=aws_id,
+                )
                 stored_ids.append(scan_id)
                 logger.info(f"⚠️ Stored FAILED scan as scan_id: {scan_id}")
             except Exception as store_err:
@@ -742,7 +782,8 @@ async def run_multi_cloud_scan_internal(
     }
 @app.post("/scan/schedule")
 async def schedule_scan(request: ScheduledScanRequest, req: Request):
-    user_id = request.user_id or "anonymous"
+    user_id = get_user_id(req)
+    request.user_id = user_id
     logger.info(f"📅 Received schedule scan request from user={user_id}: {request}")
 
     schedule = request.schedule or {}
@@ -925,10 +966,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     logger.info(f"📦 Payload: {request.dict()}")
 
     user_id = get_user_id(req)
-    # If the request has an explicit user_id, use it (though cookies are safer)
-    if "user_id" in request.dict() and request.user_id:
-        user_id = request.user_id
-        
+    request.user_id = user_id
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
     # 🔥 Initialize MCP servers FIRST
@@ -1014,6 +1052,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
 
             scan_id = await store_scan_result(
                 scan_result_obj,
+                user_id=user_id,
                 aws_credential_id=credential_id,
             )
             stored_ids.append(scan_id)
@@ -1065,7 +1104,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
 
 @app.post("/scan/offensive-enhanced")
 async def offensive_enhanced_scan(
-    profile: str = "default",
+    profile: Optional[str] = None,
     region: str = "us-east-1",
     req: Request = None,
     include_aws_scan: bool = True  # NEW: Combine AWS and CloudFox
@@ -1074,6 +1113,7 @@ async def offensive_enhanced_scan(
     Enhanced offensive security scan combining AWS config scan + CloudFox
     """
     user_id = get_user_id(req)
+    profile = profile or os.getenv("AWS_PROFILE", "default")
     logger.info(f"⚔️ Enhanced offensive scan: user={user_id}")
     
     try:
@@ -1123,7 +1163,7 @@ async def offensive_enhanced_scan(
                 "profile": profile,
                 "findings": all_findings,
                 "categorized": categorized
-            })
+            }, user_id=user_id)
             results["stored_scan_id"] = scan_id
         
         return {
@@ -1145,7 +1185,7 @@ async def offensive_enhanced_scan(
 
 @app.post("/scan/offensive")
 async def offensive_security_scan(
-    profile: str = "default",
+    profile: Optional[str] = None,
     region: str = "us-east-1",
     req: Request = None
 ):
@@ -1159,6 +1199,7 @@ async def offensive_security_scan(
     - Trust relationship exploitation
     """
     user_id = get_user_id(req)
+    profile = profile or os.getenv("AWS_PROFILE", "default")
     logger.info(f"⚔️ Offensive scan: user={user_id}")
     
     try:
@@ -1170,7 +1211,7 @@ async def offensive_security_scan(
         
         # Store findings in database
         if result.get("findings"):
-            scan_id = await _store_offensive_scan(result)
+            scan_id = await _store_offensive_scan(result, user_id=user_id)
             result["stored_scan_id"] = scan_id
         
         return {
@@ -1272,6 +1313,7 @@ async def intelligent_scan(request: ScanRequest, req: Request):
             scan_id = await _store_mcp_scan_result(
                 provider=provider,
                 result=result,
+                user_id=user_id,
                 credential_id=scan_results["credential_mapping"].get(provider)
             )
             stored_ids.append(scan_id)
@@ -1462,11 +1504,11 @@ async def list_providers():
     }
 
 @app.get("/posture/dashboard")
-async def posture_dashboard(scan_ids: Optional[str] = None):
+async def posture_dashboard(req: Request, scan_ids: Optional[str] = None):
     # Pass scan_ids to get_multi_cloud_summary if implemented
     # or filter here if not.
     logger.info(f"📊 Dashboard request with scan_ids={scan_ids}")
-    summary = get_multi_cloud_summary(scan_ids=scan_ids)
+    summary = get_multi_cloud_summary(scan_ids=scan_ids, user_id=get_user_id(req))
     logger.info(f"📉 Resulting summary from DB: {summary}")
     
     dashboard = {
@@ -1500,13 +1542,16 @@ async def posture_dashboard(scan_ids: Optional[str] = None):
 
 # Dashboard API endpoints
 @app.get("/api/severity-breakdown")
-async def get_severity_breakdown():
+async def get_severity_breakdown(req: Request):
     try:
+        user_id = get_user_id(req)
         conn = get_conn()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT severity, COUNT(*) as count
                 FROM findings
+                JOIN scans s ON s.id = findings.scan_id
+                WHERE s.user_id = %s
                 GROUP BY severity
                 ORDER BY 
                     CASE severity
@@ -1516,7 +1561,7 @@ async def get_severity_breakdown():
                         WHEN 'LOW' THEN 4
                         ELSE 5
                     END
-            """)
+            """, (user_id,))
             results = cur.fetchall()
         
         breakdown = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
@@ -1534,8 +1579,9 @@ async def get_severity_breakdown():
         }
 
 @app.get("/api/provider-breakdown")
-async def get_provider_breakdown(scan_ids: Optional[str] = None):
+async def get_provider_breakdown(req: Request, scan_ids: Optional[str] = None):
     try:
+        user_id = get_user_id(req)
         conn = get_conn()
         with conn.cursor() as cur:
             query = """
@@ -1544,14 +1590,16 @@ async def get_provider_breakdown(scan_ids: Optional[str] = None):
                     COUNT(DISTINCT r.id) as resources,
                     COUNT(DISTINCT f.id) as findings
                 FROM resources r
+                JOIN scans s ON s.id = r.scan_id
                 LEFT JOIN findings f ON r.id = f.resource_id
+                WHERE s.user_id = %s
             """
-            params = []
+            params = [user_id]
             
             if scan_ids:
                 try:
                     ids = [int(i.strip()) for i in scan_ids.split(",")]
-                    query += " WHERE r.scan_id = ANY(%s)"
+                    query += " AND r.scan_id = ANY(%s)"
                     params.append(ids)
                 except ValueError:
                     pass
@@ -1591,8 +1639,9 @@ async def get_provider_breakdown(scan_ids: Optional[str] = None):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/scan-history")
-async def get_scan_history(days: int = 30):
+async def get_scan_history(req: Request, days: int = 30):
     try:
+        user_id = get_user_id(req)
         conn = get_conn()
         with conn.cursor() as cur:
             cur.execute("""
@@ -1603,10 +1652,11 @@ async def get_scan_history(days: int = 30):
                     COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
                 FROM scans s
                 LEFT JOIN findings f ON s.id = f.scan_id
-                WHERE s.started_at >= NOW() - INTERVAL %s
+                WHERE s.user_id = %s
+                  AND s.started_at >= NOW() - INTERVAL %s
                 GROUP BY DATE(s.started_at)
                 ORDER BY scan_date ASC
-            """, (f"{days} days",))
+            """, (user_id, f"{days} days"))
             results = cur.fetchall()
         
         return {
@@ -1626,8 +1676,9 @@ async def get_scan_history(days: int = 30):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/latest-findings")
-async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
+async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[str] = None):
     try:
+        user_id = get_user_id(req)
         conn = get_conn()
         with conn.cursor() as cur:
             query = """
@@ -1639,14 +1690,16 @@ async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
                     f.validated_by as tool,
                     f.created_at
                 FROM findings f
+                JOIN scans s ON s.id = f.scan_id
                 JOIN resources r ON f.resource_id = r.id
+                WHERE s.user_id = %s
             """
-            params = []
+            params = [user_id]
             
             if scan_ids:
                 try:
                     ids = [int(i.strip()) for i in scan_ids.split(",")]
-                    query += " WHERE f.scan_id = ANY(%s)"
+                    query += " AND f.scan_id = ANY(%s)"
                     params.append(ids)
                 except ValueError:
                     pass
@@ -1677,7 +1730,8 @@ async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
 
 @app.get("/api/scans")
 async def get_scans(
-    user_id: str,
+    req: Request,
+    user_id: Optional[str] = None,
     limit: int = 20,
     offset: int = 0,
     provider: Optional[str] = None,
@@ -1687,6 +1741,7 @@ async def get_scans(
 ):
     """Get all scans with filters and pagination for history page"""
     try:
+        user_id = get_user_id(req)
         conn = get_conn()
         with conn.cursor() as cur:
             # Build query with filters
@@ -1704,9 +1759,9 @@ async def get_scans(
                 FROM scans s
                 LEFT JOIN resources r ON s.id = r.scan_id
                 LEFT JOIN findings f ON s.id = f.scan_id
-                WHERE 1=1
+                WHERE s.user_id = %s
             """
-            params = []
+            params = [user_id]
             
             # Add filters
             if provider:
@@ -1736,8 +1791,8 @@ async def get_scans(
             results = cur.fetchall()
             
             # Get total count
-            count_query = "SELECT COUNT(*) FROM scans WHERE 1=1"
-            count_params = []
+            count_query = "SELECT COUNT(*) FROM scans WHERE user_id = %s"
+            count_params = [user_id]
             if provider:
                 count_query += " AND cloud = %s"
                 count_params.append(provider)
@@ -1777,14 +1832,14 @@ async def get_scans(
         return {"status": "error", "message": str(e), "scans": [], "total": 0}
 
 @app.get("/report/{scan_id}")
-async def get_report(scan_id: int):
+async def get_report(scan_id: int, req: Request):
     """Get scan report"""
-    return build_scan_report(scan_id)
+    return build_scan_report(scan_id, user_id=get_user_id(req))
 
 @app.get("/report/{scan_id}/pdf")
-async def get_report_pdf(scan_id: int):
+async def get_report_pdf(scan_id: int, req: Request):
     """Generate PDF report"""
-    data = build_scan_report(scan_id)
+    data = build_scan_report(scan_id, user_id=get_user_id(req))
     
     providers = data.get("providers", [])
     
@@ -1965,6 +2020,7 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
             
             scan_id = await store_scan_result(
                 scan_result_obj,
+                user_id=user_id,
                 aws_credential_id=credential_id,
             )
             stored_ids.append(scan_id)
@@ -2239,26 +2295,19 @@ async def scheduled_scans_page():
             return HTMLResponse("<h1>Scheduled scans page not found</h1>")
 
 @app.get("/api/schedules")
-async def get_all_schedules(user_id: Optional[str] = None):
+async def get_all_schedules(req: Request, user_id: Optional[str] = None):
     """Get all scheduled scans"""
+    user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            if user_id:
-                cur.execute("""
-                    SELECT id, user_id, providers, account_ids, deep_scan, 
-                           schedule, status, next_run_at, created_at
-                    FROM scan_schedules
-                    WHERE user_id = %s
-                    ORDER BY created_at DESC
-                """, (user_id,))
-            else:
-                cur.execute("""
-                    SELECT id, user_id, providers, account_ids, deep_scan, 
-                           schedule, status, next_run_at, created_at
-                    FROM scan_schedules
-                    ORDER BY created_at DESC
-                """)
+            cur.execute("""
+                SELECT id, user_id, providers, account_ids, deep_scan, 
+                       schedule, status, next_run_at, created_at
+                FROM scan_schedules
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+            """, (user_id,))
             
             rows = cur.fetchall()
             
@@ -2285,8 +2334,9 @@ async def get_all_schedules(user_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/schedules/{schedule_id}")
-async def get_schedule(schedule_id: int):
+async def get_schedule(schedule_id: int, req: Request):
     """Get a specific scheduled scan"""
+    user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -2294,8 +2344,8 @@ async def get_schedule(schedule_id: int):
                 SELECT id, user_id, providers, account_ids, deep_scan, 
                        schedule, status, next_run_at, created_at
                 FROM scan_schedules
-                WHERE id = %s
-            """, (schedule_id,))
+                WHERE id = %s AND user_id = %s
+            """, (schedule_id, user_id))
             
             row = cur.fetchone()
             if not row:
@@ -2322,8 +2372,9 @@ async def get_schedule(schedule_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Run a scheduled scan immediately"""
+    auth_user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -2331,8 +2382,8 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
             cur.execute("""
                 SELECT user_id, providers, account_ids, deep_scan, credential_id
                 FROM scan_schedules
-                WHERE id = %s
-            """, (schedule_id,))
+                WHERE id = %s AND user_id = %s
+            """, (schedule_id, auth_user_id))
             
             row = cur.fetchone()
             if not row:
@@ -2568,23 +2619,17 @@ async def system_status_page():
 
 
 @app.delete("/api/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: int, user_id: Optional[str] = None):
+async def delete_schedule(schedule_id: int, req: Request, user_id: Optional[str] = None):
     """Delete a scheduled scan"""
+    user_id = get_user_id(req)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            if user_id:
-                cur.execute("""
-                    DELETE FROM scan_schedules
-                    WHERE id = %s AND user_id = %s
-                    RETURNING id
-                """, (schedule_id, user_id))
-            else:
-                cur.execute("""
-                    DELETE FROM scan_schedules
-                    WHERE id = %s
-                    RETURNING id
-                """, (schedule_id,))
+            cur.execute("""
+                DELETE FROM scan_schedules
+                WHERE id = %s AND user_id = %s
+                RETURNING id
+            """, (schedule_id, user_id))
             
             deleted = cur.fetchone()
             if not deleted:
@@ -2601,8 +2646,10 @@ async def delete_schedule(schedule_id: int, user_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/schedules/{schedule_id}")
-async def update_schedule(schedule_id: int, request: ScheduledScanRequest):
+async def update_schedule(schedule_id: int, request: ScheduledScanRequest, req: Request):
     """Update a scheduled scan"""
+    user_id = get_user_id(req)
+    request.user_id = user_id
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -2613,14 +2660,15 @@ async def update_schedule(schedule_id: int, request: ScheduledScanRequest):
                     deep_scan = %s,
                     schedule = %s,
                     updated_at = NOW()
-                WHERE id = %s
+                WHERE id = %s AND user_id = %s
                 RETURNING id
             """, (
                 json.dumps(request.providers),
                 json.dumps(request.account_ids),
                 request.deep_scan,
                 Json(request.schedule),
-                schedule_id
+                schedule_id,
+                user_id
             ))
             
             updated = cur.fetchone()
@@ -2678,11 +2726,12 @@ async def cloudfox_status():
 
 @app.post("/api/cloudfox/scan/secrets")
 async def cloudfox_scan_secrets(
-    profile: str = "default",
+    profile: Optional[str] = None,
     region: str = "us-east-1"
 ):
     """Scan for exposed secrets using CloudFox MCP server"""
     try:
+        profile = profile or os.getenv("AWS_PROFILE", "default")
         message = MCPMessage(
             method="tools/call",
             params={
@@ -2707,11 +2756,12 @@ async def cloudfox_scan_secrets(
 
 @app.post("/api/cloudfox/scan/attack-paths")
 async def cloudfox_scan_attack_paths(
-    profile: str = "default",
+    profile: Optional[str] = None,
     region: str = "us-east-1"
 ):
     """Enumerate attack paths using CloudFox MCP server"""
     try:
+        profile = profile or os.getenv("AWS_PROFILE", "default")
         message = MCPMessage(
             method="tools/call",
             params={
@@ -2736,15 +2786,17 @@ async def cloudfox_scan_attack_paths(
 
 @app.post("/api/cloudfox/scan/offensive")
 async def cloudfox_offensive_scan(
-    profile: str = "default",
+    profile: Optional[str] = None,
     region: str = "us-east-1",
     modules: List[str] = None,
-    background_tasks: BackgroundTasks = None
+    background_tasks: BackgroundTasks = None,
+    req: Request = None
 ):
     """
     Run comprehensive offensive security scan with CloudFox MCP server
     """
     try:
+        profile = profile or os.getenv("AWS_PROFILE", "default")
         logger.info(f"Starting CloudFox offensive scan via MCP server...")
         
         message = MCPMessage(
@@ -2765,10 +2817,11 @@ async def cloudfox_offensive_scan(
             raise HTTPException(status_code=500, detail=response.error)
         
         result = response.result
+        user_id = get_user_id(req)
         
         # Store findings in database
         if result.get("findings"):
-            scan_id = await _store_offensive_scan(result)
+            scan_id = await _store_offensive_scan(result, user_id=user_id)
             result["stored_scan_id"] = scan_id
         
         return result
@@ -2869,6 +2922,7 @@ async def call_mcp_tool(provider: str, tool_name: str, arguments: Dict[str, Any]
 
 async def store_scan_result(
     result: ScanResult,
+    user_id: str,
     aws_credential_id: int | None = None,
 ) -> int:
     conn = get_conn()
@@ -2876,7 +2930,7 @@ async def store_scan_result(
         account_id = result.account_id or "default"
         logger.info(f"DEBUG store_scan_result got aws_credential_id={aws_credential_id}")
 
-        scan_id = create_scan_record(account_id, result.provider, aws_credential_id)
+        scan_id = create_scan_record(account_id, result.provider, user_id, aws_credential_id)
 
         resource_id_map: dict[str, int] = {}
 
@@ -2937,9 +2991,13 @@ async def store_scan_result(
 # ============================================================
 
 @app.get("/api/debug/credentials/{user_id}")
-async def debug_user_credentials(user_id: str):
+async def debug_user_credentials(user_id: str, req: Request):
     """Debug endpoint to check user credentials status"""
     try:
+        auth_user_id = get_user_id(req)
+        if user_id != auth_user_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
         from backend.credentials.manager import credential_manager
         
         # Get all credentials for user
@@ -2986,7 +3044,8 @@ async def debug_user_credentials(user_id: str):
                 for c in all_creds
             ]
         }
-        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Debug failed: {e}")
         import traceback
@@ -2996,9 +3055,10 @@ async def debug_user_credentials(user_id: str):
         }
 
 @app.get("/api/debug/scheduled-scans")
-async def debug_scheduled_scans():
+async def debug_scheduled_scans(req: Request):
     """Debug endpoint to check scheduled scans"""
     try:
+        user_id = get_user_id(req)
         conn = get_conn()
         with conn.cursor() as cur:
             cur.execute("""
@@ -3012,9 +3072,10 @@ async def debug_scheduled_scans():
                     created_at,
                     schedule
                 FROM scan_schedules
+                WHERE user_id = %s
                 ORDER BY created_at DESC
                 LIMIT 10
-            """)
+            """, (user_id,))
             rows = cur.fetchall()
         
         schedules = []
@@ -3035,8 +3096,10 @@ async def debug_scheduled_scans():
             cur.execute("""
                 SELECT COUNT(*) 
                 FROM scan_schedules
-                WHERE status = 'scheduled' AND next_run_at <= NOW()
-            """)
+                WHERE user_id = %s
+                  AND status = 'scheduled'
+                  AND next_run_at <= NOW()
+            """, (user_id,))
             due_count = cur.fetchone()[0]
         
         return {
@@ -3062,6 +3125,7 @@ async def debug_scheduled_scans():
 async def _store_mcp_scan_result(
     provider: str,
     result: Dict[str, Any],
+    user_id: str,
     credential_id: Optional[int] = None
 ) -> int:
     """
@@ -3071,6 +3135,7 @@ async def _store_mcp_scan_result(
     scan_id = create_scan_record(
         account_id=result.get("account_id", "default"),
         cloud=provider,
+        user_id=user_id,
         aws_credential_id=credential_id if provider == "aws" else None
     )
     
@@ -3109,6 +3174,65 @@ async def _store_mcp_scan_result(
             )
     
     logger.info(f"✅ Stored MCP scan result: scan_id={scan_id}, cloudfox_findings={len([f for f in result.get('findings', []) if f.get('source') == 'cloudfox'])}")
+    return scan_id
+
+
+async def _store_offensive_scan(result: Dict[str, Any], user_id: str) -> int:
+    """Store CloudFox/offensive scan findings for the authenticated user."""
+    provider = result.get("provider", "aws")
+    account_id = result.get("profile") or result.get("account_id", "offensive")
+    scan_id = create_scan_record(account_id, provider, user_id)
+
+    findings = result.get("findings", [])
+    if not findings:
+        logger.info("Stored offensive scan %s with no findings", scan_id)
+        return scan_id
+
+    for index, finding in enumerate(findings, start=1):
+        if not isinstance(finding, dict):
+            finding = {"description": str(finding)}
+
+        resource = finding.get("resource")
+        if isinstance(resource, dict):
+            resource_name = resource.get("name") or f"offensive-resource-{index}"
+            resource_type = resource.get("type", "offensive")
+            resource_config = resource
+        else:
+            resource_name = (
+                finding.get("resource_name")
+                or finding.get("resource")
+                or finding.get("target")
+                or f"offensive-resource-{index}"
+            )
+            resource_type = finding.get("resource_type", "offensive")
+            resource_config = finding
+
+        resource_id = store_resource(
+            scan_id=scan_id,
+            cloud=provider,
+            resource_type=resource_type,
+            name=str(resource_name),
+            config=resource_config,
+            is_public=False,
+        )
+
+        description = (
+            finding.get("description")
+            or finding.get("title")
+            or json.dumps(finding)
+        )
+        severity = str(finding.get("severity", "HIGH")).upper()
+        source = finding.get("source", "cloudfox")
+
+        store_finding(
+            scan_id=scan_id,
+            resource_id=resource_id,
+            severity=severity,
+            description=description,
+            source=source,
+        )
+
+    logger.info("Stored offensive scan %s for user %s", scan_id, user_id)
     return scan_id
 
 def _mcp_to_scan_result(provider: str, mcp_result: Dict[str, Any]):

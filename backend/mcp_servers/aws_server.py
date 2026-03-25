@@ -4,6 +4,7 @@
 AWS MCP Server - Dedicated server for AWS security scanning
 Implements MCP protocol for AWS cloud resources
 """
+import os
 from backend.credentials.aws_assume_role import get_aws_session
 import boto3
 import json
@@ -803,7 +804,7 @@ class AWSMCPServer(BaseMCPServer):
                 params={
                     "name": "cloudfox/offensive_scan",
                     "arguments": {
-                        "profile": "default",
+                        "profile": self.config.get("profile") or os.getenv("AWS_PROFILE", "default"),
                         "region": self.config.get("region", "us-east-1"),
                         "modules": [
                             "secrets",

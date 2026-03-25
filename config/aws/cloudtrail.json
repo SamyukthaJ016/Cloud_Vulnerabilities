@@ -1,5 +1,13 @@
-aws cloudtrail create-trail ^
- --cli-input-json file: //config/aws/cloudtrail.json
-
-aws cloudtrail start-logging ^
- --name account-cloudtrail
+{
+  "Name": "account-cloudtrail",
+  "S3BucketName": "cloudguard-cloudtrail-logs-123456789012",
+  "IncludeGlobalServiceEvents": true,
+  "IsMultiRegionTrail": true,
+  "EnableLogFileValidation": true,
+  "TagsList": [
+    {
+      "Key": "Owner",
+      "Value": "cloudvul@iitm"
+    }
+  ]
+}

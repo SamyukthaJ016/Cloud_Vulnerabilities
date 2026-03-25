@@ -88,6 +88,30 @@ class CredentialManager:
     def _get_connection(self):
         """Get database connection"""
         return psycopg2.connect(self.db_url)
+
+    def _get_sso_user_profile(self, cur, user_id: str) -> Tuple[Optional[str], Optional[str]]:
+        """Resolve a matching SSO user when CloudGuard shares the SSO database."""
+        cur.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'User'
+            )
+            """
+        )
+        if not cur.fetchone()[0]:
+            return None, None
+
+        cur.execute(
+            'SELECT email, name FROM "User" WHERE id = %s',
+            (user_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None, None
+
+        return row[0], row[1]
     
     def ensure_user(self, user_id: str, email: Optional[str] = None, name: Optional[str] = None) -> str:
         """Ensure user exists, create if not"""
@@ -95,23 +119,22 @@ class CredentialManager:
         cur = conn.cursor()
         
         try:
-            # Check if user exists
+            sso_email, sso_name = self._get_sso_user_profile(cur, user_id)
+            resolved_email = email or sso_email or f"{user_id}@cloudguard.local"
+            resolved_name = name or sso_name or user_id
+
             cur.execute(
-                "SELECT user_id FROM user_profiles WHERE user_id = %s",
-                (user_id,)
+                """
+                INSERT INTO user_profiles (user_id, email, name, last_login, is_active)
+                VALUES (%s, %s, %s, NOW(), TRUE)
+                ON CONFLICT (user_id) DO UPDATE
+                SET email = COALESCE(EXCLUDED.email, user_profiles.email),
+                    name = COALESCE(EXCLUDED.name, user_profiles.name),
+                    last_login = NOW(),
+                    is_active = TRUE
+                """,
+                (user_id, resolved_email, resolved_name)
             )
-            
-            if not cur.fetchone():
-                # Create user
-                cur.execute(
-                    """
-                    INSERT INTO user_profiles (user_id, email, name)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (user_id) DO UPDATE
-                    SET last_login = NOW()
-                    """,
-                    (user_id, email or f"{user_id}@cloudguard.local", name or user_id)
-                )
             
             conn.commit()
             return user_id
@@ -471,6 +494,63 @@ class CredentialManager:
     def get_credential_by_id(self, user_id: str, credential_id: int) -> Optional[CloudCredential]:
         """Get a specific credential by ID"""
         return self.get_credentials(credential_id, user_id)
+
+    def set_default_credential(self, credential_id: int, user_id: str) -> bool:
+        """Set a credential as the default for its provider"""
+        conn = self._get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        try:
+            cur.execute(
+                """
+                SELECT id, cloud_provider
+                FROM cloud_credentials
+                WHERE id = %s AND user_id = %s
+                """,
+                (credential_id, user_id)
+            )
+
+            credential = cur.fetchone()
+            if not credential:
+                return False
+
+            provider = credential["cloud_provider"]
+
+            cur.execute(
+                """
+                UPDATE cloud_credentials
+                SET is_default = FALSE
+                WHERE user_id = %s AND cloud_provider = %s
+                """,
+                (user_id, provider)
+            )
+
+            cur.execute(
+                """
+                UPDATE cloud_credentials
+                SET is_default = TRUE, last_used = NOW(), updated_at = NOW()
+                WHERE id = %s AND user_id = %s
+                """,
+                (credential_id, user_id)
+            )
+
+            conn.commit()
+            self._log_audit(
+                credential_id,
+                user_id,
+                "set_default",
+                {"provider": provider}
+            )
+            return True
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Failed to set default credential: {e}")
+            raise
+
+        finally:
+            cur.close()
+            conn.close()
     
     def delete_credential(self, credential_id: int, user_id: str) -> bool:
         """Delete a credential"""

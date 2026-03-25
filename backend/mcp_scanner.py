@@ -5,6 +5,7 @@ Replaces old plugin system with full MCP protocol implementation
 Now includes CloudFox offensive scan integration
 """
 
+import os
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
@@ -92,7 +93,10 @@ class MCPSecurityScanner:
                     aws_cred = credential_manager.get_default_credential(user_id, "aws")
                     if aws_cred:
                         server = create_cloudfox_server({
-                            "profile": "default",  # CloudFox uses AWS CLI profiles
+                            "profile": os.getenv("AWS_PROFILE", "default"),
+                            "access_key_id": aws_cred.aws_access_key_id,
+                            "secret_access_key": aws_cred.aws_secret_access_key,
+                            "session_token": aws_cred.aws_session_token,
                             "region": aws_cred.aws_region or "us-east-1"
                         })
                         results["credential_mapping"]["cloudfox"] = "aws-credential"
@@ -288,7 +292,7 @@ class MCPSecurityScanner:
     async def run_offensive_scan(
         self,
         user_id: str,
-        profile: str = "default",
+        profile: Optional[str] = None,
         region: str = "us-east-1"
     ) -> Dict[str, Any]:
         """
@@ -302,6 +306,7 @@ class MCPSecurityScanner:
         Returns:
             CloudFox scan results with attack paths and vulnerabilities
         """
+        profile = profile or os.getenv("AWS_PROFILE", "default")
         logger.info(f"⚔️ Offensive scan: user={user_id}, profile={profile}")
         
         # Initialize CloudFox server

@@ -45,6 +45,8 @@ ENCRYPTION_KEY=your-encryption-key
 # You can also map your ~/.aws folder in docker-compose.yml
 AWS_ACCESS_KEY_ID=your_access_key
 AWS_SECRET_ACCESS_KEY=your_secret_key
+AWS_PROFILE=company
+AWS_SDK_LOAD_CONFIG=1
 AWS_REGION=us-east-1
 
 # GCP Configuration (Optional)
@@ -64,6 +66,8 @@ To scan your AWS account, the scanner needs specific **Read-Only** permissions.
 1. Navigate to the `infra/` folder.
 2. Use the provided CloudFormation template or `iam_permissions.json` to configure an IAM Role or User with the necessary permissions.
    - See `infra/README.md` for detailed instructions on deploying the permissions stack.
+3. Any resource created through the provided AWS templates/examples should carry the tag `Owner=cloudvul@iitm`.
+4. To switch the AWS account used by local Docker-based scans, set `AWS_PROFILE` to the company profile before starting the stack.
 
 ## 🏃‍♂️ Usage
 

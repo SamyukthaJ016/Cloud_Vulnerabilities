@@ -68,21 +68,26 @@ def json_serial(obj):
 # -------------------------------------------------------------------
 # Scans
 # -------------------------------------------------------------------
-def create_scan_record(account_id, cloud, aws_credential_id=None):
+def create_scan_record(account_id, cloud, user_id, aws_credential_id=None):
     conn = ensure_connection()
     cur = conn.cursor()
     try:
         cur.execute(
             """
-            INSERT INTO scans (account_id, cloud, status, aws_credential_id)
-            VALUES (%s, %s, 'running', %s)
+            INSERT INTO scans (account_id, cloud, user_id, status, aws_credential_id)
+            VALUES (%s, %s, %s, 'running', %s)
             RETURNING id
             """,
-            (account_id, cloud, aws_credential_id),
+            (account_id, cloud, user_id, aws_credential_id),
         )
         scan_id = cur.fetchone()[0]
         conn.commit()
-        logger.info(f"Created scan record: {scan_id} (aws_cred_id={aws_credential_id})")
+        logger.info(
+            "Created scan record: %s (user_id=%s, aws_cred_id=%s)",
+            scan_id,
+            user_id,
+            aws_credential_id,
+        )
         return scan_id
     except Exception as e:
         conn.rollback()
@@ -192,28 +197,33 @@ def store_vulnerability(scan_id: int, resource_id: int, vuln_data: Dict[str, Any
 # -------------------------------------------------------------------
 # Reporting
 # -------------------------------------------------------------------
-def get_scan_report(scan_id):
+def get_scan_report(scan_id, user_id=None):
     conn = ensure_connection()  # CHANGED: Use ensure_connection
     cur = conn.cursor()
     try:
-        cur.execute(
-            """
+        query = """
             SELECT r.id, r.name, r.cloud, r.type, r.public,
                    f.severity, f.description
             FROM resources r
+            JOIN scans s ON s.id = r.scan_id
             LEFT JOIN findings f ON r.id = f.resource_id
             WHERE r.scan_id = %s
-            ORDER BY r.id
-            """,
-            (scan_id,),
-        )
+        """
+        params = [scan_id]
+
+        if user_id:
+            query += " AND s.user_id = %s"
+            params.append(user_id)
+
+        query += " ORDER BY r.id"
+        cur.execute(query, tuple(params))
         rows = cur.fetchall()
         return rows
     finally:
         cur.close()
 
 
-def get_multi_cloud_summary(scan_ids=None):
+def get_multi_cloud_summary(scan_ids=None, user_id=None):
     conn = ensure_connection()
     cur = conn.cursor()
     try:
@@ -224,13 +234,20 @@ def get_multi_cloud_summary(scan_ids=None):
                 COUNT(DISTINCT f.id),
                 COUNT(DISTINCT CASE WHEN r.public THEN r.id END)
             FROM resources r
+            JOIN scans s ON s.id = r.scan_id
             LEFT JOIN findings f ON r.id = f.resource_id
+            WHERE 1=1
         """
         params = []
+
+        if user_id:
+            query += " AND s.user_id = %s"
+            params.append(user_id)
+
         if scan_ids:
             try:
                 ids = [int(i.strip()) for i in scan_ids.split(",")]
-                query += " WHERE r.scan_id = ANY(%s)"
+                query += " AND r.scan_id = ANY(%s)"
                 params.append(ids)
             except ValueError:
                 pass

@@ -1963,20 +1963,25 @@
         }
 
         function getUserId() {
-            let userId = sessionStorage.getItem('cloudguard_user_id');
+            const urlParams = new URLSearchParams(window.location.search);
+            const cookieMatch = document.cookie
+                .split('; ')
+                .find((row) => row.startsWith('cloudguard_user_id='));
+            let userId =
+                urlParams.get('user_id') ||
+                sessionStorage.getItem('cloudguard_user_id') ||
+                localStorage.getItem('cloudguard_user_id') ||
+                (cookieMatch ? decodeURIComponent(cookieMatch.split('=')[1]) : null);
+
             if (!userId) {
-                // Generate new consistent user ID
-                userId = Math.random().toString(36).substr(2, 9);
-                sessionStorage.setItem('cloudguard_user_id', userId);
+                userId = 'user_' + Math.random().toString(36).slice(2, 11);
             }
 
-            // Handle legacy IDs that might already have 'user_' prefix
-            const rawId = userId.startsWith('user_') ? userId.replace('user_', '') : userId;
+            sessionStorage.setItem('cloudguard_user_id', userId);
+            localStorage.setItem('cloudguard_user_id', userId);
+            document.cookie = `cloudguard_user_id=${encodeURIComponent(userId)}; path=/; max-age=2592000; SameSite=Lax`;
 
-            // Ensure cookie is ALWAYS set for the backend (session_id)
-            document.cookie = `session_id=${rawId}; path=/; max-age=86400`;
-
-            return 'user_' + rawId;
+            return userId;
         }
 
 

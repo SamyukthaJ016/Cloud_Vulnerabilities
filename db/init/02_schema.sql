@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS scans (
     id SERIAL PRIMARY KEY,
     account_id VARCHAR(255) NOT NULL,
     cloud VARCHAR(50) NOT NULL,
+    user_id TEXT,
     status VARCHAR(50) DEFAULT 'running',
     started_at TIMESTAMP DEFAULT NOW(),
     completed_at TIMESTAMP,
@@ -145,6 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_scans_cloud ON scans (cloud);
 CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);
 CREATE INDEX IF NOT EXISTS idx_scans_started_at_desc ON scans (started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scans_credential_id ON scans (aws_credential_id);
+CREATE INDEX IF NOT EXISTS idx_scans_user_id ON scans (user_id);
 
 
 -- ===================================================

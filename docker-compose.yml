@@ -1,6 +1,6 @@
 services:
   # ==========================================================================
-  # PostgreSQL Database
+  # Optional standalone PostgreSQL database
   # ==========================================================================
   postgres:
     image: postgres:15-alpine
@@ -32,6 +32,8 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
+    profiles:
+      - standalone-db
 
   # ==========================================================================
   # Redis Cache
@@ -76,13 +78,15 @@ services:
     container_name: security-scanner-backend-dev
     environment:
       # Database
-      DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://ssouser:password123@host.docker.internal:55432/ssologin}
 
       # Redis
       REDIS_URL: redis://:redis_password@redis:6379/0
 
       # AWS
-      AWS_ASSUME_ROLE_ARN: arn:aws:iam::859561299880:role/cloud-vulnerabilities-scanner-role
+      AWS_ASSUME_ROLE_ARN: arn:aws:iam::766363046973:role/cloud-vulnerabilities-scanner-role
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_SDK_LOAD_CONFIG: ${AWS_SDK_LOAD_CONFIG:-1}
       AWS_REGION: ${AWS_REGION:-us-east-1}
 
       # GCP
@@ -122,8 +126,6 @@ services:
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -148,16 +150,16 @@ services:
     container_name: scheduler-worker
     command: ["python", "-m", "backend.scheduler_worker"]
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       backend-dev:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://ssouser:password123@host.docker.internal:55432/ssologin}
       REDIS_URL: redis://:redis_password@redis:6379/0
-      AWS_ASSUME_ROLE_ARN: arn:aws:iam::859561299880:role/cloud-vulnerabilities-scanner-role
+      AWS_ASSUME_ROLE_ARN: arn:aws:iam::766363046973:role/cloud-vulnerabilities-scanner-role
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_SDK_LOAD_CONFIG: ${AWS_SDK_LOAD_CONFIG:-1}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID}
       GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-/app/config/gcp-service-account.json}
@@ -198,7 +200,7 @@ services:
         #- security-scanner-backend:latest
     container_name: security-scanner-backend
     environment:
-      DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://ssouser:password123@host.docker.internal:55432/ssologin}
       REDIS_URL: redis://:redis_password@redis:6379/0
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
@@ -221,8 +223,6 @@ services:
       - ./logs:/app/logs:rw
       - ./db/init:/app/db/init:ro
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -294,7 +294,7 @@ services:
     container_name: scheduled-scanner
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}
-      AWS_ASSUME_ROLE_ARN: arn:aws:iam::<ACCOUNT_ID>:role/cloud-vulnerabilities-scanner-role
+      AWS_ASSUME_ROLE_ARN: arn:aws:iam::766363046973:role/cloud-vulnerabilities-scanner-role
       AWS_REGION: ${AWS_REGION:-us-east-1}
       SCAN_SCHEDULE: ${SCAN_SCHEDULE:-0 2 * * *}
     volumes:
@@ -322,6 +322,8 @@ services:
     environment:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+      AWS_SDK_LOAD_CONFIG: ${AWS_SDK_LOAD_CONFIG:-1}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       AZURE_TENANT_ID: ${AZURE_TENANT_ID}
       AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
@@ -339,7 +341,7 @@ services:
     profiles:
       - scanning
     entrypoint: ["cloudfox"]
-    command: ["aws", "-p", "default", "all-checks"]
+    command: ["sh", "-lc", "cloudfox aws -p ${AWS_PROFILE:-default} all-checks"]
 
   # ==========================================================================
   # Prometheus (Metrics)

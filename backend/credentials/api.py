@@ -20,6 +20,7 @@ from starlette.responses import JSONResponse
 
 from backend.credentials.manager import credential_manager, CloudCredential
 from backend.credentials import auto_permission
+from backend.user_context import resolve_user_id
 
 logger = logging.getLogger("credentials_api")
 
@@ -119,13 +120,9 @@ class ScanSessionResponse(BaseModel):
 # Helper function to get user ID from request
 def get_user_id(request: Request) -> str:
     """Extract user ID from request"""
-    # 🔥 DEBUG: Log ALL cookies for session debugging
-    logger.info(f"🍪 Request Cookies: {request.cookies}")
-    
-    session_id = request.cookies.get("session_id")
-    if session_id:
-        return f"user_{session_id}"
-    return "anonymous"
+    user_id = resolve_user_id(request)
+    logger.info("Resolved credential user_id=%s", user_id)
+    return user_id
 
 
 @router.post("/aws", response_model=CredentialResponse)
@@ -357,6 +354,27 @@ async def delete_credential(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/{credential_id}/default")
+async def set_default_credential(
+    credential_id: int,
+    user_id: str = Depends(get_user_id)
+):
+    """Mark a credential as the default for its provider"""
+    try:
+        success = credential_manager.set_default_credential(credential_id, user_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Credential not found")
+
+        return {"success": True, "message": "Credential set as default"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set default credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # @router.post("/session", response_model=ScanSessionResponse)
 # async def create_scan_session(request: ScanSessionRequest):
 #     """Create a scan session with credentials"""
@@ -478,7 +496,7 @@ async def get_cloudformation_url(
         template_url = "https://cloudguard-cfn-templates.s3.eu-north-1.amazonaws.com/aws-readonly-role.yaml"
         
         # Master Scanner Account ID (fixed - this is the account where the scanner runs)
-        master_scanner_account_id = "859561299880"
+        master_scanner_account_id = "766363046973"
         
         # Generate unique stack name
         from datetime import datetime
@@ -512,7 +530,8 @@ async def get_cloudformation_url(
                 "🔐 Cross-Account Scanning Setup",
                 "This creates a role in YOUR account that the master scanner can assume",
                 "Click 'Launch CloudFormation Stack' to open AWS Console",
-                "The ScannerAccountId is pre-filled with the master scanner account (859561299880)",
+                "The ScannerAccountId is pre-filled with the master scanner account (766363046973)",
+                "The created IAM role is tagged Owner=cloudvul@iitm",
                 "Check the IAM acknowledgment box",
                 "Click 'Create stack'",
                 "Wait for stack creation to complete (~2 minutes)",

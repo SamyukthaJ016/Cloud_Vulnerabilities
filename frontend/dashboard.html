@@ -928,6 +928,28 @@
         let currentFilter = 'all';
         let scanInProgress = false;
 
+        function initializeUserContext() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cookieMatch = document.cookie
+                .split('; ')
+                .find((row) => row.startsWith('cloudguard_user_id='));
+            let userId =
+                urlParams.get('user_id') ||
+                sessionStorage.getItem('cloudguard_user_id') ||
+                localStorage.getItem('cloudguard_user_id') ||
+                (cookieMatch ? decodeURIComponent(cookieMatch.split('=')[1]) : null);
+
+            if (!userId) {
+                userId = 'user_' + Math.random().toString(36).slice(2, 11);
+            }
+
+            sessionStorage.setItem('cloudguard_user_id', userId);
+            localStorage.setItem('cloudguard_user_id', userId);
+            document.cookie = `cloudguard_user_id=${encodeURIComponent(userId)}; path=/; max-age=2592000; SameSite=Lax`;
+
+            return userId;
+        }
+
         // AI Remediation Templates
         const remediationTemplates = {
             s3: {
@@ -989,7 +1011,8 @@ aws iam enable-mfa-device \\
 # Create new key via Secrets Manager
 aws secretsmanager create-secret \\
   --name "iam/${resourceName}/access-key" \\
-  --secret-string '{"AccessKeyId":"NEW_KEY"}'`,
+  --secret-string '{"AccessKeyId":"NEW_KEY"}' \\
+  --tags Key=Owner,Value=cloudvul@iitm`,
                 validation: 'Verify MFA: aws iam list-mfa-devices --user-name USERNAME',
                 references: [
                     'AWS IAM Best Practices',
@@ -1015,7 +1038,8 @@ aws iam delete-access-key \\
 # 2. Create new secure credential
 aws secretsmanager create-secret \\
   --name "app/api-key" \\
-  --secret-string "$(openssl rand -base64 32)"
+  --secret-string "$(openssl rand -base64 32)" \\
+  --tags Key=Owner,Value=cloudvul@iitm
 
 # 3. Install Gitleaks pre-commit
 cat > .git/hooks/pre-commit << 'EOF'
@@ -1102,7 +1126,8 @@ aws s3api put-bucket-encryption \\
                 code: (resourceName) => `# Store in Secrets Manager
 aws secretsmanager create-secret \\
   --name "openai/api-key" \\
-  --secret-string "sk-YOUR_NEW_KEY"
+  --secret-string "sk-YOUR_NEW_KEY" \\
+  --tags Key=Owner,Value=cloudvul@iitm
 
 # Lambda function to retrieve
 import boto3
@@ -1188,6 +1213,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', () => {
+            initializeUserContext();
             console.log('CloudGuard Dashboard initializing...');
             updateTimestamp();
             loadDashboard();

@@ -14,6 +14,7 @@ This will:
 2. 📤 Upload to `s3://cloudguard-cfn-templates/cloudformation/aws-readonly-role.yaml`
 3. 🔓 Set public read permissions
 4. 📍 Display the public S3 URL
+5. 🏷️ Keep created AWS resources tagged with `Owner=cloudvul@iitm`
 
 ## Manual Upload (Alternative)
 
@@ -69,6 +70,11 @@ aws configure
 ```bash
 # Create the bucket
 aws s3 mb s3://cloudguard-cfn-templates --region eu-north-1
+
+# Tag the bucket
+aws s3api put-bucket-tagging \
+  --bucket cloudguard-cfn-templates \
+  --tagging '{"TagSet":[{"Key":"Owner","Value":"cloudvul@iitm"}]}'
 
 # Enable public access (if needed)
 aws s3api put-public-access-block \
