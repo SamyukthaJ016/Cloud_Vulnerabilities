@@ -14,8 +14,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #f1f5f9;
+            background: linear-gradient(135deg, #091413 0%, #285A48 100%);
+            color: #B0E4CC;
             min-height: 100vh;
             line-height: 1.6;
         }
@@ -41,7 +41,7 @@
         .title {
             font-size: 3.5rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #60a5fa, #8b5cf6, #ec4899);
+            background: linear-gradient(135deg, #B0E4CC 0%, #408A71 55%, #B0E4CC 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 16px;
@@ -50,7 +50,7 @@
 
         .subtitle {
             font-size: 1.2rem;
-            color: #94a3b8;
+            color: #B0E4CC;
             max-width: 600px;
             margin: 0 auto;
         }
@@ -71,11 +71,11 @@
 
         /* Scan Panel */
         .scan-panel {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             backdrop-filter: blur(10px);
             border-radius: 24px;
             padding: 40px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
 
@@ -83,22 +83,22 @@
             font-size: 1.8rem;
             font-weight: 700;
             margin-bottom: 24px;
-            color: white;
+            color: #B0E4CC;
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
         .panel-subtitle {
-            color: #94a3b8;
+            color: #B0E4CC;
             margin-bottom: 32px;
             line-height: 1.6;
         }
 
         /* Credentials Banner */
         .credentials-banner {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: linear-gradient(135deg, rgba(64, 138, 113, 0.12), rgba(176, 228, 204, 0.12));
+            border: 1px solid rgba(64, 138, 113, 0.3);
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 24px;
@@ -143,41 +143,29 @@
         }
 
         .provider-option {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            background: rgba(176, 228, 204, 0.06);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             border-radius: 12px;
-            padding: 16px;
+            padding: 18px 112px 18px 16px;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 12px;
             position: relative;
+            min-height: 82px;
         }
 
         .provider-option:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(176, 228, 204, 0.1);
+            border-color: rgba(176, 228, 204, 0.24);
+            transform: translateY(-1px);
         }
 
         .provider-option.selected {
-            background: rgba(59, 130, 246, 0.15);
-            border-color: rgba(59, 130, 246, 0.5);
-        }
-
-        .provider-option.has-credentials::after {
-            content: '✓';
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 20px;
-            height: 20px;
-            background: #10b981;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: white;
+            background: linear-gradient(135deg, rgba(64, 138, 113, 0.28), rgba(176, 228, 204, 0.14));
+            border-color: #B0E4CC;
+            box-shadow: 0 0 0 2px rgba(176, 228, 204, 0.14), 0 12px 24px rgba(9, 20, 19, 0.24);
         }
 
         .provider-icon {
@@ -188,6 +176,12 @@
             align-items: center;
             justify-content: center;
             font-size: 1.2rem;
+        }
+
+        .provider-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .aws-icon {
@@ -210,9 +204,58 @@
             color: #10a37f;
         }
 
+        .kubernetes-icon {
+            background: rgba(50, 108, 229, 0.1);
+            color: #326ce5;
+        }
+
         .provider-name {
             font-weight: 600;
-            color: white;
+            color: #B0E4CC;
+        }
+
+        .provider-meta {
+            font-size: 0.8rem;
+            color: rgba(176, 228, 204, 0.82);
+        }
+
+        .provider-option.selected .provider-meta {
+            color: #B0E4CC;
+        }
+
+        .provider-badges {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .provider-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .provider-ready-badge {
+            background: rgba(176, 228, 204, 0.14);
+            border: 1px solid rgba(176, 228, 204, 0.2);
+            color: #B0E4CC;
+            padding: 4px 10px;
+        }
+
+        .provider-selected-badge {
+            background: #10b981;
+            color: #091413;
+            padding: 6px 12px;
+            box-shadow: 0 8px 18px rgba(16, 185, 129, 0.28);
         }
 
         /* Scan Schedule Section */
@@ -224,14 +267,14 @@
             display: flex;
             gap: 8px;
             margin-bottom: 20px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            border-bottom: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .schedule-tab {
             padding: 12px 24px;
             background: transparent;
             border: none;
-            color: #94a3b8;
+            color: #B0E4CC;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
@@ -239,12 +282,12 @@
         }
 
         .schedule-tab:hover {
-            color: #cbd5e1;
+            color: #B0E4CC;
         }
 
         .schedule-tab.active {
-            color: #60a5fa;
-            border-bottom-color: #60a5fa;
+            color: #B0E4CC;
+            border-bottom-color: #B0E4CC;
         }
 
         .schedule-content {
@@ -271,7 +314,7 @@
         }
 
         .immediate-scan-info p {
-            color: #cbd5e1;
+            color: #B0E4CC;
             font-size: 0.9rem;
         }
 
@@ -295,7 +338,7 @@
         }
 
         .form-label {
-            color: #cbd5e1;
+            color: #B0E4CC;
             font-weight: 500;
             font-size: 0.9rem;
         }
@@ -303,8 +346,8 @@
         .form-input,
         .form-select {
             padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(176, 228, 204, 0.06);
+            border: 1px solid rgba(176, 228, 204, 0.22);
             border-radius: 8px;
             color: white;
             font-family: inherit;
@@ -314,17 +357,17 @@
         .form-input:focus,
         .form-select:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            border-color: #408A71;
+            box-shadow: 0 0 0 3px rgba(64, 138, 113, 0.2);
         }
 
         .form-input::placeholder {
-            color: #64748b;
+            color: #408A71;
         }
 
         /* Recurring Schedule */
         .recurring-options {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(9, 20, 19, 0.52);
             border-radius: 12px;
             padding: 20px;
             margin-top: 20px;
@@ -347,23 +390,23 @@
 
         .frequency-btn {
             padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(176, 228, 204, 0.06);
+            border: 1px solid rgba(176, 228, 204, 0.22);
             border-radius: 8px;
-            color: #cbd5e1;
+            color: #B0E4CC;
             cursor: pointer;
             transition: all 0.3s;
             font-weight: 500;
         }
 
         .frequency-btn:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(176, 228, 204, 0.1);
         }
 
         .frequency-btn.selected {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.5);
-            color: #60a5fa;
+            background: rgba(64, 138, 113, 0.2);
+            border-color: rgba(64, 138, 113, 0.5);
+            color: #B0E4CC;
         }
 
         /* Scan Options */
@@ -386,7 +429,7 @@
             appearance: none;
             width: 20px;
             height: 20px;
-            border: 2px solid rgba(148, 163, 184, 0.3);
+            border: 2px solid rgba(176, 228, 204, 0.3);
             border-radius: 6px;
             cursor: pointer;
             position: relative;
@@ -394,8 +437,8 @@
         }
 
         .checkbox:checked {
-            background: #3b82f6;
-            border-color: #3b82f6;
+            background: #408A71;
+            border-color: #408A71;
         }
 
         .checkbox:checked::after {
@@ -409,13 +452,13 @@
         }
 
         .option-label {
-            color: #cbd5e1;
+            color: #B0E4CC;
             font-size: 0.95rem;
         }
 
         .option-hint {
             display: block;
-            color: #94a3b8;
+            color: #B0E4CC;
             font-size: 0.85rem;
             margin-top: 4px;
         }
@@ -443,27 +486,27 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(135deg, #408A71, #B0E4CC);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 10px 25px rgba(64, 138, 113, 0.35);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(176, 228, 204, 0.12);
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.22);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(176, 228, 204, 0.18);
         }
 
         .btn-credentials {
-            background: linear-gradient(135deg, #10b981, #0d9488);
+            background: linear-gradient(135deg, #285A48, #408A71);
             color: white;
         }
 
@@ -480,11 +523,11 @@
         }
 
         .feature-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 32px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             transition: all 0.3s ease;
         }
 
@@ -502,11 +545,11 @@
             font-size: 1.3rem;
             font-weight: 700;
             margin-bottom: 12px;
-            color: white;
+            color: #B0E4CC;
         }
 
         .feature-description {
-            color: #94a3b8;
+            color: #B0E4CC;
             line-height: 1.6;
         }
 
@@ -526,13 +569,13 @@
             align-items: center;
             gap: 12px;
             padding: 16px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(176, 228, 204, 0.06);
             border-radius: 12px;
             transition: all 0.2s;
         }
 
         .scan-item:hover {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(176, 228, 204, 0.1);
         }
 
         .scan-status {
@@ -560,12 +603,12 @@
 
         .scan-provider {
             font-weight: 600;
-            color: white;
+            color: #B0E4CC;
         }
 
         .scan-time {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         /* Scan Progress Modal */
@@ -575,7 +618,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(9, 20, 19, 0.94);
             backdrop-filter: blur(10px);
             display: flex;
             align-items: center;
@@ -592,12 +635,12 @@
         }
 
         .modal-content {
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(40, 90, 72, 0.95);
             border-radius: 24px;
             padding: 40px;
             width: 90%;
             max-width: 500px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
@@ -612,11 +655,11 @@
             font-size: 1.8rem;
             font-weight: 700;
             margin-bottom: 16px;
-            color: white;
+            color: #B0E4CC;
         }
 
         .modal-message {
-            color: #94a3b8;
+            color: #B0E4CC;
             margin-bottom: 32px;
             line-height: 1.6;
         }
@@ -624,7 +667,7 @@
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(9, 20, 19, 0.84);
             backdrop-filter: blur(6px);
             display: flex;
             align-items: center;
@@ -634,7 +677,7 @@
 
         .progress-bar {
             height: 8px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(176, 228, 204, 0.12);
             border-radius: 4px;
             overflow: hidden;
             margin: 32px 0;
@@ -642,7 +685,7 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(90deg, #408A71, #B0E4CC);
             border-radius: 4px;
             transition: width 0.5s ease;
         }
@@ -652,8 +695,8 @@
             text-align: center;
             margin-top: 60px;
             padding-top: 40px;
-            border-top: 1px solid rgba(148, 163, 184, 0.1);
-            color: #64748b;
+            border-top: 1px solid rgba(176, 228, 204, 0.14);
+            color: #408A71;
             font-size: 0.9rem;
         }
 
@@ -665,13 +708,13 @@
         }
 
         .nav-link {
-            color: #94a3b8;
+            color: #B0E4CC;
             text-decoration: none;
             transition: color 0.3s;
         }
 
         .nav-link:hover {
-            color: #60a5fa;
+            color: #B0E4CC;
         }
 
         /* Animations */
@@ -768,22 +811,22 @@
         .command-group h3 {
             font-size: 1.1rem;
             margin-bottom: 12px;
-            color: #60a5fa;
+            color: #B0E4CC;
             font-weight: 600;
         }
 
         .code-block-container {
             position: relative;
-            background: #0f172a;
+            background: #091413;
             border-radius: 12px;
             padding: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            border: 1px solid rgba(176, 228, 204, 0.22);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .code-block-container pre {
             margin: 0;
-            color: #f1f5f9;
+            color: #B0E4CC;
             font-family: 'JetBrains Mono', 'Monaco', 'Consolas', monospace;
             font-size: 0.9rem;
             white-space: pre-wrap;
@@ -796,9 +839,9 @@
             position: absolute;
             top: 12px;
             right: 12px;
-            background: rgba(148, 163, 184, 0.1);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            color: #94a3b8;
+            background: rgba(176, 228, 204, 0.14);
+            border: 1px solid rgba(176, 228, 204, 0.22);
+            color: #B0E4CC;
             padding: 6px 12px;
             border-radius: 6px;
             font-size: 0.8rem;
@@ -808,9 +851,9 @@
         }
 
         .copy-btn:hover {
-            background: rgba(148, 163, 184, 0.2);
+            background: rgba(176, 228, 204, 0.22);
             color: white;
-            border-color: rgba(148, 163, 184, 0.4);
+            border-color: rgba(176, 228, 204, 0.4);
         }
     </style>
 </head>
@@ -963,15 +1006,15 @@
                 <!-- Credential Selection -->
                 <div class="credential-selector" style="margin-bottom: 20px;">
                     <label for="scanCredentialSelect"
-                        style="display: block; margin-bottom: 8px; font-weight: 600; color: #e2e8f0;">
+                        style="display: block; margin-bottom: 8px; font-weight: 600; color: #B0E4CC;">
                         Select AWS Credential
                     </label>
                     <select id="scanCredentialSelect"
-                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; font-size: 14px;">
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #408A71; background: #285A48; color: #B0E4CC; font-size: 14px;">
                         <option value="">Use Default Credential</option>
                         <!-- Populated dynamically -->
                     </select>
-                    <span style="font-size: 12px; color: #94a3b8; margin-top: 4px; display: block;">
+                    <span style="font-size: 12px; color: #B0E4CC; margin-top: 4px; display: block;">
                         Choose which AWS credential to use for this scan
                     </span>
                 </div>
@@ -1019,7 +1062,7 @@
                             style="display: none; width: 100%; padding-left: 32px; margin-top: 8px;">
                             <input type="email" id="notificationEmail" class="form-input"
                                 placeholder="Enter notification email"
-                                style="width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; padding: 8px;">
+                                style="width: 100%; background: #091413; border: 1px solid #408A71; border-radius: 6px; color: white; padding: 8px;">
                         </div>
                     </div>
                 </div>
@@ -1091,10 +1134,10 @@
                 </div>
 
                 <div id="scanDetails">
-                    <div style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 8px;">
+                    <div style="color: #B0E4CC; font-size: 0.9rem; margin-bottom: 8px;">
                         <span id="currentStep">Connecting to cloud APIs...</span>
                     </div>
-                    <div style="color: #64748b; font-size: 0.85rem;">
+                    <div style="color: #408A71; font-size: 0.85rem;">
                         Estimated time: <span id="estimatedTime">2-3 minutes</span>
                     </div>
                 </div>
@@ -1112,8 +1155,8 @@
                 <a href="/health" class="nav-link">❤️ Health</a>
             </div>
             <p>CloudGuard Security Scanner v3.1 • Multi-Cloud CSPM with AI & Credential Management</p>
-            <p style="margin-top: 8px; font-size: 0.8rem; color: #475569;">
-                Securing AWS, GCP and Azure environments with user credentials
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #408A71;">
+                Securing AWS, GCP, Kubernetes and Azure environments with user credentials
             </p>
         </div>
     </div>
@@ -1127,12 +1170,18 @@
         let availableProviders = {
             'aws': false,
             'gcp': false,
+            'kubernetes': false,
             'openai': false,
             'azure': false
         };
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
         let allCredentialsMap = {}; // Global map ID -> detail
+        const scanProviders = [
+            { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon' },
+            { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon' },
+            { id: 'kubernetes', name: 'Kubernetes', icon: '⎈', iconClass: 'kubernetes-icon' }
+        ];
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1318,12 +1367,23 @@
                     const message = document.getElementById('credentialsMessage');
 
                     const configuredProviders = Object.values(data).filter(p => p.configured).length;
+                    const readyProviders = Object.values(data).filter(p => p.selectable ?? p.valid).length;
+                    const validatedProviders = Object.values(data).filter(p => p.valid).length;
 
-                    if (configuredProviders > 0) {
+                    if (readyProviders > 0) {
                         statusDot.className = 'status-dot';
-                        message.textContent = `${configuredProviders} cloud provider(s) configured`;
+                        if (validatedProviders === readyProviders) {
+                            message.textContent = `${readyProviders} cloud provider(s) ready`;
+                        } else {
+                            message.textContent = `${readyProviders} provider(s) ready, ${validatedProviders} validated locally`;
+                        }
                         banner.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(13, 148, 136, 0.1))';
                         banner.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                    } else if (configuredProviders > 0) {
+                        statusDot.className = 'status-dot warning';
+                        message.textContent = `${configuredProviders} provider(s) saved, but none are validated yet`;
+                        banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))';
+                        banner.style.borderColor = 'rgba(245, 158, 11, 0.3)';
                     } else {
                         statusDot.className = 'status-dot warning';
                         message.textContent = 'No credentials configured. Add credentials or use environment defaults.';
@@ -1336,6 +1396,34 @@
             }
         }
 
+        function renderProviderOptions() {
+            const providersGrid = document.getElementById('providersGrid');
+            if (!providersGrid) return;
+
+            providersGrid.innerHTML = scanProviders.map(provider => {
+                const hasCredentials = availableProviders[provider.id];
+                const isSelected = selectedProviders.includes(provider.id);
+                const helperText = isSelected
+                    ? (hasCredentials ? 'Selected for this scan' : 'Selected, but credentials are still needed')
+                    : (hasCredentials ? 'Ready to add to this scan' : 'Add credentials to enable');
+
+                return `
+                    <div class="provider-option ${isSelected ? 'selected' : ''} ${hasCredentials ? 'has-credentials' : ''}" 
+                         onclick="toggleProvider('${provider.id}')">
+                        <div class="provider-badges">
+                            ${hasCredentials ? '<span class="provider-badge provider-ready-badge">Ready</span>' : ''}
+                            ${isSelected ? '<span class="provider-badge provider-selected-badge">✓ Selected</span>' : ''}
+                        </div>
+                        <div class="provider-icon ${provider.iconClass}">${provider.icon}</div>
+                        <div class="provider-details">
+                            <div class="provider-name">${provider.name}</div>
+                            <div class="provider-meta">${helperText}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Load providers with credential status
         async function loadProviders() {
             try {
@@ -1345,36 +1433,18 @@
                     const data = await response.json();
 
                     availableProviders = {
-                        'aws': data.aws?.configured || false,
-                        'gcp': data.gcp?.configured || false,
-                        'openai': data.openai?.configured || false,
-                        'azure': data.azure?.configured || false
+                        'aws': (data.aws?.selectable ?? data.aws?.valid) || false,
+                        'gcp': (data.gcp?.selectable ?? data.gcp?.valid) || false,
+                        'kubernetes': (data.kubernetes?.selectable ?? data.kubernetes?.valid) || false,
+                        'openai': (data.openai?.selectable ?? data.openai?.valid) || false,
+                        'azure': (data.azure?.selectable ?? data.azure?.valid) || false
                     };
-
-                    const providersGrid = document.getElementById('providersGrid');
-                    const providers = [
-                        { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon' },
-                        { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon' }
-                    ];
-
-                    providersGrid.innerHTML = providers.map(provider => {
-                        const hasCredentials = availableProviders[provider.id];
-                        const isSelected = selectedProviders.includes(provider.id);
-
-                        return `
-                            <div class="provider-option ${isSelected ? 'selected' : ''} ${hasCredentials ? 'has-credentials' : ''}" 
-                                 onclick="toggleProvider('${provider.id}')">
-                                <div class="provider-icon ${provider.iconClass}">${provider.icon}</div>
-                                <div class="provider-name">${provider.name}</div>
-                            </div>
-                        `;
-                    }).join('');
 
                     // Preserve any providers the user has already manually selected
                     const currentSelected = new Set(selectedProviders);
 
                     // Identify providers that actually have credentials (STRICT check)
-                    const configuredProviders = providers.filter(p => availableProviders[p.id] && availableProviders[p.id].configured).map(p => p.id);
+                    const configuredProviders = scanProviders.filter(p => availableProviders[p.id]).map(p => p.id);
 
                     // Additive Selection: if credentials for a provider are newly found AND 
                     // this is the first load or the provider was just added, select it.
@@ -1388,15 +1458,7 @@
 
                     console.log('📊 Provider Status:', availableProviders);
                     console.log('✅ Current Selection:', selectedProviders);
-
-                    document.querySelectorAll('.provider-option').forEach(option => {
-                        const providerId = option.getAttribute('onclick').match(/'([^']+)'/)[1];
-                        if (selectedProviders.includes(providerId)) {
-                            option.classList.add('selected');
-                        } else {
-                            option.classList.remove('selected');
-                        }
-                    });
+                    renderProviderOptions();
                 }
             } catch (error) {
                 console.error('Failed to load providers:', error);
@@ -1424,23 +1486,20 @@
 
         function clearSelection() {
             selectedProviders = [];
-            document.querySelectorAll('.provider-option').forEach(opt => opt.classList.remove('selected'));
+            renderProviderOptions();
             console.log('🧹 Selection cleared');
         }
 
         // Provider selection
         function toggleProvider(provider) {
-            // Use querySelector to find the right element rather than relying on global 'event'
-            const option = document.querySelector(`.provider-option[onclick*="'${provider}'"]`);
             const index = selectedProviders.indexOf(provider);
 
             if (index === -1) {
                 selectedProviders.push(provider);
-                if (option) option.classList.add('selected');
             } else {
                 selectedProviders.splice(index, 1);
-                if (option) option.classList.remove('selected');
             }
+            renderProviderOptions();
             console.log('Selected providers:', selectedProviders);
         }
 
@@ -1454,7 +1513,7 @@
                 if (!container) return;
 
                 if (!data.data || data.data.length === 0) {
-                    container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 20px;">No recent scans found</div>';
+                    container.innerHTML = '<div style="color: #408A71; text-align: center; padding: 20px;">No recent scans found</div>';
                     return;
                 }
 
@@ -1703,6 +1762,17 @@
 
                 if (response.ok) {
                     console.log('✅ Scan completed:', result);
+
+                    if (result.status === 'started') {
+                        updateScanStatus('Scan started on worker. Redirecting to scan history...', 100);
+                        setTimeout(() => {
+                            modal.classList.remove('active');
+                            scanInProgress = false;
+                            enableControls();
+                            window.location.href = result.history_url || '/frontend/history.html';
+                        }, 1500);
+                        return;
+                    }
 
                     if (!result.scan_ids || result.scan_ids.length === 0) {
                         updateScanStatus('Scan finished but no resources were found. Check your credentials.', 100);
@@ -1986,7 +2056,7 @@
 
 
         async function saveAWSCredentials() {
-            const credentialName = document.getElementById('awsCredentialName').value;
+            const credentialName = document.getElementById('awsCredentialName').value.trim();
             const accessKeyId = document.getElementById('awsAccessKeyId').value;
             const secretAccessKey = document.getElementById('awsSecretAccessKey').value;
             const region = document.getElementById('awsRegion').value;
@@ -2015,10 +2085,20 @@
                     })
                 });
 
-                if (!response.ok) throw new Error('Failed to save credentials');
+                if (!response.ok) {
+                    let detail = 'Failed to save credentials';
+                    try {
+                        const errorPayload = await response.json();
+                        detail = errorPayload.detail || detail;
+                    } catch (parseError) {
+                        // Keep the generic message when the backend response is not JSON.
+                    }
+                    throw new Error(detail);
+                }
 
                 const result = await response.json();
-                showAlert(`AWS credentials saved successfully! ID: ${result.id}`, 'success');
+                const actionLabel = result.save_action === 'updated' ? 'updated' : 'saved';
+                showAlert(`AWS credentials ${actionLabel} successfully! ${result.credential_name}`, 'success');
 
                 document.getElementById('awsAccessKeyId').value = '';
                 document.getElementById('awsSecretAccessKey').value = '';
@@ -2035,7 +2115,7 @@
 
 
         async function saveGCPCredentials() {
-            const credentialName = document.getElementById('gcpCredentialName').value;
+            const credentialName = document.getElementById('gcpCredentialName').value.trim();
             const serviceAccountJson = document.getElementById('gcpServiceAccount').value;
             const projectId = document.getElementById('gcpProjectId').value;
             const isDefault = document.getElementById('gcpIsDefault').checked;
@@ -2063,7 +2143,8 @@
                 if (!response.ok) throw new Error('Failed to save credentials');
 
                 const result = await response.json();
-                showAlert(`GCP credentials saved successfully! ID: ${result.id}`, 'success');
+                const actionLabel = result.save_action === 'updated' ? 'updated' : 'saved';
+                showAlert(`GCP credentials ${actionLabel} successfully! ${result.credential_name}`, 'success');
 
                 document.getElementById('gcpServiceAccount').value = '';
                 document.getElementById('gcpProjectId').value = '';
@@ -2072,6 +2153,50 @@
                 await checkCredentialsStatus();
                 await loadProviders();
 
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function saveKubernetesCredentials() {
+            const credentialName = document.getElementById('kubernetesCredentialName').value.trim();
+            const kubeconfig = document.getElementById('kubernetesKubeconfig').value;
+            const context = document.getElementById('kubernetesContext').value;
+            const clusterName = document.getElementById('kubernetesClusterName').value;
+            const isDefault = document.getElementById('kubernetesIsDefault').checked;
+
+            if (!kubeconfig) {
+                showAlert('Please paste a kubeconfig file', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/credentials/kubernetes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_name: credentialName,
+                        kubernetes_kubeconfig: kubeconfig,
+                        kubernetes_context: context || undefined,
+                        kubernetes_cluster_name: clusterName || undefined,
+                        is_default: isDefault
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to save credentials');
+
+                const result = await response.json();
+                const actionLabel = result.save_action === 'updated' ? 'updated' : 'saved';
+                showAlert(`Kubernetes credentials ${actionLabel} successfully! ${result.credential_name}`, 'success');
+
+                document.getElementById('kubernetesKubeconfig').value = '';
+                document.getElementById('kubernetesContext').value = '';
+                document.getElementById('kubernetesClusterName').value = '';
+
+                await loadSavedCredentials();
+                await checkCredentialsStatus();
+                await loadProviders();
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
             }
@@ -2089,6 +2214,10 @@
             showAlert('Testing GCP credentials...', 'warning');
         }
 
+        async function testKubernetesCredentials() {
+            showAlert('Testing Kubernetes credentials...', 'warning');
+        }
+
         async function loadSavedCredentials() {
             const container = document.getElementById('savedCredentialsList');
             container.innerHTML = '<div class="loading">Loading your credentials...</div>';
@@ -2102,7 +2231,7 @@
 
                 if (credentials.length === 0) {
                     container.innerHTML = `
-                        <div style="text-align: center; padding: 40px; color: #64748b;">
+                        <div style="text-align: center; padding: 40px; color: #408A71;">
                             <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">🔐</div>
                             <h3>No credentials saved yet</h3>
                             <p>Add your cloud credentials to start scanning</p>
@@ -2233,9 +2362,10 @@
         async function launchCloudFormationStack() {
             try {
                 showAlert('🚀 Generating CloudFormation stack URL...', 'warning');
+                const region = document.getElementById('awsRegion')?.value || 'ap-south-1';
 
                 // Call backend to get CloudFormation URL
-                const response = await fetch('/api/credentials/aws/cloudformation-url');
+                const response = await fetch(`/api/credentials/aws/cloudformation-url?region=${encodeURIComponent(region)}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to generate CloudFormation URL');
@@ -2310,9 +2440,11 @@
         window.saveAWSCredentials = saveAWSCredentials;
         window.saveOpenAICredentials = saveOpenAICredentials;
         window.saveGCPCredentials = saveGCPCredentials;
+        window.saveKubernetesCredentials = saveKubernetesCredentials;
         window.testAWSCredentials = testAWSCredentials;
         window.testOpenAICredentials = testOpenAICredentials;
         window.testGCPCredentials = testGCPCredentials;
+        window.testKubernetesCredentials = testKubernetesCredentials;
         window.validateCredential = validateCredential;
         window.deleteCredential = deleteCredential;
         window.refreshCredentials = refreshCredentials;
@@ -2331,6 +2463,7 @@
             <div class="modal-tabs">
                 <button class="tab-btn active" onclick="switchCredentialTab('aws', this)">AWS</button>
                 <button class="tab-btn" onclick="switchCredentialTab('gcp', this)">GCP</button>
+                <button class="tab-btn" onclick="switchCredentialTab('kubernetes', this)">Kubernetes</button>
                 <button class="tab-btn" onclick="switchCredentialTab('saved', this)">Saved Credentials</button>
             </div>
 
@@ -2482,7 +2615,7 @@
 
                     <div class="form-group">
                         <label>Credential Name</label>
-                        <input type="text" id="awsCredentialName" placeholder="production-aws" value="default">
+                        <input type="text" id="awsCredentialName" placeholder="production-aws">
                     </div>
 
                     <div class="form-group">
@@ -2499,9 +2632,15 @@
                     <div class="form-group">
                         <label>AWS Region</label>
                         <select id="awsRegion">
+                            <option value="ap-south-1" selected>Asia Pacific (Mumbai)</option>
                             <option value="us-east-1">US East (N. Virginia)</option>
+                            <option value="us-east-2">US East (Ohio)</option>
+                            <option value="us-west-1">US West (N. California)</option>
                             <option value="us-west-2">US West (Oregon)</option>
                             <option value="eu-west-1">EU (Ireland)</option>
+                            <option value="eu-central-1">EU (Frankfurt)</option>
+                            <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                            <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
                         </select>
                     </div>
 
@@ -2509,7 +2648,7 @@
                         <label>Role ARN (Optional - from CloudFormation)</label>
                         <input type="text" id="awsRoleArn"
                             placeholder="arn:aws:iam::123456789012:role/CloudGuardReadOnlyRole-xxx">
-                        <small style="color: #94a3b8; display: block; margin-top: 4px;">
+                        <small style="color: #B0E4CC; display: block; margin-top: 4px;">
                             If you created a stack above, paste the Role ARN from the Outputs tab
                         </small>
                     </div>
@@ -2545,7 +2684,7 @@
 
                     <div class="form-group">
                         <label>Credential Name</label>
-                        <input type="text" id="openaiCredentialName" placeholder="openai-production" value="default">
+                        <input type="text" id="openaiCredentialName" placeholder="openai-production">
                     </div>
 
                     <div class="form-group">
@@ -2584,7 +2723,7 @@
 
                     <div class="form-group">
                         <label>Credential Name</label>
-                        <input type="text" id="gcpCredentialName" placeholder="gcp-production" value="default">
+                        <input type="text" id="gcpCredentialName" placeholder="gcp-production">
                     </div>
 
                     <div class="form-group">
@@ -2608,6 +2747,60 @@
                             🔍 Test Connection
                         </button>
                         <button class="btn btn-primary" onclick="saveGCPCredentials()">
+                            💾 Save Credentials
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="kubernetesTab" class="tab-content">
+                <div class="form-section">
+                    <h3>Kubernetes Cluster Credentials</h3>
+                    <p class="form-description">
+                        Paste a kubeconfig with read access to the cluster resources you want to scan. For local clusters, use <code>kubectl config view --raw --minify --flatten</code> so certs and keys are embedded and the config is portable.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="kubernetesCredentialName" placeholder="production-cluster">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kubeconfig</label>
+                        <textarea id="kubernetesKubeconfig" rows="10" placeholder='apiVersion: v1
+clusters:
+- cluster:
+    server: https://your-cluster
+  name: company-cluster
+contexts:
+- context:
+    cluster: company-cluster
+    user: scanner
+  name: company-context
+current-context: company-context
+kind: Config'></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Context (Optional)</label>
+                        <input type="text" id="kubernetesContext" placeholder="company-context">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cluster Name (Optional)</label>
+                        <input type="text" id="kubernetesClusterName" placeholder="company-cluster">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="kubernetesIsDefault" checked>
+                        <label for="kubernetesIsDefault">Set as default Kubernetes credential</label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="testKubernetesCredentials()">
+                            🔍 Test Connection
+                        </button>
+                        <button class="btn btn-primary" onclick="saveKubernetesCredentials()">
                             💾 Save Credentials
                         </button>
                     </div>
@@ -2639,22 +2832,22 @@
     <style>
         /* Credentials Modal Styles */
         .credentials-modal-content {
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(40, 90, 72, 0.95);
             border-radius: 20px;
             padding: 30px;
             width: 100%;
             max-width: 800px;
             max-height: 90vh;
             overflow-y: auto;
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            border: 1px solid rgba(176, 228, 204, 0.22);
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
 
         .form-section {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(9, 20, 19, 0.52);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .form-section h3 {
@@ -2663,7 +2856,7 @@
         }
 
         .form-description {
-            color: #94a3b8;
+            color: #B0E4CC;
             margin-bottom: 24px;
             line-height: 1.5;
             font-size: 0.9rem;
@@ -2675,7 +2868,7 @@
 
         .form-group label {
             display: block;
-            color: #cbd5e1;
+            color: #B0E4CC;
             margin-bottom: 8px;
             font-weight: 500;
             font-size: 0.9rem;
@@ -2686,8 +2879,8 @@
         .form-group textarea {
             width: 100%;
             padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(176, 228, 204, 0.06);
+            border: 1px solid rgba(176, 228, 204, 0.22);
             border-radius: 8px;
             color: white;
             font-family: inherit;
@@ -2698,8 +2891,8 @@
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            border-color: #408A71;
+            box-shadow: 0 0 0 3px rgba(64, 138, 113, 0.2);
         }
 
         .form-group textarea {
@@ -2740,15 +2933,15 @@
         }
 
         .credential-item {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(176, 228, 204, 0.06);
             border-radius: 12px;
             padding: 20px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .credential-item.default {
-            border-color: rgba(59, 130, 246, 0.5);
-            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(64, 138, 113, 0.5);
+            background: rgba(64, 138, 113, 0.12);
         }
 
         .credential-header {
@@ -2789,6 +2982,11 @@
             color: #4285f4;
         }
 
+        .provider-kubernetes {
+            background: rgba(50, 108, 229, 0.1);
+            color: #B0E4CC;
+        }
+
         .credential-details {
             display: flex;
             gap: 20px;
@@ -2804,11 +3002,11 @@
         }
 
         .detail-label {
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         .detail-value {
-            color: #cbd5e1;
+            color: #B0E4CC;
         }
 
         .credential-actions {
@@ -2852,7 +3050,7 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #64748b;
+            color: #408A71;
         }
 
         .btn-danger {
@@ -2877,7 +3075,7 @@
         }
 
         .permission-modal-content {
-            background: #1e293b;
+            background: #285A48;
             padding: 30px;
             border-radius: 12px;
             max-width: 500px;
@@ -2948,9 +3146,9 @@
         }
 
         .btn-cancel {
-            background: rgba(255, 255, 255, 0.05);
-            color: #94a3b8;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(176, 228, 204, 0.06);
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.12);
             padding: 10px 20px;
             border-radius: 6px;
             font-weight: 600;
@@ -2972,12 +3170,12 @@
                     <p style="font-size: 0.85rem; color: #fde68a; margin-bottom: 8px;"><strong>Option A: Try with Admin
                             Credentials</strong></p>
                     <select id="adminCredentialSelect"
-                        style="width: 100%; background: #0f172a; color: white; border: 1px solid #334155; padding: 8px; border-radius: 4px; font-size: 0.85rem;">
+                        style="width: 100%; background: #091413; color: white; border: 1px solid #408A71; padding: 8px; border-radius: 4px; font-size: 0.85rem;">
                         <option value="">-- Select Admin Credential --</option>
                     </select>
                 </div>
 
-                <div style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;">
+                <div style="margin-top: 15px; font-size: 0.85rem; color: #B0E4CC;">
                     <p id="autoGrantText">Would you like to automatically attach the required policy?</p>
                     <strong>Policy to attach:</strong><br>
                     <code id="permPolicyArn" style="display: block; margin-top: 5px;"></code>
@@ -2999,7 +3197,7 @@
                 </div>
 
                 <div id="manualTabCLI">
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Run these commands with
+                    <p style="font-size: 0.85rem; color: #B0E4CC; margin-bottom: 10px;">Run these commands with
                         <strong>administrator credentials</strong> (in order):
                     </p>
 
@@ -3021,14 +3219,14 @@
                 </div>
 
                 <div id="manualTabJSON" style="display: none;">
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 1: Identity
+                    <p style="font-size: 0.8rem; color: #B0E4CC; margin-bottom: 5px;"><strong>Step 1: Identity
                             Policy</strong> (Attach to User <code>vuln_scan_test</code>)</p>
                     <pre id="identityPolicyJSON"
                         style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; margin-bottom: 10px;"></pre>
                     <button class="btn-cancel" style="width: 100%; margin-bottom: 15px;"
                         onclick="copyToClipboard('identityPolicyJSON')">📋 Copy Identity JSON</button>
 
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 2: Trust
+                    <p style="font-size: 0.8rem; color: #B0E4CC; margin-bottom: 5px;"><strong>Step 2: Trust
                             Relationship</strong> (Edit trust relationship on Role <code>CloudGuardReadOnlyRole</code>)
                     </p>
                     <pre id="trustPolicyJSON"
@@ -3054,7 +3252,7 @@
                 <button class="modal-close" onclick="closeIamCommandsModal()">&times;</button>
             </div>
             <div class="modal-body" style="padding: 32px;">
-                <p style="margin-bottom: 24px; color: #94a3b8; font-size: 1.1rem;">To run scheduled scans, you must
+                <p style="margin-bottom: 24px; color: #B0E4CC; font-size: 1.1rem;">To run scheduled scans, you must
                     grant the scanner user permission to assume the role. Run these commands in your AWS terminal:</p>
 
                 <div class="command-group">
@@ -3074,20 +3272,20 @@
                 </div>
 
                 <div class="alert alert-info"
-                    style="margin-top: 32px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); padding: 20px; border-radius: 12px; display: flex; align-items: flex-start; gap: 12px;">
+                    style="margin-top: 32px; background: rgba(64, 138, 113, 0.08); border: 1px solid rgba(64, 138, 113, 0.2); padding: 20px; border-radius: 12px; display: flex; align-items: flex-start; gap: 12px;">
                     <span style="font-size: 1.5rem;">ℹ️</span>
                     <div>
-                        <strong style="color: #60a5fa; display: block; margin-bottom: 4px;">Important Note</strong>
-                        <span style="font-size: 0.95rem; color: #94a3b8;">These commands only need to be run once.
+                        <strong style="color: #B0E4CC; display: block; margin-bottom: 4px;">Important Note</strong>
+                        <span style="font-size: 0.95rem; color: #B0E4CC;">These commands only need to be run once.
                             Replace <code>YOUR_IAM_USER</code> with the AWS user whose access keys you provided.</span>
                     </div>
                 </div>
             </div>
             <div class="modal-footer"
-                style="padding: 24px 32px; background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(148, 163, 184, 0.1);">
+                style="padding: 24px 32px; background: rgba(9, 20, 19, 0.52); border-top: 1px solid rgba(176, 228, 204, 0.14);">
                 <button class="btn btn-secondary" onclick="closeIamCommandsModal()">Cancel</button>
                 <button class="btn btn-primary" id="confirmIamCommandsBtn"
-                    style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);">✅ I have run these commands</button>
+                    style="background: linear-gradient(135deg, #408A71, #B0E4CC);">✅ I have run these commands</button>
             </div>
         </div>
     </div>

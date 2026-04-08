@@ -1,0 +1,83 @@
+services:
+  - type: web
+    name: cloudguard-scan-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh deploy/run-worker.sh
+    healthCheckPath: /health
+    maxShutdownDelaySeconds: 300
+    envVars:
+      - fromGroup: cloudguard-worker-shared
+      - key: WORKER_API_TOKEN
+        sync: false
+      - key: PORT
+        value: "10000"
+    buildFilter:
+      paths:
+        - backend/**
+        - config/**
+        - db/init/**
+        - deploy/**
+        - Dockerfile
+        - requirements.txt
+
+  - type: cron
+    name: cloudguard-scan-cron
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    dockerCommand: sh deploy/run-due-schedules.sh
+    schedule: "*/5 * * * *"
+    envVars:
+      - fromGroup: cloudguard-worker-shared
+    buildFilter:
+      paths:
+        - backend/**
+        - config/**
+        - db/init/**
+        - deploy/**
+        - Dockerfile
+        - requirements.txt
+
+envVarGroups:
+  - name: cloudguard-worker-shared
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_AGENT_MODEL
+        value: gpt-4o-mini
+      - key: AWS_REGION
+        value: us-east-1
+      - key: AWS_PROFILE
+        value: default
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_SESSION_TOKEN
+        sync: false
+      - key: GCP_PROJECT_ID
+        sync: false
+      - key: GCP_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false

@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
 
     aws_access_key_id TEXT,
     aws_secret_access_key TEXT,
-    aws_region VARCHAR(100) DEFAULT 'us-east-1',
+    aws_region VARCHAR(100) DEFAULT 'ap-south-1',
     aws_session_token TEXT,
 
     gcp_service_account_json TEXT,

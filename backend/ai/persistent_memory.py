@@ -87,7 +87,8 @@ class PersistentMemorySystem:
     """
     
     def __init__(self):
-        self._ensure_tables_exist()
+        # Delay table initialization until app startup so imports stay light on serverless cold starts.
+        pass
     
     def _ensure_tables_exist(self):
         """Create memory tables if they don't exist"""

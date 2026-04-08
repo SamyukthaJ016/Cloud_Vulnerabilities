@@ -22,6 +22,7 @@ from backend.mcp_servers.base_server import (
 from backend.mcp.mcp_base import CloudResource, SecurityFinding, Severity
 
 logger = logging.getLogger("aws_mcp_server")
+DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
 
 
 class AWSMCPServer(BaseMCPServer):
@@ -47,7 +48,7 @@ class AWSMCPServer(BaseMCPServer):
             
             # Pass self.config as the creds parameter
             self.session = get_aws_session(
-                region=self.config.get('region', 'us-east-1'),
+                region=self.config.get('region', DEFAULT_AWS_REGION),
                 creds=self.config  # Pass the entire config as creds
             )
 

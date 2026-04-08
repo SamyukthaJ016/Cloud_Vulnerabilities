@@ -23,6 +23,7 @@ from backend.mcp_servers.base_server import (
 )
 
 logger = logging.getLogger("cloudfox_mcp_server")
+DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
 
 
 class CloudFoxMCPServer(BaseMCPServer):
@@ -31,7 +32,7 @@ class CloudFoxMCPServer(BaseMCPServer):
     def __init__(self, config: Dict[str, Any]):
         self.cloudfox_path = None
         self.aws_profile = config.get("profile") or os.getenv("AWS_PROFILE", "default")
-        self.aws_region = config.get("region") or os.getenv("AWS_REGION", "us-east-1")
+        self.aws_region = config.get("region") or os.getenv("AWS_REGION", DEFAULT_AWS_REGION)
         self.aws_access_key_id = config.get("access_key_id")
         self.aws_secret_access_key = config.get("secret_access_key")
         self.aws_session_token = config.get("session_token")

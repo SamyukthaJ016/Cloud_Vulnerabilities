@@ -21,6 +21,33 @@ logger = logging.getLogger("database")
 _DB_CONN = None
 
 
+def _create_conn(db_url: str):
+    conn = psycopg2.connect(
+        db_url,
+        connect_timeout=10,
+        application_name="cloudguard",
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5,
+    )
+    conn.autocommit = True
+    return conn
+
+
+def _is_conn_usable(conn) -> bool:
+    if conn is None or conn.closed:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+        return True
+    except (psycopg2.InterfaceError, psycopg2.OperationalError):
+        return False
+
+
 def get_conn():
     """
     Get a valid database connection.
@@ -34,16 +61,20 @@ def get_conn():
         raise RuntimeError("DATABASE_URL not set")
 
     try:
-        if _DB_CONN is None or _DB_CONN.closed:
+        if not _is_conn_usable(_DB_CONN):
+            if _DB_CONN is not None:
+                try:
+                    _DB_CONN.close()
+                except Exception:
+                    pass
             logger.info("Connecting to database...")
-            _DB_CONN = psycopg2.connect(db_url)
-            _DB_CONN.autocommit = True   # 🔁 yahan True karo
+            _DB_CONN = _create_conn(db_url)
             logger.info("✅ Database connected")
 
 
         return _DB_CONN
 
-    except psycopg2.OperationalError as e:
+    except (psycopg2.InterfaceError, psycopg2.OperationalError) as e:
         logger.critical(f"❌ Database connection failed: {e}")
         raise
 
@@ -93,6 +124,108 @@ def create_scan_record(account_id, cloud, user_id, aws_credential_id=None):
         conn.rollback()
         logger.error(f"Failed to create scan record: {e}")
         raise
+    finally:
+        cur.close()
+
+
+def finalize_scan_record(
+    scan_id: int,
+    status: str,
+    duration_seconds: int | None = None,
+    error_message: str | None = None,
+):
+    """Mark a scan as finished once all findings have been stored."""
+    conn = ensure_connection()
+    cur = conn.cursor()
+    duration_value = None
+    if duration_seconds is not None:
+        try:
+            duration_value = max(int(round(duration_seconds)), 0)
+        except (TypeError, ValueError):
+            duration_value = None
+
+    try:
+        cur.execute(
+            """
+            UPDATE scans
+            SET
+                status = %s,
+                completed_at = CASE
+                    WHEN %s IN ('completed', 'failed') THEN COALESCE(completed_at, NOW())
+                    ELSE completed_at
+                END,
+                duration_seconds = COALESCE(
+                    %s,
+                    duration_seconds,
+                    CASE
+                        WHEN %s IN ('completed', 'failed')
+                        THEN GREATEST(EXTRACT(EPOCH FROM (NOW() - started_at))::INTEGER, 0)
+                        ELSE NULL
+                    END
+                ),
+                error_message = %s
+            WHERE id = %s
+            """,
+            (
+                status,
+                status,
+                duration_value,
+                status,
+                error_message,
+                scan_id,
+            ),
+        )
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to finalize scan record {scan_id}: {e}")
+        raise
+    finally:
+        cur.close()
+
+
+def reconcile_stale_scan_records(
+    user_id: str | None = None,
+    older_than_seconds: int = 120,
+) -> int:
+    """
+    Repair historical scan rows that were left in 'running' even though data was stored.
+    """
+    conn = ensure_connection()
+    cur = conn.cursor()
+
+    try:
+        query = """
+            UPDATE scans s
+            SET
+                status = 'completed',
+                completed_at = COALESCE(s.completed_at, NOW()),
+                duration_seconds = COALESCE(
+                    s.duration_seconds,
+                    GREATEST(EXTRACT(EPOCH FROM (NOW() - s.started_at))::INTEGER, 0)
+                )
+            WHERE s.status = 'running'
+              AND s.started_at < NOW() - (%s * INTERVAL '1 second')
+              AND (
+                    EXISTS (SELECT 1 FROM resources r WHERE r.scan_id = s.id)
+                 OR EXISTS (SELECT 1 FROM findings f WHERE f.scan_id = s.id)
+                 OR EXISTS (SELECT 1 FROM vulnerabilities v WHERE v.scan_id = s.id)
+              )
+        """
+        params: list[Any] = [older_than_seconds]
+
+        if user_id:
+            query += " AND s.user_id = %s"
+            params.append(user_id)
+
+        cur.execute(query, tuple(params))
+        updated = cur.rowcount or 0
+        conn.commit()
+        return updated
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to reconcile stale scan records: {e}")
+        return 0
     finally:
         cur.close()
 

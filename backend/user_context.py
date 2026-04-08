@@ -1,6 +1,6 @@
 import os
 from typing import Optional
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 import psycopg2
 from fastapi import HTTPException, Request
@@ -52,6 +52,43 @@ def build_sso_login_redirect(request: Request) -> str:
     return f"{get_sso_login_url()}?{urlencode({'callbackUrl': str(request.url)})}"
 
 
+def _standalone_user_id(request: Request) -> str:
+    return (
+        _clean_user_id(request.cookies.get(USER_ID_COOKIE))
+        or (os.getenv("STANDALONE_USER_ID") or "").strip()
+        or "anonymous"
+    )
+
+
+def _build_standalone_user(request: Request) -> dict:
+    user_id = _standalone_user_id(request)
+    return {
+        "id": user_id,
+        "email": f"{user_id}@cloudguard.local",
+        "name": "Standalone User" if user_id != "anonymous" else "Anonymous User",
+    }
+
+
+def use_standalone_auth(request: Request) -> bool:
+    auth_mode = (os.getenv("CLOUDGUARD_AUTH_MODE") or "").strip().lower()
+    if auth_mode == "standalone":
+        return True
+    if auth_mode == "sso":
+        return False
+
+    login_url = (os.getenv("SSO_LOGIN_URL") or "").strip()
+    if not login_url:
+        return True
+
+    try:
+        login_host = urlparse(login_url).netloc.lower()
+    except Exception:
+        login_host = ""
+
+    request_host = request.url.netloc.lower()
+    return not login_host or login_host == request_host
+
+
 def _get_database_url() -> str:
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
@@ -71,6 +108,12 @@ def authenticate_sso_user(request: Request) -> Optional[dict]:
     cached_user = getattr(request.state, "authenticated_user", None)
     if cached_user:
         return cached_user
+
+    if use_standalone_auth(request):
+        user = _build_standalone_user(request)
+        request.state.authenticated_user = user
+        request.state.user_id = user["id"]
+        return user
 
     session_token = _get_nextauth_session_token(request)
     if not session_token:

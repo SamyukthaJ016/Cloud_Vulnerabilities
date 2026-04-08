@@ -1,0 +1,292 @@
+# =============================================================================
+# VULNERABLE KUBERNETES SETUP - FOR SCANNER TESTING ONLY
+# Apply to an isolated local cluster (minikube / kind) NEVER in production
+# =============================================================================
+# Apply with: kubectl apply -f vulnerable-k8s-setup.yaml
+# Teardown  : kubectl delete -f vulnerable-k8s-setup.yaml
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# 1. NAMESPACES
+#    - "vuln-app"    : Missing NetworkPolicy, missing pod security labels
+#    - "vuln-system" : Missing NetworkPolicy, missing pod security labels
+#    - "secured"     : Has enforcement labels (to test your true-negative path)
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vuln-app
+  # ❌ No pod-security enforcement labels
+  # ❌ No NetworkPolicy will be created for this namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vuln-system
+  # ❌ No pod-security enforcement labels
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secured
+  labels:
+    pod-security.kubernetes.io/enforce: restricted   # ✅ Should NOT be flagged
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+
+
+# -----------------------------------------------------------------------------
+# 2. RBAC — CLUSTER-ADMIN BINDINGS
+#    Triggers: "cluster/admin RBAC bindings" check
+# -----------------------------------------------------------------------------
+
+# 2a. Regular user bound to cluster-admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vuln-user-cluster-admin
+subjects:
+- kind: User
+  name: vuln-developer          # ❌ Plain user with cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+
+# 2b. Service account bound to cluster-admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vuln-sa-cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: vuln-privileged-sa
+  namespace: vuln-app            # ❌ SA with cluster-admin
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+
+# 2c. The privileged service account itself
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vuln-privileged-sa
+  namespace: vuln-app
+---
+
+
+# -----------------------------------------------------------------------------
+# 3. SERVICES
+#    - NodePort service  : externally reachable without necessity
+#    - ClusterIP service : normal (true-negative)
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: vuln-nodeport-service
+  namespace: vuln-app
+spec:
+  type: NodePort               # ❌ Unnecessarily exposed via NodePort
+  selector:
+    app: vuln-app
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: safe-clusterip-service
+  namespace: secured
+spec:
+  type: ClusterIP              # ✅ Should NOT be flagged
+  selector:
+    app: safe-app
+  ports:
+  - port: 80
+    targetPort: 80
+---
+
+
+# -----------------------------------------------------------------------------
+# 4. PODS / CONTAINERS — RISKY SECURITY SETTINGS
+#    One pod packs as many vulnerabilities as possible so your scanner gets
+#    findings across every container-risk category.
+# -----------------------------------------------------------------------------
+
+# 4a. The "everything wrong" pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vuln-everything-pod
+  namespace: vuln-app
+spec:
+  # ❌ Default service account (not explicitly set, falls back to "default")
+  automountServiceAccountToken: true     # ❌ Token auto-mounted
+
+  # ❌ Host namespace usage
+  hostPID: true
+  hostIPC: true
+  hostNetwork: true
+
+  containers:
+  - name: vuln-container
+    image: nginx:latest                  # ❌ :latest tag (unpinned)
+
+    securityContext:
+      privileged: true                   # ❌ Privileged container
+      allowPrivilegeEscalation: true     # ❌ Privilege escalation allowed
+      runAsUser: 0                       # ❌ Running as root (UID 0)
+      runAsNonRoot: false                # ❌ Explicitly allows root
+
+    # No resource limits — DoS risk
+    # resources: {}                      # ❌ Missing limits/requests
+
+    env:
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: vuln-secret
+          key: password                  # ❌ Secret exposed as env var
+---
+
+# 4b. Privileged-only pod (isolated for clear scanner signal)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vuln-privileged-pod
+  namespace: vuln-app
+spec:
+  containers:
+  - name: privileged-container
+    image: busybox:1.35
+    command: ["sleep", "3600"]
+    securityContext:
+      privileged: true                   # ❌ Privileged
+      runAsUser: 0                       # ❌ Root
+---
+
+# 4c. Privilege-escalation-only pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vuln-escalation-pod
+  namespace: vuln-system
+spec:
+  containers:
+  - name: escalation-container
+    image: busybox:1.35
+    command: ["sleep", "3600"]
+    securityContext:
+      allowPrivilegeEscalation: true     # ❌ Escalation allowed
+      runAsNonRoot: false                # ❌ May run as root
+---
+
+# 4d. Host-namespace pod (hostPID / hostIPC)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vuln-hostns-pod
+  namespace: vuln-system
+spec:
+  hostPID: true                          # ❌ Shares host PID namespace
+  hostIPC: true                          # ❌ Shares host IPC namespace
+  containers:
+  - name: hostns-container
+    image: busybox:1.35
+    command: ["sleep", "3600"]
+---
+
+# 4e. Default service account pod (no explicit SA set)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vuln-default-sa-pod
+  namespace: vuln-app
+spec:
+  # serviceAccountName not set → uses "default"  ❌
+  automountServiceAccountToken: true     # ❌ Token mounted on default SA
+  containers:
+  - name: app
+    image: nginx:1.25
+---
+
+
+# -----------------------------------------------------------------------------
+# 5. SECRET (used by vuln-everything-pod env var above)
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vuln-secret
+  namespace: vuln-app
+type: Opaque
+stringData:
+  password: "supersecret123"
+---
+
+
+# -----------------------------------------------------------------------------
+# 6. NETWORK POLICY — only on "secured" namespace (true-negative)
+#    vuln-app and vuln-system intentionally have NO NetworkPolicy  ❌
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: secured               # ✅ Only secured ns gets a policy
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+
+
+# -----------------------------------------------------------------------------
+# 7. SAFE / REFERENCE POD in "secured" namespace
+#    All scanner checks should PASS here — use for true-negative validation
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: safe-pod
+  namespace: secured
+spec:
+  serviceAccountName: safe-sa
+  automountServiceAccountToken: false    # ✅
+  securityContext:
+    runAsNonRoot: true                   # ✅
+    runAsUser: 10001                     # ✅ Non-root UID
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: safe-container
+    image: nginx:1.25.4                  # ✅ Pinned version
+    securityContext:
+      privileged: false                  # ✅
+      allowPrivilegeEscalation: false    # ✅
+      readOnlyRootFilesystem: true       # ✅
+      capabilities:
+        drop: ["ALL"]                    # ✅
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "128Mi"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: safe-sa
+  namespace: secured
+automountServiceAccountToken: false      # ✅

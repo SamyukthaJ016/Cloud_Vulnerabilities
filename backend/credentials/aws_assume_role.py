@@ -1,10 +1,12 @@
+import os
 import boto3
 import logging
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
 
-def get_aws_session(region: str = "us-east-1", creds: dict = None):
+def get_aws_session(region: str = DEFAULT_AWS_REGION, creds: dict = None):
     """
     Get AWS session with optional role assumption.
     

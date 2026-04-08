@@ -22,7 +22,23 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from backend.utils.kubeconfig import KubeconfigPreparationError, prepare_kubeconfig_text
+
 logger = logging.getLogger("credential_manager")
+
+DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
+AWS_REGION_ALIASES = {
+    "asia/kolkata": "ap-south-1",
+    "ist": "ap-south-1",
+}
+
+
+def normalize_aws_region(region: Optional[str]) -> str:
+    raw = (region or "").strip()
+    if not raw:
+        return DEFAULT_AWS_REGION
+
+    return AWS_REGION_ALIASES.get(raw.lower(), raw)
 
 
 @dataclass
@@ -34,7 +50,7 @@ class CloudCredential:
     id: Optional[int] = None 
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
-    aws_region: Optional[str] = "us-east-1"
+    aws_region: Optional[str] = DEFAULT_AWS_REGION
     aws_role_arn: Optional[str] = None
     aws_session_token: Optional[str] = None
 
@@ -49,8 +65,12 @@ class CloudCredential:
     azure_tenant_id: Optional[str] = None
     azure_subscription_id: Optional[str] = None
 
+    kubernetes_kubeconfig: Optional[str] = None
+    kubernetes_context: Optional[str] = None
+    kubernetes_cluster_name: Optional[str] = None
+
     is_default: bool = False
-    is_valid: bool = True
+    is_valid: bool = False
 
 
 
@@ -143,10 +163,37 @@ class CredentialManager:
             cur.close()
             conn.close()
 
-    def save_credential(self, credential: CloudCredential) -> int:
+    def _build_generated_credential_name(self, credential: CloudCredential) -> str:
+        """Generate a readable credential name when the client leaves it blank."""
+        timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        provider = (credential.cloud_provider or "credential").strip().lower()
+
+        if provider == "aws":
+            descriptor = normalize_aws_region(credential.aws_region)
+        elif provider == "gcp":
+            descriptor = (credential.gcp_project_id or "project").strip()
+        elif provider == "kubernetes":
+            descriptor = (
+                credential.kubernetes_cluster_name
+                or credential.kubernetes_context
+                or "cluster"
+            ).strip()
+        elif provider == "openai":
+            descriptor = (credential.openai_org_id or "api").strip()
+        elif provider == "azure":
+            descriptor = (credential.azure_subscription_id or "subscription").strip()
+        else:
+            descriptor = "credential"
+
+        normalized_descriptor = "-".join(
+            chunk for chunk in descriptor.replace("/", "-").replace(" ", "-").split("-") if chunk
+        ) or "credential"
+        return f"{provider}-{normalized_descriptor}-{timestamp}"
+
+    def save_credential(self, credential: CloudCredential) -> Tuple[int, str]:
         """
         Save encrypted credential to database
-        Returns credential ID
+        Returns credential ID and whether the row was created or updated.
         """
         conn = self._get_connection()
         cur = conn.cursor()
@@ -154,6 +201,19 @@ class CredentialManager:
         try:
         # Ensure user exists
             self.ensure_user(credential.user_id)
+            credential.aws_region = normalize_aws_region(credential.aws_region)
+            credential.credential_name = (
+                (credential.credential_name or "").strip()
+                or self._build_generated_credential_name(credential)
+            )
+
+            # New or updated credentials should remain pending until validation completes.
+            credential.is_valid = False
+
+            if credential.cloud_provider == "kubernetes" and credential.kubernetes_kubeconfig:
+                credential.kubernetes_kubeconfig = prepare_kubeconfig_text(
+                    credential.kubernetes_kubeconfig
+                )
         
         # Encrypt sensitive fields
             encrypted_credential = asdict(credential)
@@ -171,6 +231,8 @@ class CredentialManager:
                 encrypted_credential['openai_api_key'] = self.encrypt(credential.openai_api_key)
             if credential.azure_client_secret:
                 encrypted_credential['azure_client_secret'] = self.encrypt(credential.azure_client_secret)
+            if credential.kubernetes_kubeconfig:
+                encrypted_credential['kubernetes_kubeconfig'] = self.encrypt(credential.kubernetes_kubeconfig)
         
         # Check if credential already exists
             cur.execute(
@@ -183,10 +245,12 @@ class CredentialManager:
         
             existing = cur.fetchone()
             credential_id = None
+            save_action = "created"
         
             if existing:
             # Update existing credential
                 credential_id = existing[0]
+                save_action = "updated"
                 update_fields = []
                 update_values = []
             
@@ -225,6 +289,8 @@ class CredentialManager:
             
                 cur.execute(insert_query, values)
                 credential_id = cur.fetchone()[0]
+
+            credential.id = credential_id
         
         # If this is default, unset other defaults for this provider and user
             if credential.is_default:
@@ -250,7 +316,7 @@ class CredentialManager:
                 )
         
             
-            return credential_id
+            return credential_id, save_action
         
         except Exception as e:
             conn.rollback()
@@ -352,13 +418,24 @@ class CredentialManager:
         
         # 🔥 DECRYPT sensitive fields
             for field in ['aws_secret_access_key', 'aws_access_key_id', 'aws_session_token',
-                     'gcp_service_account_json', 'openai_api_key', 'azure_client_secret']:
+                     'gcp_service_account_json', 'openai_api_key', 'azure_client_secret',
+                     'kubernetes_kubeconfig']:
                 if credential_dict.get(field):
                     try:
                         credential_dict[field] = self.decrypt(credential_dict[field])
                     except Exception as e:
                         logger.warning(f"Failed to decrypt field {field}: {e}")
                         credential_dict[field] = None
+
+            if credential_dict.get("cloud_provider") == "kubernetes" and credential_dict.get("kubernetes_kubeconfig"):
+                try:
+                    credential_dict["kubernetes_kubeconfig"] = prepare_kubeconfig_text(
+                        credential_dict["kubernetes_kubeconfig"]
+                    )
+                except KubeconfigPreparationError as exc:
+                    logger.warning("Kubernetes kubeconfig could not be normalized on read: %s", exc)
+
+            credential_dict["aws_region"] = normalize_aws_region(credential_dict.get("aws_region"))
         
         # 🔥 Remove fields that aren't part of CloudCredential constructor
             fields_to_remove = [
@@ -402,6 +479,10 @@ class CredentialManager:
                 azure_tenant_id=credential_dict["azure_tenant_id"],
                 azure_subscription_id=credential_dict["azure_subscription_id"],
 
+                kubernetes_kubeconfig=credential_dict.get("kubernetes_kubeconfig"),
+                kubernetes_context=credential_dict.get("kubernetes_context"),
+                kubernetes_cluster_name=credential_dict.get("kubernetes_cluster_name"),
+
                 is_default=credential_dict["is_default"],
                 is_valid=credential_dict["is_valid"],
             )
@@ -430,12 +511,13 @@ class CredentialManager:
                         id, user_id, cloud_provider, credential_name,
                         aws_region, gcp_project_id, openai_org_id,
                         azure_tenant_id, azure_subscription_id,
+                        kubernetes_context, kubernetes_cluster_name,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
                     FROM cloud_credentials 
                     WHERE user_id = %s AND cloud_provider = %s
-                    ORDER BY is_default DESC, last_used DESC NULLS LAST
+                    ORDER BY is_default DESC, updated_at DESC NULLS LAST, last_used DESC NULLS LAST
                     """,
                     (user_id, provider)
                 )
@@ -446,18 +528,22 @@ class CredentialManager:
                         id, user_id, cloud_provider, credential_name,
                         aws_region, gcp_project_id, openai_org_id,
                         azure_tenant_id, azure_subscription_id,
+                        kubernetes_context, kubernetes_cluster_name,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
                     FROM cloud_credentials 
                     WHERE user_id = %s
-                    ORDER BY cloud_provider, is_default DESC, last_used DESC NULLS LAST
+                    ORDER BY cloud_provider, is_default DESC, updated_at DESC NULLS LAST, last_used DESC NULLS LAST
                     """,
                     (user_id,)
                 )
         
             rows = cur.fetchall()
-            return [dict(row) for row in rows]
+            credentials = [dict(row) for row in rows]
+            for credential in credentials:
+                credential["aws_region"] = normalize_aws_region(credential.get("aws_region"))
+            return credentials
         
         except Exception as e:
             logger.error(f"Failed to get user credentials: {e}")
@@ -565,8 +651,9 @@ class CredentialManager:
                 OR gcp_credential_id = %s
                 OR openai_credential_id = %s
                 OR azure_credential_id = %s
+                OR kubernetes_credential_id = %s
                 LIMIT 1
-            """, (credential_id, credential_id, credential_id, credential_id))
+            """, (credential_id, credential_id, credential_id, credential_id, credential_id))
 
             if cur.fetchone():
                 raise HTTPException(
@@ -625,12 +712,14 @@ class CredentialManager:
                 validation_result = self._validate_gcp_credential(credential)
             elif credential.cloud_provider == 'azure':
                 validation_result = self._validate_azure_credential(credential)
+            elif credential.cloud_provider == 'kubernetes':
+                validation_result = self._validate_kubernetes_credential(credential)
             else:
                 validation_result['message'] = f'Unknown provider: {credential.cloud_provider}'
             
             # Update credential validation status
             self._update_validation_status(
-                credential_id=None,  # Will be set after save
+                credential_id=credential.id,
                 user_id=credential.user_id,
                 is_valid=validation_result['valid'],
                 message=validation_result['message']
@@ -656,7 +745,7 @@ class CredentialManager:
                 aws_access_key_id=credential.aws_access_key_id,
                 aws_secret_access_key=credential.aws_secret_access_key,
                 aws_session_token=credential.aws_session_token,
-                region_name=credential.aws_region or 'us-east-1'
+                region_name=normalize_aws_region(credential.aws_region)
             )
             
             # Test STS to get caller identity
@@ -821,6 +910,71 @@ class CredentialManager:
                 'message': f'Azure validation failed: {str(e)}',
                 'details': {}
             }
+
+    def _validate_kubernetes_credential(self, credential: CloudCredential) -> Dict[str, Any]:
+        """Validate Kubernetes credentials using kubeconfig."""
+        temp_path = None
+        try:
+            from kubernetes import client, config
+            from kubernetes.config.config_exception import ConfigException
+            import tempfile
+
+            if not credential.kubernetes_kubeconfig:
+                return {
+                    'valid': False,
+                    'message': 'No Kubernetes kubeconfig provided',
+                    'details': {}
+                }
+
+            kubeconfig_text = prepare_kubeconfig_text(credential.kubernetes_kubeconfig)
+
+            with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+                handle.write(kubeconfig_text)
+                temp_path = handle.name
+
+            api_client = config.new_client_from_config(
+                config_file=temp_path,
+                context=credential.kubernetes_context or None,
+            )
+
+            version_api = client.VersionApi(api_client)
+            version = version_api.get_code()
+            contexts, active_context = config.list_kube_config_contexts(config_file=temp_path)
+            context_name = credential.kubernetes_context or (active_context or {}).get("name")
+            cluster_name = credential.kubernetes_cluster_name
+            if not cluster_name and active_context:
+                cluster_name = (active_context.get("context") or {}).get("cluster")
+
+            return {
+                'valid': True,
+                'message': 'Kubernetes credentials validated successfully',
+                'details': {
+                    'context': context_name,
+                    'cluster_name': cluster_name,
+                    'server_version': getattr(version, 'git_version', None)
+                }
+            }
+        except KubeconfigPreparationError as e:
+            return {
+                'valid': False,
+                'message': str(e),
+                'details': {}
+            }
+        except ConfigException as e:
+            return {
+                'valid': False,
+                'message': f'Kubernetes validation failed: {str(e)}',
+                'details': {}
+            }
+        except Exception as e:
+            return {
+                'valid': False,
+                'message': f'Kubernetes validation error: {str(e)}',
+                'details': {}
+            }
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                os.unlink(temp_path)
     
     def _update_validation_status(self, credential_id: Optional[int], user_id: str, 
                                  is_valid: bool, message: str) -> None:
@@ -895,14 +1049,16 @@ class CredentialManager:
                 """
                 INSERT INTO scan_sessions 
                 (session_id, user_id, aws_credential_id, gcp_credential_id, 
-                 openai_credential_id, azure_credential_id, scan_config, expires_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, NOW() + INTERVAL '1 hour')
+                 openai_credential_id, azure_credential_id, kubernetes_credential_id,
+                 scan_config, expires_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW() + INTERVAL '1 hour')
                 """,
                 (session_id, user_id,
                  credential_ids.get('aws'),
                  credential_ids.get('gcp'),
                  credential_ids.get('openai'),
                  credential_ids.get('azure'),
+                 credential_ids.get('kubernetes'),
                  json.dumps(scan_config or {}))
             )
             
@@ -961,6 +1117,15 @@ class CredentialManager:
                     credentials['gcp'] = {
                         'service_account_json': gcp_cred.gcp_service_account_json,
                         'project_id': gcp_cred.gcp_project_id
+                    }
+
+            if session.get('kubernetes_credential_id'):
+                kube_cred = self.get_credentials(session['kubernetes_credential_id'], session['user_id'])
+                if kube_cred:
+                    credentials['kubernetes'] = {
+                        'kubeconfig': kube_cred.kubernetes_kubeconfig,
+                        'context': kube_cred.kubernetes_context,
+                        'cluster_name': kube_cred.kubernetes_cluster_name,
                     }
             
             return credentials

@@ -29,6 +29,11 @@ google-cloud-compute==1.15.0   # Google Compute Engine client library
 google-cloud-resource-manager==1.12.3 # Google Cloud Resource Manager client library
 
 # ============================================================================
+# Kubernetes SDK
+# ============================================================================
+kubernetes==30.1.0             # Kubernetes API client for cluster posture scanning
+
+# ============================================================================
 # OpenAI / AI Analysis
 # ============================================================================
 openai==1.54.3                 # OpenAI API client for GPT-4 analysis (pinned for compatibility)

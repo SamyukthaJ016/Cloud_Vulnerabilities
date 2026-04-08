@@ -121,6 +121,8 @@ services:
       - ./reports:/app/reports:rw
       - ./logs:/app/logs:rw
       - ~/.aws:/home/scanner/.aws:ro
+      - ${HOME}/.kube:${HOME}/.kube:ro
+      - ${HOME}/.minikube:${HOME}/.minikube:ro
       - ./db/init:/app/db/init:ro
 
     ports:
@@ -180,6 +182,8 @@ services:
       - ./config:/app/config:ro
       - ./logs:/app/logs:rw
       - ~/.aws:/home/scanner/.aws:ro
+      - ${HOME}/.kube:${HOME}/.kube:ro
+      - ${HOME}/.minikube:${HOME}/.minikube:ro
       - ./db/init:/app/db/init:ro
 
     networks:

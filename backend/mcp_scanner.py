@@ -17,6 +17,7 @@ from backend.mcp_servers.base_server import (
 )
 from backend.mcp_servers.aws_server import create_aws_server
 from backend.mcp_servers.gcp_server import create_gcp_server
+from backend.mcp_servers.kubernetes_server import create_kubernetes_server
 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.credentials.manager import credential_manager
 
@@ -87,6 +88,14 @@ class MCPSecurityScanner:
                         "project_id": credential.gcp_project_id
                     })
                     results["credential_mapping"]["gcp"] = credential.id
+
+                elif provider == "kubernetes":
+                    server = create_kubernetes_server({
+                        "kubeconfig": credential.kubernetes_kubeconfig,
+                        "context": credential.kubernetes_context,
+                        "cluster_name": credential.kubernetes_cluster_name,
+                    })
+                    results["credential_mapping"]["kubernetes"] = credential.id
                 
                 elif provider == "cloudfox":
                     # CloudFox uses AWS credentials

@@ -14,8 +14,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #f1f5f9;
+            background: linear-gradient(135deg, #091413 0%, #285A48 100%);
+            color: #B0E4CC;
             min-height: 100vh;
         }
 
@@ -30,17 +30,17 @@
             justify-content: space-between;
             align-items: center;
             padding: 24px 32px;
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(40, 90, 72, 0.82);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             margin-bottom: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .title {
             font-size: 2rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+            background: linear-gradient(135deg, #B0E4CC 0%, #408A71 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -56,19 +56,19 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(135deg, #408A71, #B0E4CC);
             color: white;
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(176, 228, 204, 0.12);
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.12);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 25px rgba(64, 138, 113, 0.3);
         }
 
         /* Stats Cards */
@@ -80,10 +80,10 @@
         }
 
         .stat-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .stat-value {
@@ -95,7 +95,7 @@
 
         .stat-label {
             font-size: 0.9rem;
-            color: #94a3b8;
+            color: #B0E4CC;
             text-transform: uppercase;
         }
 
@@ -104,10 +104,10 @@
             display: flex;
             gap: 8px;
             margin-bottom: 24px;
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             padding: 8px;
             border-radius: 16px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .tab {
@@ -115,7 +115,7 @@
             border-radius: 12px;
             background: transparent;
             border: none;
-            color: #94a3b8;
+            color: #B0E4CC;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
@@ -123,8 +123,8 @@
         }
 
         .tab.active {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
+            background: rgba(64, 138, 113, 0.2);
+            color: #B0E4CC;
         }
 
         /* Schedule Cards */
@@ -134,10 +134,10 @@
         }
 
         .schedule-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             transition: all 0.3s;
         }
 
@@ -168,8 +168,8 @@
         }
 
         .status-scheduled {
-            background: rgba(59, 130, 246, 0.2);
-            color: #93c5fd;
+            background: rgba(64, 138, 113, 0.2);
+            color: #B0E4CC;
         }
 
         .status-completed {
@@ -197,12 +197,12 @@
 
         .info-label {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         .info-value {
             font-size: 1rem;
-            color: #e2e8f0;
+            color: #B0E4CC;
             font-weight: 600;
         }
 
@@ -229,6 +229,11 @@
             color: #4285f4;
         }
 
+        .provider-kubernetes {
+            background: rgba(50, 108, 229, 0.2);
+            color: #B0E4CC;
+        }
+
         .provider-openai {
             background: rgba(16, 163, 127, 0.2);
             color: #10a37f;
@@ -237,13 +242,13 @@
         .scan-results {
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            border-top: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .results-header {
             font-size: 1rem;
             font-weight: 600;
-            color: #cbd5e1;
+            color: #B0E4CC;
             margin-bottom: 12px;
         }
 
@@ -260,7 +265,7 @@
         }
 
         .metric-label {
-            color: #94a3b8;
+            color: #B0E4CC;
             font-size: 0.9rem;
         }
 
@@ -289,7 +294,7 @@
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #64748b;
+            color: #408A71;
         }
 
         .empty-icon {
@@ -301,7 +306,7 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #64748b;
+            color: #408A71;
         }
 
         /* Permission Modal */
@@ -319,8 +324,8 @@
         }
 
         .permission-modal-content {
-            background: #1e293b;
-            border: 1px solid #334155;
+            background: #285A48;
+            border: 1px solid #408A71;
             border-radius: 20px;
             padding: 32px;
             max-width: 600px;
@@ -374,7 +379,7 @@
         <div class="header">
             <div>
                 <div class="title">📅 Scheduled Scans</div>
-                <div style="color: #94a3b8; margin-top: 8px;">
+                <div style="color: #B0E4CC; margin-top: 8px;">
                     Manage your automated security scans
                 </div>
             </div>
@@ -505,7 +510,7 @@
                             <div class="schedule-name">
                                 ${schedule.schedule?.name || `Schedule #${schedule.id}`}
                             </div>
-                            <div style="color: #94a3b8; font-size: 0.9rem; margin-top: 4px;">
+                            <div style="color: #B0E4CC; font-size: 0.9rem; margin-top: 4px;">
                                 Created ${formatDate(schedule.created_at)}
                             </div>
                         </div>
@@ -631,7 +636,7 @@
                     </div>
                 `;
             } catch (error) {
-                container.innerHTML = '<span style="color: #94a3b8;">Failed to load results</span>';
+                container.innerHTML = '<span style="color: #B0E4CC;">Failed to load results</span>';
             }
         }
 
@@ -881,7 +886,7 @@
                 </div>
 
                 <div id="manualTabCLI">
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Run these commands with
+                    <p style="font-size: 0.85rem; color: #B0E4CC; margin-bottom: 10px;">Run these commands with
                         <strong>administrator credentials</strong>:
                     </p>
 
@@ -899,13 +904,13 @@
                 </div>
 
                 <div id="manualTabJSON" style="display: none;">
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 1: Identity
+                    <p style="font-size: 0.8rem; color: #B0E4CC; margin-bottom: 5px;"><strong>Step 1: Identity
                             Policy</strong></p>
                     <pre id="identityPolicyJSON"></pre>
                     <button class="btn btn-secondary btn-small" style="width: 100%; margin-bottom: 15px;"
                         onclick="copyToClipboard('identityPolicyJSON')">📋 Copy Identity JSON</button>
 
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 5px;"><strong>Step 2: Trust
+                    <p style="font-size: 0.8rem; color: #B0E4CC; margin-bottom: 5px;"><strong>Step 2: Trust
                             Relationship</strong></p>
                     <pre id="trustPolicyJSON"></pre>
                     <button class="btn btn-secondary btn-small" style="width: 100%;"

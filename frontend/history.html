@@ -14,8 +14,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #e2e8f0;
+            background: linear-gradient(135deg, #091413 0%, #285A48 100%);
+            color: #B0E4CC;
             min-height: 100vh;
             padding: 20px;
         }
@@ -31,7 +31,7 @@
             align-items: center;
             margin-bottom: 30px;
             padding: 20px;
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(40, 90, 72, 0.68);
             border-radius: 12px;
             backdrop-filter: blur(10px);
         }
@@ -39,7 +39,7 @@
         h1 {
             font-size: 28px;
             font-weight: 700;
-            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            background: linear-gradient(135deg, #B0E4CC 0%, #408A71 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -57,17 +57,17 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #408A71 0%, #B0E4CC 100%);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 10px 25px rgba(64, 138, 113, 0.35);
         }
 
         .filters {
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(40, 90, 72, 0.68);
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
@@ -85,7 +85,7 @@
 
         .filter-group label {
             font-size: 12px;
-            color: #94a3b8;
+            color: #B0E4CC;
             font-weight: 600;
         }
 
@@ -93,14 +93,14 @@
         .filter-group input {
             padding: 8px 12px;
             border-radius: 6px;
-            border: 1px solid #334155;
-            background: #1e293b;
-            color: #e2e8f0;
+            border: 1px solid #408A71;
+            background: #285A48;
+            color: #B0E4CC;
             font-size: 14px;
         }
 
         .scans-table {
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(40, 90, 72, 0.68);
             border-radius: 12px;
             overflow: hidden;
         }
@@ -111,14 +111,14 @@
         }
 
         thead {
-            background: rgba(51, 65, 85, 0.8);
+            background: rgba(64, 138, 113, 0.34);
         }
 
         th {
             padding: 15px;
             text-align: left;
             font-weight: 600;
-            color: #cbd5e1;
+            color: #B0E4CC;
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -126,7 +126,7 @@
 
         td {
             padding: 15px;
-            border-top: 1px solid rgba(51, 65, 85, 0.5);
+            border-top: 1px solid rgba(176, 228, 204, 0.12);
         }
 
         tbody tr {
@@ -135,7 +135,7 @@
         }
 
         tbody tr:hover {
-            background: rgba(51, 65, 85, 0.4);
+            background: rgba(64, 138, 113, 0.2);
         }
 
         .status-badge {
@@ -152,8 +152,8 @@
         }
 
         .status-running {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
+            background: rgba(64, 138, 113, 0.2);
+            color: #B0E4CC;
         }
 
         .status-failed {
@@ -201,15 +201,15 @@
         .pagination button {
             padding: 8px 16px;
             border-radius: 6px;
-            border: 1px solid #334155;
-            background: #1e293b;
-            color: #e2e8f0;
+            border: 1px solid #408A71;
+            background: #285A48;
+            color: #B0E4CC;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .pagination button:hover:not(:disabled) {
-            background: #334155;
+            background: #408A71;
         }
 
         .pagination button:disabled {
@@ -218,20 +218,20 @@
         }
 
         .pagination span {
-            color: #94a3b8;
+            color: #B0E4CC;
             font-size: 14px;
         }
 
         .loading {
             text-align: center;
             padding: 40px;
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         .empty-state svg {
@@ -247,7 +247,7 @@
             font-size: 11px;
             font-weight: 600;
             background: rgba(96, 165, 250, 0.2);
-            color: #60a5fa;
+            color: #B0E4CC;
         }
     </style>
 </head>
@@ -268,6 +268,7 @@
                     <option value="">All Providers</option>
                     <option value="aws">AWS</option>
                     <option value="gcp">GCP</option>
+                    <option value="kubernetes">Kubernetes</option>
                     <option value="azure">Azure</option>
                 </select>
             </div>
@@ -303,8 +304,6 @@
                         <th>Cloud Provider</th>
                         <th>Account ID</th>
                         <th>Status</th>
-                        <th>Started At</th>
-                        <th>Duration</th>
                         <th>Resources</th>
                         <th>Findings</th>
                         <th>Critical</th>
@@ -312,7 +311,7 @@
                 </thead>
                 <tbody id="scansTableBody">
                     <tr>
-                        <td colspan="9" class="loading">Loading scan history...</td>
+                        <td colspan="7" class="loading">Loading scan history...</td>
                     </tr>
                 </tbody>
             </table>
@@ -363,7 +362,7 @@
                 const userId = getUserId();
                 const offset = (currentPage - 1) * pageSize;
 
-                let url = `/api/scans?user_id=${userId}&limit=${pageSize}&offset=${offset}`;
+                let url = `/api/scans?user_id=${userId}&limit=${pageSize}&offset=${offset}&latest_only=true`;
 
                 if (filters.provider) url += `&provider=${filters.provider}`;
                 if (filters.status) url += `&status=${filters.status}`;
@@ -392,7 +391,7 @@
             if (!scans || scans.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="empty-state">
+                        <td colspan="7" class="empty-state">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                             </svg>
@@ -410,8 +409,6 @@
                     <td><span class="cloud-badge">${scan.cloud.toUpperCase()}</span></td>
                     <td>${scan.account_id || 'N/A'}</td>
                     <td><span class="status-badge status-${scan.status}">${scan.status}</span></td>
-                    <td>${new Date(scan.started_at).toLocaleString()}</td>
-                    <td>${scan.duration_seconds ? scan.duration_seconds + 's' : '-'}</td>
                     <td>${scan.resource_count || 0}</td>
                     <td>${scan.finding_count || 0}</td>
                     <td>${scan.critical_count ? `<span class="severity-badge severity-critical">${scan.critical_count}</span>` : '-'}</td>
@@ -423,7 +420,7 @@
             const tbody = document.getElementById('scansTableBody');
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="empty-state">
+                    <td colspan="7" class="empty-state">
                         <h3>⚠️ ${message}</h3>
                     </td>
                 </tr>
@@ -461,10 +458,11 @@
         function viewScanDetails(scanId) {
             window.location.href = `/dashboard?scanIds=${scanId}`;
         }
+
         function goToDashboard() {
             window.location.href = '/dashboard';
         }
-        // Load scans on page load
+
         document.addEventListener('DOMContentLoaded', () => {
             loadScans();
         });

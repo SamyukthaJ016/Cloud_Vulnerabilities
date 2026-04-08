@@ -15,8 +15,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f172a;
-            color: #f1f5f9;
+            background: linear-gradient(180deg, #091413 0%, #163128 45%, #285A48 100%);
+            color: #B0E4CC;
             min-height: 100vh;
             line-height: 1.6;
         }
@@ -33,17 +33,17 @@
             justify-content: space-between;
             align-items: center;
             padding: 24px 32px;
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(40, 90, 72, 0.82);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             margin-bottom: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .logo {
             font-size: 1.8rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+            background: linear-gradient(135deg, #B0E4CC 0%, #408A71 100%);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -57,7 +57,7 @@
             align-items: center;
             gap: 16px;
             font-size: 0.9rem;
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         .live-badge {
@@ -89,19 +89,19 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(135deg, #408A71, #B0E4CC);
             color: white;
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(176, 228, 204, 0.12);
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.12);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 25px rgba(64, 138, 113, 0.3);
         }
 
         /* Stats Cards */
@@ -113,15 +113,15 @@
         }
 
         .stat-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             transition: all 0.3s ease;
         }
 
         .stat-card:hover {
-            border-color: rgba(59, 130, 246, 0.3);
+            border-color: rgba(64, 138, 113, 0.3);
             transform: translateY(-3px);
         }
 
@@ -134,7 +134,7 @@
 
         .stat-label {
             font-size: 0.9rem;
-            color: #94a3b8;
+            color: #B0E4CC;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -164,10 +164,10 @@
         }
 
         .chart-container {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             height: 350px;
             display: flex;
             flex-direction: column;
@@ -186,7 +186,7 @@
         }
 
         .chart-subtitle {
-            color: #94a3b8;
+            color: #B0E4CC;
             font-size: 0.9rem;
         }
 
@@ -204,11 +204,87 @@
             margin-bottom: 32px;
         }
 
-        .cloud-card {
-            background: rgba(30, 41, 59, 0.7);
+        .recent-scans-section {
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
+            margin-bottom: 32px;
+        }
+
+        .recent-scans-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .recent-scans-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .recent-scans-table th {
+            text-align: left;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #B0E4CC;
+            padding: 0 16px 14px;
+        }
+
+        .recent-scans-table td {
+            padding: 16px;
+            border-top: 1px solid rgba(176, 228, 204, 0.1);
+            color: #B0E4CC;
+        }
+
+        .recent-scans-table tbody tr {
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .recent-scans-table tbody tr:hover {
+            background: rgba(51, 65, 85, 0.35);
+        }
+
+        .recent-scan-id {
+            color: #B0E4CC;
+            font-weight: 600;
+        }
+
+        .recent-scans-empty {
+            text-align: center;
+            color: #B0E4CC;
+            padding: 28px 16px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+            text-transform: capitalize;
+        }
+
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .status-running {
+            background: rgba(64, 138, 113, 0.2);
+            color: #B0E4CC;
+        }
+
+        .status-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .cloud-card {
+            background: rgba(40, 90, 72, 0.74);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(176, 228, 204, 0.14);
             transition: all 0.3s ease;
         }
 
@@ -254,6 +330,11 @@
             color: #10a37f;
         }
 
+        .kubernetes-icon {
+            background: rgba(50, 108, 229, 0.1);
+            color: #326ce5;
+        }
+
         .cloud-name {
             font-size: 1.1rem;
             font-weight: 600;
@@ -270,7 +351,7 @@
         .metric {
             text-align: center;
             padding: 12px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(176, 228, 204, 0.06);
             border-radius: 12px;
         }
 
@@ -282,15 +363,15 @@
 
         .metric-label {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         /* Vulnerabilities Section */
         .vulnerabilities-section {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 32px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
             margin-bottom: 32px;
         }
 
@@ -319,15 +400,15 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            color: #94a3b8;
+            background: rgba(176, 228, 204, 0.06);
+            border: 1px solid rgba(176, 228, 204, 0.14);
+            color: #B0E4CC;
         }
 
         .severity-filter.active {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: rgba(59, 130, 246, 0.5);
-            color: #60a5fa;
+            background: rgba(64, 138, 113, 0.2);
+            border-color: rgba(64, 138, 113, 0.5);
+            color: #B0E4CC;
         }
 
         /* Vulnerability List */
@@ -338,7 +419,7 @@
         }
 
         .vulnerability-card {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(9, 20, 19, 0.52);
             border-radius: 12px;
             padding: 20px;
             border-left: 4px solid;
@@ -346,7 +427,7 @@
         }
 
         .vulnerability-card:hover {
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(40, 90, 72, 0.82);
             transform: translateX(4px);
         }
 
@@ -363,7 +444,7 @@
         }
 
         .vulnerability-card.low {
-            border-left-color: #3b82f6;
+            border-left-color: #408A71;
         }
 
         .vuln-header {
@@ -405,8 +486,8 @@
         }
 
         .severity-badge.low {
-            background: rgba(59, 130, 246, 0.2);
-            color: #93c5fd;
+            background: rgba(64, 138, 113, 0.2);
+            color: #B0E4CC;
         }
 
         .vuln-info {
@@ -421,11 +502,11 @@
             align-items: center;
             gap: 8px;
             font-size: 0.9rem;
-            color: #cbd5e1;
+            color: #B0E4CC;
         }
 
         .info-label {
-            color: #94a3b8;
+            color: #B0E4CC;
         }
 
         .tool-badge {
@@ -437,7 +518,7 @@
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
-            color: #c4b5fd;
+            color: #B0E4CC;
         }
 
         /* Cloud Badge */
@@ -449,8 +530,8 @@
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
-            background: rgba(59, 130, 246, 0.1);
-            color: #93c5fd;
+            background: rgba(64, 138, 113, 0.12);
+            color: #B0E4CC;
         }
 
         .aws-badge {
@@ -470,8 +551,8 @@
 
         /* AI Remediation Section */
         .ai-remediation {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
-            border: 1px solid rgba(139, 92, 246, 0.3);
+            background: linear-gradient(135deg, rgba(176, 228, 204, 0.12), rgba(64, 138, 113, 0.12));
+            border: 1px solid rgba(64, 138, 113, 0.3);
             border-radius: 12px;
             padding: 20px;
             margin-top: 16px;
@@ -482,7 +563,7 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 16px;
-            color: #c4b5fd;
+            color: #B0E4CC;
             font-weight: 600;
             font-size: 1rem;
         }
@@ -495,11 +576,11 @@
         }
 
         .ai-priority span {
-            color: #c4b5fd;
+            color: #B0E4CC;
         }
 
         .ai-priority strong {
-            color: #e9d5ff;
+            color: #B0E4CC;
         }
 
         .ai-steps {
@@ -516,25 +597,25 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(64, 138, 113, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 0.75rem;
             font-weight: 700;
-            color: #c4b5fd;
+            color: #B0E4CC;
             flex-shrink: 0;
         }
 
         .step-text {
-            color: #e9d5ff;
+            color: #B0E4CC;
             font-size: 0.9rem;
             flex: 1;
         }
 
         .code-block {
             background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(64, 138, 113, 0.2);
             border-radius: 8px;
             padding: 16px;
             margin: 16px 0;
@@ -542,7 +623,7 @@
         }
 
         .code-block pre {
-            color: #c4b5fd;
+            color: #B0E4CC;
             font-size: 0.85rem;
             font-family: 'Courier New', monospace;
             white-space: pre-wrap;
@@ -550,22 +631,22 @@
         }
 
         .validation-text {
-            color: #c4b5fd;
+            color: #B0E4CC;
             font-size: 0.9rem;
             margin-bottom: 12px;
         }
 
         .validation-text strong {
-            color: #e9d5ff;
+            color: #B0E4CC;
         }
 
         .references {
-            color: #c4b5fd;
+            color: #B0E4CC;
             font-size: 0.9rem;
         }
 
         .references strong {
-            color: #e9d5ff;
+            color: #B0E4CC;
         }
 
         .references ul {
@@ -579,9 +660,9 @@
         }
 
         .toggle-btn {
-            background: rgba(139, 92, 246, 0.2);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            color: #c4b5fd;
+            background: rgba(64, 138, 113, 0.2);
+            border: 1px solid rgba(64, 138, 113, 0.3);
+            color: #B0E4CC;
             padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
@@ -595,7 +676,7 @@
         }
 
         .toggle-btn:hover {
-            background: rgba(139, 92, 246, 0.3);
+            background: rgba(64, 138, 113, 0.3);
         }
 
         .expanded-content {
@@ -610,7 +691,7 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #64748b;
+            color: #408A71;
         }
 
         .pulse {
@@ -636,11 +717,11 @@
             position: fixed;
             bottom: 24px;
             right: 24px;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(9, 20, 19, 0.94);
             border-radius: 16px;
             padding: 20px;
             width: 320px;
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            border: 1px solid rgba(64, 138, 113, 0.3);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             z-index: 1000;
             transform: translateY(100px);
@@ -667,7 +748,7 @@
 
         .progress-bar {
             height: 8px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(176, 228, 204, 0.12);
             border-radius: 4px;
             overflow: hidden;
             margin: 16px 0;
@@ -675,7 +756,7 @@
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            background: linear-gradient(90deg, #408A71, #B0E4CC);
             border-radius: 4px;
             transition: width 0.5s ease;
         }
@@ -705,13 +786,13 @@
         }
 
         .step-icon.pending {
-            background: rgba(148, 163, 184, 0.2);
-            color: #94a3b8;
+            background: rgba(176, 228, 204, 0.22);
+            color: #B0E4CC;
         }
 
         .step-icon.active {
-            background: rgba(59, 130, 246, 0.2);
-            color: #60a5fa;
+            background: rgba(64, 138, 113, 0.2);
+            color: #B0E4CC;
         }
 
         .step-icon.complete {
@@ -733,7 +814,7 @@
         .no-data {
             text-align: center;
             padding: 60px 20px;
-            color: #64748b;
+            color: #408A71;
         }
 
         .no-data-icon {
@@ -869,6 +950,35 @@
             </div>
         </div>
 
+        <div class="recent-scans-section">
+            <div class="section-header">
+                <div class="section-title">🕒 Recent Scan Runs</div>
+                <button class="btn btn-secondary" onclick="window.location.href='/frontend/history.html'">
+                    View Full History
+                </button>
+            </div>
+            <div class="recent-scans-table-wrapper">
+                <table class="recent-scans-table">
+                    <thead>
+                        <tr>
+                            <th>Scan ID</th>
+                            <th>Provider</th>
+                            <th>Status</th>
+                            <th>Started</th>
+                            <th>Duration</th>
+                            <th>Findings</th>
+                            <th>Critical</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-scans-body">
+                        <tr>
+                            <td colspan="7" class="recent-scans-empty">Loading recent scans...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Cloud Providers Overview -->
         <div class="cloud-grid" id="cloud-providers">
             <div class="loading">Loading cloud providers...</div>
@@ -897,7 +1007,7 @@
         <div class="progress-header">
             <div class="progress-title">🔄 Scan in Progress</div>
             <button onclick="hideScanProgress()"
-                style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem;">✕</button>
+                style="background: none; border: none; color: #B0E4CC; cursor: pointer; font-size: 1.2rem;">✕</button>
         </div>
         <div class="progress-steps">
             <div class="progress-step">
@@ -1208,8 +1318,474 @@ gcloud compute instances delete-access-config ${resourceName} \\
                     'GCP Compute Engine Security Best Practices',
                     'IAP Documentation'
                 ]
+            },
+            k8s_cluster: {
+                title: 'Kubernetes Cluster Baseline Hardening',
+                priority: 'HIGH',
+                estimatedTime: '25 minutes',
+                steps: [
+                    'Enable Pod Security admission labels on application namespaces',
+                    'Separate production and administrative workloads into dedicated namespaces',
+                    'Apply a default-deny NetworkPolicy baseline before opening required paths',
+                    'Re-run the cluster scan and verify compliance coverage improves'
+                ],
+                code: (resourceName) => `# Add Pod Security admission labels to the namespace
+kubectl label namespace ${resourceName || 'APPLICATION_NAMESPACE'} \\
+  pod-security.kubernetes.io/enforce=restricted \\
+  pod-security.kubernetes.io/audit=restricted \\
+  pod-security.kubernetes.io/warn=restricted --overwrite
+
+# Create a namespace baseline policy
+cat <<'EOF' | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: ${resourceName || 'APPLICATION_NAMESPACE'}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+EOF`,
+                validation: 'kubectl get ns --show-labels && kubectl get networkpolicy -A',
+                references: [
+                    'Kubernetes Pod Security Admission',
+                    'CIS Kubernetes Benchmark - Policy Enforcement'
+                ]
+            },
+            k8s_workload: {
+                title: 'Kubernetes Workload Hardening',
+                priority: 'CRITICAL',
+                estimatedTime: '30 minutes',
+                steps: [
+                    'Remove privileged mode, host namespace access, and hostPath usage unless there is a documented exception',
+                    'Force workloads to run as non-root with read-only filesystems where possible',
+                    'Set seccompProfile and drop Linux capabilities by default',
+                    'Add CPU and memory requests and limits for every container',
+                    'Roll out the patched workload and verify the pod security context is enforced'
+                ],
+                code: (resourceName) => `# Harden the workload manifest for ${resourceName || 'WORKLOAD_NAME'}
+cat <<'EOF' > hardened-workload-snippet.yaml
+spec:
+  template:
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: app
+        securityContext:
+          privileged: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+EOF
+
+# Apply the updated manifest and roll the workload
+kubectl apply -f hardened-workload-snippet.yaml`,
+                validation: 'kubectl get pod -o yaml | grep -E "runAsNonRoot|allowPrivilegeEscalation|seccompProfile"',
+                references: [
+                    'Kubernetes Pod Security Standards',
+                    'NSA/CISA Kubernetes Hardening Guidance'
+                ]
+            },
+            k8s_rbac: {
+                title: 'Kubernetes RBAC Least Privilege Fix',
+                priority: 'CRITICAL',
+                estimatedTime: '35 minutes',
+                steps: [
+                    'Remove cluster-admin bindings from users and service accounts that do not need full cluster control',
+                    'Replace wildcard verbs and resources with narrowly scoped Role or ClusterRole definitions',
+                    'Eliminate bind, escalate, impersonate, and broad secrets access permissions unless explicitly approved',
+                    'Bind workloads to dedicated service accounts with namespace-scoped permissions'
+                ],
+                code: (resourceName) => `# Review high-risk bindings
+kubectl get clusterrolebinding,rolebinding -A | grep -i '${resourceName || 'cluster-admin'}'
+
+# Example: remove an unsafe cluster-admin binding
+kubectl delete clusterrolebinding ${resourceName || 'BINDING_NAME'}
+
+# Example: create a namespace-scoped replacement role
+cat <<'EOF' | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+EOF`,
+                validation: 'kubectl auth can-i --list --as system:serviceaccount:default:default',
+                references: [
+                    'Kubernetes RBAC Good Practices',
+                    'CIS Kubernetes Benchmark - RBAC'
+                ]
+            },
+            k8s_network_policy: {
+                title: 'Kubernetes Network Segmentation Fix',
+                priority: 'HIGH',
+                estimatedTime: '25 minutes',
+                steps: [
+                    'Add default-deny ingress and egress policies for every workload namespace',
+                    'Replace broad selectors and 0.0.0.0/0 rules with explicit peer namespaces, pods, and CIDRs',
+                    'Open only the ports and directions required by the application',
+                    'Test application connectivity after each policy change'
+                ],
+                code: (resourceName) => `cat <<'EOF' | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: ${resourceName || 'APPLICATION_NAMESPACE'}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-app-ingress
+  namespace: ${resourceName || 'APPLICATION_NAMESPACE'}
+spec:
+  podSelector:
+    matchLabels:
+      app: example
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          access: allowed
+    ports:
+    - protocol: TCP
+      port: 8080
+EOF`,
+                validation: 'kubectl describe networkpolicy -n APPLICATION_NAMESPACE',
+                references: [
+                    'Kubernetes Network Policies',
+                    'CIS Kubernetes Benchmark - Network Segmentation'
+                ]
+            },
+            k8s_ingress: {
+                title: 'Kubernetes Ingress Exposure Hardening',
+                priority: 'HIGH',
+                estimatedTime: '20 minutes',
+                steps: [
+                    'Require explicit hosts for every ingress rule',
+                    'Enable TLS for all internet-facing hosts and redirect HTTP to HTTPS',
+                    'Remove risky ingress annotations that bypass SSL or weaken auth controls',
+                    'Limit public ingress exposure to workloads that genuinely need it'
+                ],
+                code: (resourceName) => `# Review ingress configuration
+kubectl describe ingress ${resourceName || 'INGRESS_NAME'}
+
+# Example TLS-enabled ingress patch
+cat <<'EOF' | kubectl apply -f -
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${resourceName || 'INGRESS_NAME'}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - app.example.com
+    secretName: app-tls
+  rules:
+  - host: app.example.com
+EOF`,
+                validation: 'kubectl get ingress -A -o yaml | grep -E "tls:|ssl-redirect"',
+                references: [
+                    'Kubernetes Ingress Concepts',
+                    'Ingress-NGINX Hardening Guidance'
+                ]
+            },
+            k8s_service: {
+                title: 'Kubernetes Service Exposure Reduction',
+                priority: 'HIGH',
+                estimatedTime: '15 minutes',
+                steps: [
+                    'Replace NodePort and public LoadBalancer services with ClusterIP where possible',
+                    'Use an ingress controller or internal load balancer for controlled exposure',
+                    'Remove unused external IPs and verify only required ports remain reachable',
+                    'Document the approved public entry points for the cluster'
+                ],
+                code: (resourceName) => `# Convert a service to ClusterIP
+kubectl patch service ${resourceName || 'SERVICE_NAME'} \\
+  --type merge \\
+  -p '{"spec":{"type":"ClusterIP","externalIPs":null}}'
+
+# Inspect the resulting exposure
+kubectl get svc ${resourceName || 'SERVICE_NAME'} -o wide`,
+                validation: 'kubectl get svc -A -o wide',
+                references: [
+                    'Kubernetes Services',
+                    'CIS Kubernetes Benchmark - Service Exposure'
+                ]
+            },
+            k8s_service_account: {
+                title: 'Kubernetes Service Account Hardening',
+                priority: 'HIGH',
+                estimatedTime: '20 minutes',
+                steps: [
+                    'Stop using the default service account for application workloads',
+                    'Disable token automounting unless the workload must call the Kubernetes API',
+                    'Create workload-specific service accounts and bind only the minimum required roles',
+                    'Rotate legacy service account token secrets and remove unused tokens'
+                ],
+                code: (resourceName) => `# Create a dedicated service account
+kubectl create serviceaccount ${resourceName || 'app-sa'} --dry-run=client -o yaml | kubectl apply -f -
+
+# Disable token automounting
+kubectl patch serviceaccount ${resourceName || 'app-sa'} \\
+  -p '{"automountServiceAccountToken": false}'
+
+# Update the workload to use the new service account
+kubectl patch deployment APP_DEPLOYMENT \\
+  --type merge \\
+  -p '{"spec":{"template":{"spec":{"serviceAccountName":"${resourceName || 'app-sa'}","automountServiceAccountToken":false}}}}'`,
+                validation: 'kubectl get sa -A -o yaml | grep -E "automountServiceAccountToken|serviceAccountName"',
+                references: [
+                    'Kubernetes Service Accounts',
+                    'NSA/CISA Kubernetes Hardening - Service Account Minimization'
+                ]
+            },
+            k8s_secret: {
+                title: 'Kubernetes Secret Exposure Response',
+                priority: 'CRITICAL',
+                estimatedTime: '20 minutes',
+                steps: [
+                    'Rotate any credential exposed through env vars, shared secrets, or legacy token secrets',
+                    'Move sensitive values out of plain environment variables where possible',
+                    'Remove unused secrets and narrow secret access to the few workloads that require them',
+                    'Consider an external secret manager or CSI driver for high-value credentials'
+                ],
+                code: (resourceName) => `# Review where the secret is consumed
+kubectl get pods -A -o yaml | grep -n '${resourceName || 'SECRET_NAME'}'
+
+# Rotate the secret
+kubectl delete secret ${resourceName || 'SECRET_NAME'}
+kubectl create secret generic ${resourceName || 'SECRET_NAME'} \\
+  --from-literal=password='REPLACED_VALUE'
+
+# Restart workloads that consume the secret
+kubectl rollout restart deployment APP_DEPLOYMENT`,
+                validation: 'kubectl get secret -A && kubectl describe pod POD_NAME',
+                references: [
+                    'Kubernetes Secrets',
+                    'OWASP Secrets Management Cheat Sheet'
+                ]
+            },
+            k8s_image: {
+                title: 'Kubernetes Container Image Remediation',
+                priority: 'HIGH',
+                estimatedTime: '30 minutes',
+                steps: [
+                    'Replace vulnerable images with patched versions or digests',
+                    'Stop using latest tags and pin images to approved versions',
+                    'Rebuild the image after dependency updates and re-scan it with Trivy',
+                    'Roll out the updated workload and verify the new image digest is deployed'
+                ],
+                code: (resourceName) => `# Scan the current image
+trivy image ${resourceName || 'registry.example.com/app:TAG'}
+
+# Pin to a patched version or digest
+kubectl set image deployment/APP_DEPLOYMENT app=${resourceName || 'registry.example.com/app:PATCHED_TAG'}
+
+# Verify the rollout
+kubectl rollout status deployment/APP_DEPLOYMENT`,
+                validation: 'kubectl get pods -o jsonpath="{..image}" && trivy image IMAGE_NAME',
+                references: [
+                    'Trivy Kubernetes Image Scanning',
+                    'Kubernetes Image Best Practices'
+                ]
+            },
+            k8s_storage: {
+                title: 'Kubernetes Storage Posture Hardening',
+                priority: 'HIGH',
+                estimatedTime: '25 minutes',
+                steps: [
+                    'Avoid hostPath and node-local storage for application data outside tightly controlled test clusters',
+                    'Review reclaim policies so deleted PVCs do not leave sensitive data behind',
+                    'Limit ReadWriteMany and shared PVC usage to workloads that truly require it',
+                    'Move to CSI-backed storage classes with explicit lifecycle controls'
+                ],
+                code: (resourceName) => `# Review storage objects
+kubectl get pv,pvc,storageclass -A
+
+# Inspect the affected object
+kubectl describe pv ${resourceName || 'PV_NAME'}
+kubectl describe pvc ${resourceName || 'PVC_NAME'}
+
+# Example: switch reclaim policy away from Retain
+kubectl patch storageclass ${resourceName || 'STORAGECLASS_NAME'} \\
+  -p '{"reclaimPolicy":"Delete"}'`,
+                validation: 'kubectl get pv,pvc,storageclass -A -o wide',
+                references: [
+                    'Kubernetes Persistent Volumes',
+                    'CSI Driver Security Best Practices'
+                ]
+            },
+            k8s_node: {
+                title: 'Kubernetes Node Placement Hardening',
+                priority: 'MEDIUM',
+                estimatedTime: '20 minutes',
+                steps: [
+                    'Prevent general application workloads from scheduling onto control-plane nodes',
+                    'Review broad tolerations and node pinning rules for unnecessary host access',
+                    'Limit workloads that require external node IP exposure and monitor their traffic',
+                    'Reserve sensitive node pools for trusted workloads only'
+                ],
+                code: (resourceName) => `# Taint the control-plane node to repel application workloads
+kubectl taint nodes ${resourceName || 'CONTROL_PLANE_NODE'} node-role.kubernetes.io/control-plane=:NoSchedule --overwrite
+
+# Remove a broad toleration or hard node pinning from the workload manifest
+kubectl get deployment APP_DEPLOYMENT -o yaml > deployment.yaml
+# Edit tolerations / nodeSelector / nodeName in deployment.yaml, then apply
+kubectl apply -f deployment.yaml`,
+                validation: 'kubectl get nodes -o wide && kubectl get pods -A -o wide',
+                references: [
+                    'Kubernetes Node Scheduling',
+                    'NSA/CISA Kubernetes Hardening - Node Isolation'
+                ]
             }
         };
+
+        function detectKubernetesRemediationType(vuln) {
+            const text = [
+                vuln.description || '',
+                vuln.resource_name || '',
+                vuln.tool || '',
+                vuln.cloud || ''
+            ].join(' ').toLowerCase();
+
+            const matchesAny = (patterns) => patterns.some((pattern) => text.includes(pattern));
+
+            if (matchesAny([
+                'cluster admin binding',
+                'namespace binding to cluster admin',
+                'high-risk rbac role',
+                'wildcard administrative permissions',
+                'rbac privilege escalation verbs',
+                'rbac impersonation permission',
+                'secrets access permission',
+                'service account bound to high-risk role',
+                'clusterrolebinding',
+                'rolebinding',
+                'cluster-admin'
+            ])) {
+                return 'k8s_rbac';
+            }
+
+            if (matchesAny([
+                'networkpolicy',
+                'network policy',
+                'default-deny',
+                'namespace missing network policies',
+                'namespace missing default-deny ingress',
+                'namespace missing default-deny egress',
+                'broad ingress peer selector',
+                'broad egress peer selector',
+                'ingress allowed from entire internet',
+                'egress allowed to entire internet'
+            ])) {
+                return 'k8s_network_policy';
+            }
+
+            if (matchesAny([
+                'ingress rule without host restriction',
+                'ingress host without tls',
+                'ingress disables ssl redirect',
+                'ingress allows http'
+            ])) {
+                return 'k8s_ingress';
+            }
+
+            if (matchesAny([
+                'public loadbalancer service',
+                'nodeport service exposed',
+                'service with external ips',
+                'internet-facing load balancer',
+                'external load balancer'
+            ])) {
+                return 'k8s_service';
+            }
+
+            if (matchesAny([
+                'service account token auto-mounted',
+                'service account token auto-mount enabled',
+                'default service account',
+                'high-risk service account',
+                'legacy service account token secret'
+            ])) {
+                return 'k8s_service_account';
+            }
+
+            if (matchesAny([
+                'secret exposed through environment variable',
+                'secret imported through envfrom',
+                'unused secret',
+                'secret shared across multiple consumers'
+            ])) {
+                return 'k8s_secret';
+            }
+
+            if (matchesAny([
+                'container image vulnerabilities detected',
+                'container image vulnerability:',
+                'container uses latest tag',
+                'container image not pinned',
+                'additional image vulnerabilities omitted'
+            ])) {
+                return 'k8s_image';
+            }
+
+            if (matchesAny([
+                'persistent volume uses hostpath',
+                'persistent volume uses local node storage',
+                'persistent volume uses nfs',
+                'persistent volume retains data after release',
+                'persistent volume claim allows multi-writer access',
+                'persistent volume claim shared across multiple workloads',
+                'storageclass uses host-local provisioner',
+                'storageclass retains data after claim release'
+            ])) {
+                return 'k8s_storage';
+            }
+
+            if (matchesAny([
+                'node has external ip',
+                'control-plane node accepts workloads',
+                'workload can run on control-plane nodes',
+                'workload uses broad toleration',
+                'workload pinned to specific node'
+            ])) {
+                return 'k8s_node';
+            }
+
+            if (matchesAny([
+                'namespace missing pod security enforcement'
+            ])) {
+                return 'k8s_cluster';
+            }
+
+            return 'k8s_workload';
+        }
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', () => {
@@ -1262,14 +1838,17 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 document.getElementById('security-score').textContent = '...';
                 document.getElementById('active-tools').textContent = '...';
 
-                const [summaryRes, providersRes, findingsRes] = await Promise.all([
+                const [summaryRes, providersRes] = await Promise.all([
                     fetch(`/posture/dashboard${filter}`),
-                    fetch(`/api/provider-breakdown${filter}`),
-                    fetch(`/api/latest-findings${filter}${scanIds ? '&' : '?'}limit=20`)
+                    fetch(`/api/provider-breakdown${filter}`)
                 ]);
 
                 const summary = await summaryRes.json();
                 const providers = await providersRes.json();
+                const findingsLimit = scanIds
+                    ? Math.max(summary.total_findings || 20, 20)
+                    : 20;
+                const findingsRes = await fetch(`/api/latest-findings${filter}${scanIds ? '&' : '?'}limit=${findingsLimit}`);
                 const findings = await findingsRes.json();
 
                 console.log('📊 Dashboard Summary:', summary);
@@ -1289,9 +1868,13 @@ gcloud compute instances delete-access-config ${resourceName} \\
 
                 await loadTrendChart();
                 await loadCloudChart(providers.data || []);
+                await loadRecentScans();
                 await loadCloudProviders(providers.data || []);
 
-                await loadVulnerabilities(findings.data || []);
+                await loadVulnerabilities(findings.data || [], {
+                    isFullScanResults: Boolean(scanIds),
+                    totalFindings: summary.total_findings || 0
+                });
 
                 console.log('Dashboard loaded successfully');
 
@@ -1299,6 +1882,67 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 console.error('Dashboard load failed:', error);
                 showError('Failed to load dashboard data');
             }
+        }
+
+        function formatScanDuration(seconds) {
+            if (seconds === null || seconds === undefined || seconds === '') {
+                return '-';
+            }
+
+            const totalSeconds = Number(seconds);
+            if (!Number.isFinite(totalSeconds)) {
+                return '-';
+            }
+
+            if (totalSeconds < 60) {
+                return `${totalSeconds}s`;
+            }
+
+            const minutes = Math.floor(totalSeconds / 60);
+            const remainder = totalSeconds % 60;
+            return remainder ? `${minutes}m ${remainder}s` : `${minutes}m`;
+        }
+
+        async function loadRecentScans() {
+            const tbody = document.getElementById('recent-scans-body');
+            if (!tbody) return;
+
+            try {
+                const response = await fetch('/api/scans?limit=6&latest_only=true');
+                const data = await response.json();
+
+                if (data.status !== 'success' || !Array.isArray(data.scans) || data.scans.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="recent-scans-empty">No scan history available yet.</td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = data.scans.map(scan => `
+                    <tr onclick="viewScanDetails(${scan.id})">
+                        <td><span class="recent-scan-id">#${scan.id}</span></td>
+                        <td><span class="cloud-badge">${(scan.cloud || 'unknown').toUpperCase()}</span></td>
+                        <td><span class="status-badge status-${scan.status}">${scan.status}</span></td>
+                        <td>${scan.started_at ? new Date(scan.started_at).toLocaleString() : '-'}</td>
+                        <td>${formatScanDuration(scan.duration_seconds)}</td>
+                        <td>${scan.finding_count || 0}</td>
+                        <td>${scan.critical_count ? `<span class="severity-badge critical">${scan.critical_count}</span>` : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load recent scans:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="recent-scans-empty">Could not load recent scans.</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function viewScanDetails(scanId) {
+            window.location.href = `/dashboard?scanIds=${scanId}`;
         }
 
         function generateAIRemediation(vuln) {
@@ -1309,7 +1953,9 @@ gcloud compute instances delete-access-config ${resourceName} \\
 
             let type = 'vulnerability';
 
-            if (desc.includes('s3') || desc.includes('bucket')) {
+            if (cloud === 'kubernetes' || desc.includes('cluster-admin') || desc.includes('networkpolicy') || desc.includes('nodeport service exposed')) {
+                type = detectKubernetesRemediationType(vuln);
+            } else if (desc.includes('s3') || desc.includes('bucket')) {
                 type = 's3';
             } else if (desc.includes('iam') || desc.includes('access key') || desc.includes('mfa')) {
                 type = 'iam';
@@ -1406,16 +2052,16 @@ gcloud compute instances delete-access-config ${resourceName} \\
                             legend: {
                                 position: 'top',
                                 labels: {
-                                    color: '#94a3b8',
+                                    color: '#B0E4CC',
                                     padding: 20,
                                     font: { size: 12 }
                                 }
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                titleColor: '#f1f5f9',
-                                bodyColor: '#cbd5e1',
-                                borderColor: '#475569',
+                                backgroundColor: 'rgba(9, 20, 19, 0.9)',
+                                titleColor: '#B0E4CC',
+                                bodyColor: '#B0E4CC',
+                                borderColor: '#408A71',
                                 borderWidth: 1,
                                 padding: 12,
                                 displayColors: true
@@ -1425,21 +2071,21 @@ gcloud compute instances delete-access-config ${resourceName} \\
                             y: {
                                 beginAtZero: true,
                                 grid: {
-                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    color: 'rgba(176, 228, 204, 0.14)',
                                     drawBorder: false
                                 },
                                 ticks: {
-                                    color: '#94a3b8',
+                                    color: '#B0E4CC',
                                     padding: 8
                                 }
                             },
                             x: {
                                 grid: {
-                                    color: 'rgba(148, 163, 184, 0.05)',
+                                    color: 'rgba(176, 228, 204, 0.06)',
                                     drawBorder: false
                                 },
                                 ticks: {
-                                    color: '#94a3b8',
+                                    color: '#B0E4CC',
                                     maxRotation: 45,
                                     padding: 8
                                 }
@@ -1477,7 +2123,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 'GCP': 'rgba(66, 133, 244, 0.8)',
                 'AZURE': 'rgba(0, 120, 212, 0.8)',
                 'OPENAI': 'rgba(16, 163, 127, 0.8)',
-                'UNKNOWN': 'rgba(148, 163, 184, 0.8)'
+                'UNKNOWN': 'rgba(176, 228, 204, 0.8)'
             };
 
             const backgroundColors = labels.map(label => colors[label] || colors.UNKNOWN);
@@ -1510,16 +2156,16 @@ gcloud compute instances delete-access-config ${resourceName} \\
                         legend: {
                             position: 'top',
                             labels: {
-                                color: '#94a3b8',
+                                color: '#B0E4CC',
                                 padding: 20,
                                 font: { size: 12 }
                             }
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#f1f5f9',
-                            bodyColor: '#cbd5e1',
-                            borderColor: '#475569',
+                            backgroundColor: 'rgba(9, 20, 19, 0.9)',
+                            titleColor: '#B0E4CC',
+                            bodyColor: '#B0E4CC',
+                            borderColor: '#408A71',
                             borderWidth: 1,
                             padding: 12
                         }
@@ -1528,21 +2174,21 @@ gcloud compute instances delete-access-config ${resourceName} \\
                         y: {
                             beginAtZero: true,
                             grid: {
-                                color: 'rgba(148, 163, 184, 0.1)',
+                                color: 'rgba(176, 228, 204, 0.14)',
                                 drawBorder: false
                             },
                             ticks: {
-                                color: '#94a3b8',
+                                color: '#B0E4CC',
                                 padding: 8
                             }
                         },
                         x: {
                             grid: {
-                                color: 'rgba(148, 163, 184, 0.05)',
+                                color: 'rgba(176, 228, 204, 0.06)',
                                 drawBorder: false
                             },
                             ticks: {
-                                color: '#94a3b8',
+                                color: '#B0E4CC',
                                 padding: 8
                             }
                         }
@@ -1567,13 +2213,14 @@ gcloud compute instances delete-access-config ${resourceName} \\
             const cloudIcons = {
                 'aws': { icon: '☁️', class: 'aws-icon', color: '#ff9900' },
                 'gcp': { icon: '📊', class: 'gcp-icon', color: '#4285f4' },
+                'kubernetes': { icon: '⎈', class: 'kubernetes-icon', color: '#326ce5' },
                 'azure': { icon: '🔷', class: 'azure-icon', color: '#0078d4' },
                 'openai': { icon: '🤖', class: 'openai-icon', color: '#10a37f' }
             };
 
             container.innerHTML = providers.map(provider => {
                 const cloud = provider.provider?.toLowerCase() || 'unknown';
-                const cloudInfo = cloudIcons[cloud] || { icon: '☁️', class: 'aws-icon', color: '#94a3b8' };
+                const cloudInfo = cloudIcons[cloud] || { icon: '☁️', class: 'aws-icon', color: '#B0E4CC' };
 
                 return `
                     <div class="cloud-card">
@@ -1583,7 +2230,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                             </div>
                             <div>
                                 <div class="cloud-name">${provider.provider?.toUpperCase() || 'UNKNOWN'}</div>
-                                <div style="color: #94a3b8; font-size: 0.9rem;">
+                                <div style="color: #B0E4CC; font-size: 0.9rem;">
                                     ${provider.resources || 0} resources
                                 </div>
                             </div>
@@ -1618,8 +2265,9 @@ gcloud compute instances delete-access-config ${resourceName} \\
             }).join('');
         }
 
-        async function loadVulnerabilities(findings) {
+        async function loadVulnerabilities(findings, options = {}) {
             const container = document.getElementById('vulnerability-list');
+            const { isFullScanResults = false, totalFindings = 0 } = options;
 
             if (!findings || findings.length === 0) {
                 container.innerHTML = `
@@ -1639,12 +2287,17 @@ gcloud compute instances delete-access-config ${resourceName} \\
             });
 
             container.innerHTML = Object.entries(grouped).map(([cloud, vulns]) => {
+                const displayedCount = vulns.length;
+                const headingText = isFullScanResults
+                    ? `${displayedCount} vulnerabilities found`
+                    : `${displayedCount} recent vulnerabilities shown${totalFindings > displayedCount ? ` of ${totalFindings}` : ''}`;
+
                 return `
                     <div style="margin-bottom: 30px;">
-                        <h3 style="margin-bottom: 16px; color: #f1f5f9; font-size: 1.1rem;">
+                        <h3 style="margin-bottom: 16px; color: #B0E4CC; font-size: 1.1rem;">
                             ☁️ ${cloud} Cloud
-                            <span style="color: #94a3b8; font-size: 0.9rem; margin-left: 12px;">
-                                ${vulns.length} vulnerabilities found
+                            <span style="color: #B0E4CC; font-size: 0.9rem; margin-left: 12px;">
+                                ${headingText}
                             </span>
                         </h3>
                         
@@ -1683,7 +2336,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                                         </div>
                                     </div>
                                     
-                                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.1); color: #cbd5e1; font-size: 0.9rem;">
+                                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(176, 228, 204, 0.14); color: #B0E4CC; font-size: 0.9rem;">
                                         <strong>Full Description:</strong> ${v.description || 'No detailed description available.'}
                                     </div>
                                     
@@ -1695,7 +2348,6 @@ gcloud compute instances delete-access-config ${resourceName} \\
                                         
                                         <div class="ai-priority">
                                             <span>Priority: <strong>${remediation.priority}</strong></span>
-                                            <span>Estimated Time: <strong>${remediation.estimatedTime}</strong></span>
                                         </div>
                                         
                                         <div class="ai-steps">
@@ -1822,7 +2474,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
             const section = document.getElementById('vulnerabilities-section');
             section.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-            section.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.5)';
+            section.style.boxShadow = '0 0 0 2px rgba(64, 138, 113, 0.5)';
             setTimeout(() => {
                 section.style.boxShadow = 'none';
             }, 2000);
@@ -1869,7 +2521,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             container.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #64748b;">
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #408A71;">
                     <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">📊</div>
                     <div style="font-size: 0.9rem; text-align: center;">${message}</div>
                 </div>

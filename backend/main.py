@@ -26,6 +26,7 @@ from backend.mcp.mcp_base import mcp_registry, ScanResult, CloudResource, Securi
 from backend.mcp_servers.base_server import mcp_server_manager, MCPMessage, MCPResponse
 from backend.mcp_servers.aws_server import create_aws_server
 from backend.mcp_servers.gcp_server import create_gcp_server
+from backend.mcp_servers.kubernetes_server import create_kubernetes_server
 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.mcp_scanner import mcp_scanner
 
@@ -37,6 +38,8 @@ from backend.vulnerability.vulnerability_integration import CloudVulnerabilityIn
 from backend.ai_recommender import AIRecommendationEngine
 from backend.database import (
     create_scan_record,
+    finalize_scan_record,
+    reconcile_stale_scan_records,
     store_resource,
     store_finding,
     store_vulnerability,
@@ -52,6 +55,14 @@ from backend.ai.agentic_core import ToolRegistry
 # Credential Management
 from backend.credentials.api import router as credentials_router
 from backend.credentials.manager import credential_manager, CloudCredential
+from backend.scan_api_helpers import permission_required_json_response
+from backend.worker_client import (
+    get_scan_worker_health,
+    get_scan_worker_url,
+    is_scan_worker_enabled,
+    post_to_scan_worker,
+    start_scan_on_worker,
+)
 
 # CloudFox (Offensive Security)
 from backend.cloudfox.cloudfox_scanner import (
@@ -76,6 +87,42 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp_scanner")
+
+
+def _get_openai_api_key() -> Optional[str]:
+    api_key = (os.getenv("OPENAI_API_KEY") or "").strip()
+    placeholder_values = {
+        "YOUR_OPENAI_API_KEY_HERE",
+        "your_openai_api_key_here",
+        "OPENAI_API_KEY",
+        "openai_api_key",
+        "changeme",
+    }
+    if api_key in placeholder_values or api_key.startswith("YOUR_"):
+        logger.warning("OPENAI_API_KEY is using a placeholder value - AI features will run in limited mode")
+        return None
+    return api_key or None
+
+
+def _build_ai_clients():
+    api_key = _get_openai_api_key()
+    if not api_key:
+        logger.warning("OPENAI_API_KEY not set - AI features will run in limited mode")
+        return None, None, None
+
+    client = OpenAI(api_key=api_key)
+    return client, client, AIRecommendationEngine(api_key=api_key)
+
+
+async def _analyze_scan_results_with_ai(scan_results: List[ScanResult]) -> dict:
+    if not ai_engine:
+        return {"error": "AI unavailable"}
+
+    try:
+        return await ai_engine.analyze_scan_results(scan_results)
+    except Exception as e:
+        logger.error(f"AI analysis failed: {e}")
+        return {"error": "AI unavailable"}
 
 # ============================================================
 # FASTAPI APP
@@ -132,8 +179,13 @@ async def startup_event():
     
     # Initialize enhanced AI systems
     global multi_agent_analyzer
-    logger.info("🤖 Initializing Multi-Agent Analysis System...")
-    multi_agent_analyzer = get_multi_agent_analyzer(os.getenv("OPENAI_API_KEY"))
+    api_key = _get_openai_api_key()
+    if api_key:
+        logger.info("🤖 Initializing Multi-Agent Analysis System...")
+        multi_agent_analyzer = get_multi_agent_analyzer(api_key)
+    else:
+        logger.warning("OPENAI_API_KEY not set - skipping multi-agent analyzer initialization")
+        multi_agent_analyzer = None
     
     logger.info("🧠 Initializing Persistent Memory System...")
     memory_system._ensure_tables_exist()
@@ -160,9 +212,7 @@ async def shutdown_event():
 
 OPENAI_AGENT_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
 
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-orchestrator_client = openai_client
-ai_engine = AIRecommendationEngine(api_key=os.getenv("OPENAI_API_KEY"))
+openai_client, orchestrator_client, ai_engine = _build_ai_clients()
 
 vuln_scanner = VulnerabilityScanner()
 vuln_integration = CloudVulnerabilityIntegration()
@@ -348,9 +398,11 @@ def build_scan_report(scan_id: int, user_id: Optional[str] = None) -> dict:
 # SCHEDULE MANAGEMENT
 # ============================================================
 
-@app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
-    """Manually trigger a scheduled scan now"""
+async def _run_schedule_now_impl(
+    schedule_id: int,
+    background_tasks: BackgroundTasks,
+    req: Request,
+):
     auth_user_id = get_user_id(req)
     conn = get_conn()
     with conn.cursor() as cur:
@@ -360,42 +412,37 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, 
             FROM scan_schedules
             WHERE id = %s AND user_id = %s
             """,
-            (schedule_id, auth_user_id)
+            (schedule_id, auth_user_id),
         )
         row = cur.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Schedule not found")
-        
-        user_id, providers_text, account_ids_text, deep_scan, credential_id = row
-        providers = json.loads(providers_text)
-        account_ids = json.loads(account_ids_text)
 
-    # 🛡️ Permission Check
+    if not row:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+    user_id, providers_text, account_ids_text, deep_scan, credential_id = row
+    providers = json.loads(providers_text) if providers_text else []
+    account_ids = json.loads(account_ids_text) if account_ids_text else {}
+
+    if is_scan_worker_enabled():
+        logger.info(
+            "Delegating scheduled scan %s to worker at %s",
+            schedule_id,
+            get_scan_worker_url(),
+        )
+        return await post_to_scan_worker(
+            f"/internal/schedules/{schedule_id}/run",
+            {"auth_user_id": auth_user_id},
+        )
+
     if "aws" in providers:
         logger.info(f"🛡️ Testing AWS permissions for schedule {schedule_id} before run...")
         try:
             await initialize_mcp_servers_for_user(user_id, ["aws"], credential_id)
         except Exception as e:
-            if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
+            if hasattr(e, "iam_user_arn") and hasattr(e, "recommended_policy_arn"):
                 logger.warning(f"🛡️ Permission check failed for schedule {schedule_id}")
-                iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
-                return JSONResponse(
-                    status_code=200,
-                    content={
-                        "status": "permission_required",
-                        "permission_error": {
-                            "type": "missing_assume_role_permission",
-                            "iam_user_name": iam_user_name,
-                            "iam_user_arn": e.iam_user_arn,
-                            "role_arn": getattr(e, 'role_arn', None),
-                            "policy_arn": e.recommended_policy_arn,
-                            "credential_id": credential_id,
-                            "can_auto_grant": True
-                        }
-                    }
-                )
+                return permission_required_json_response(user_id, credential_id, e)
 
-    # Run MCP scan in background
     background_tasks.add_task(
         run_multi_cloud_scan_internal,
         providers=providers,
@@ -406,36 +453,12 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, 
     )
 
     return {"status": "started", "message": "Scan started in background"}
+
+@app.post("/api/schedules/{schedule_id}/run")
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
+    """Manually trigger a scheduled scan now"""
+    return await _run_schedule_now_impl(schedule_id, background_tasks, req)
     
-
-load_dotenv()
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("mcp_scanner")
-
-
-
-OPENAI_AGENT_MODEL = os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini")
-
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-orchestrator_client = openai_client
-ai_engine = AIRecommendationEngine(api_key=os.getenv("OPENAI_API_KEY"))
-
-vuln_scanner = VulnerabilityScanner()
-vuln_integration = CloudVulnerabilityIntegration()
-
-# Initialize multi-agent analyzer
-multi_agent_analyzer = None
-
-# ============================================================
-# REQUEST MODELS
-# ============================================================
-
-# Duplicate models removed. Using definitions from the top of the file.
-
-# ============================================================
-# CREDENTIAL INITIALIZATION FOR MCP SERVERS
-# ============================================================
 
 async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], credential_id: Optional[int] = None):
     """Ensure MCP servers are initialized for the user's selected providers."""
@@ -532,6 +555,33 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
             mcp_registry.register("gcp", server)
             logger.info(f"✅ GCP MCP Server initialized and registered for project: {gcp_cred.gcp_project_id}")
 
+        elif provider == "kubernetes":
+            logger.info(f"[ServerInit] Attempting to retrieve default Kubernetes credential for user: {user_id}")
+            kube_cred = credential_manager.get_default_credential(user_id, "kubernetes")
+
+            if not kube_cred:
+                logger.warning(f"⚠️ No Kubernetes credentials found in DB for user {user_id}")
+                continue
+
+            logger.info(
+                f"[ServerInit] (Re)initializing Kubernetes server with credentials (cred_id={kube_cred.id}) for user: {user_id}"
+            )
+            kube_config = {
+                "kubeconfig": kube_cred.kubernetes_kubeconfig,
+                "context": kube_cred.kubernetes_context,
+                "cluster_name": kube_cred.kubernetes_cluster_name,
+            }
+
+            server = create_kubernetes_server(kube_config)
+            mcp_server_manager.register_server(server)
+            await server.start()
+
+            mcp_registry.register("kubernetes", server)
+            logger.info(
+                "✅ Kubernetes MCP Server initialized and registered for cluster: %s",
+                kube_cred.kubernetes_cluster_name or kube_cred.kubernetes_context or "default"
+            )
+
         elif provider == "cloudfox":
             if mcp_server_manager.get_server("cloudfox"):
                 continue
@@ -623,6 +673,9 @@ def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
     )
 
 async def run_gpt_agent(prompt: str) -> str:
+    if not openai_client:
+        return "Agent unavailable: OPENAI_API_KEY is not configured"
+
     try:
         response = openai_client.chat.completions.create(
             model=OPENAI_AGENT_MODEL,
@@ -767,11 +820,7 @@ async def run_multi_cloud_scan_internal(
                 logger.error(f"Failed to store error record: {store_err}")
 
     # ✅ STEP 4: AI Analysis
-    try:
-        ai_analysis = await ai_engine.analyze_scan_results(scan_results)
-    except Exception as e:
-        logger.error(f"AI analysis failed: {e}")
-        ai_analysis = {"error": "AI unavailable"}
+    ai_analysis = await _analyze_scan_results_with_ai(scan_results)
 
     return {
         "scan_ids": stored_ids,
@@ -969,6 +1018,20 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     request.user_id = user_id
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
+    if is_scan_worker_enabled():
+        logger.info("Delegating multi-cloud scan to worker at %s", get_scan_worker_url())
+        return await start_scan_on_worker(
+            "/internal/scan/multi-cloud",
+            {
+                "providers": request.providers,
+                "account_ids": request.account_ids,
+                "deep_scan": request.deep_scan,
+                "offensive_scan": request.offensive_scan,
+                "user_id": user_id,
+                "credential_id": request.credential_id,
+            },
+        )
+
     # 🔥 Initialize MCP servers FIRST
     try:
         await initialize_mcp_servers_for_user(user_id, request.providers, request.credential_id)
@@ -988,21 +1051,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
             # Extract simple name from ARN: arn:aws:iam::123:user/vuln_scan_test -> vuln_scan_test
             iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
             
-            return JSONResponse(
-                status_code=200, # Return 200 so the frontend can handle it as a flow, not a crash
-                content={
-                    "status": "permission_required",
-                    "permission_error": {
-                        "type": "missing_assume_role_permission",
-                        "iam_user_name": iam_user_name,
-                        "iam_user_arn": e.iam_user_arn,
-                        "role_arn": getattr(e, 'role_arn', None),
-                        "policy_arn": e.recommended_policy_arn,
-                        "credential_id": cred_id,
-                        "can_auto_grant": True
-                    }
-                }
-            )
+            return permission_required_json_response(user_id, cred_id, e)
         
         # Log other initialization errors
         logger.error(f"❌ MCP Server initialization failed: {e}")
@@ -1072,11 +1121,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
             )
 
     # ✅ AI analysis (non-blocking failure)
-    try:
-        ai_analysis = await ai_engine.analyze_scan_results(scan_results)
-    except Exception as e:
-        logger.error(f"AI analysis failed: {e}")
-        ai_analysis = {"error": "AI unavailable"}
+    ai_analysis = await _analyze_scan_results_with_ai(scan_results)
 
     # ✅ Final response (NO legacy fields)
     response = format_scan_completion_response(
@@ -1234,7 +1279,7 @@ async def intelligent_scan(request: ScanRequest, req: Request):
     logger.info(f"👤 User ID: {user_id}")
 
     # 🔁 AI decides which providers to scan
-    valid_providers = ["aws", "gcp", "openai"]
+    valid_providers = ["aws", "gcp", "kubernetes", "openai"]
     
     providers = []
     account_ids = {}
@@ -1251,7 +1296,7 @@ async def intelligent_scan(request: ScanRequest, req: Request):
                         f"- {', '.join(valid_providers)}\n\n"
                         "Return ONLY a JSON object with this exact shape:\n"
                         "{\n"
-                        '  "providers": ["aws", "gcp", "openai"],\n'
+                        '  "providers": ["aws", "gcp", "kubernetes", "openai"],\n'
                         '  "account_ids": {\n'
                         '    "aws": "optional-account-id",\n'
                         '    "gcp": "optional-project-id"\n'
@@ -1290,6 +1335,8 @@ async def intelligent_scan(request: ScanRequest, req: Request):
         providers.append("aws")
     if ("gcp" in msg_lower or "google cloud" in msg_lower) and "gcp" in valid_providers and "gcp" not in providers:
         providers.append("gcp")
+    if any(term in msg_lower for term in ["kubernetes", "k8s", "cluster"]) and "kubernetes" in valid_providers and "kubernetes" not in providers:
+        providers.append("kubernetes")
     if "openai" in msg_lower and "openai" in valid_providers and "openai" not in providers:
         providers.append("openai")
 
@@ -1319,15 +1366,11 @@ async def intelligent_scan(request: ScanRequest, req: Request):
             stored_ids.append(scan_id)
 
         # AI analysis
-        try:
-            scan_result_objects = [
-                _mcp_to_scan_result(provider, result)
-                for provider, result in scan_results["results"].items()
-            ]
-            ai_analysis = await ai_engine.analyze_scan_results(scan_result_objects)
-        except Exception as e:
-            logger.error(f"AI analysis failed: {e}")
-            ai_analysis = {"error": "AI unavailable"}
+        scan_result_objects = [
+            _mcp_to_scan_result(provider, result)
+            for provider, result in scan_results["results"].items()
+        ]
+        ai_analysis = await _analyze_scan_results_with_ai(scan_result_objects)
 
         return {
             "status": "completed",
@@ -1481,6 +1524,7 @@ async def api_info():
         "version": "4.0.0",
         "agent_model": OPENAI_AGENT_MODEL,
         "architecture": "MCP-SERVER",
+        "scan_worker_enabled": is_scan_worker_enabled(),
         "vulnerability_tools": vuln_scanner.tools_available,
         "credential_manager_ready": True,
         "features": [
@@ -1496,8 +1540,9 @@ async def api_info():
 @app.get("/providers")
 async def list_providers():
     return {
-        "supported_providers": ["aws", "gcp", "openai"],
+        "supported_providers": ["aws", "gcp", "kubernetes", "openai"],
         "architecture": "MCP-SERVER",
+        "scan_worker_enabled": is_scan_worker_enabled(),
         "vulnerability_scanner_ready": len(vuln_scanner.tools_available) > 0,
         "available_vuln_tools": list(vuln_scanner.tools_available.keys()),
         "credential_manager_ready": True
@@ -1737,75 +1782,121 @@ async def get_scans(
     provider: Optional[str] = None,
     status: Optional[str] = None,
     from_date: Optional[str] = None,
-    to_date: Optional[str] = None
+    to_date: Optional[str] = None,
+    latest_only: bool = False,
 ):
     """Get all scans with filters and pagination for history page"""
     try:
         user_id = get_user_id(req)
+        repaired = reconcile_stale_scan_records(user_id=user_id)
+        if repaired:
+            logger.info("Repaired %s stale scan status rows for user=%s", repaired, user_id)
         conn = get_conn()
         with conn.cursor() as cur:
-            # Build query with filters
-            query = """
-                SELECT 
-                    s.id,
-                    s.cloud,
-                    s.account_id,
-                    s.status,
-                    s.started_at,
-                    s.duration_seconds,
-                    COUNT(DISTINCT r.id) as resource_count,
-                    COUNT(DISTINCT f.id) as finding_count,
-                    COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
-                FROM scans s
-                LEFT JOIN resources r ON s.id = r.scan_id
-                LEFT JOIN findings f ON s.id = f.scan_id
-                WHERE s.user_id = %s
-            """
-            params = [user_id]
-            
-            # Add filters
+            base_filters = ["s.user_id = %s"]
+            filter_params: list[Any] = [user_id]
+
             if provider:
-                query += " AND s.cloud = %s"
-                params.append(provider)
-            
+                base_filters.append("s.cloud = %s")
+                filter_params.append(provider)
+
             if status:
-                query += " AND s.status = %s"
-                params.append(status)
-            
+                base_filters.append("s.status = %s")
+                filter_params.append(status)
+
             if from_date:
-                query += " AND s.started_at >= %s"
-                params.append(from_date)
-            
+                base_filters.append("s.started_at >= %s")
+                filter_params.append(from_date)
+
             if to_date:
-                query += " AND s.started_at <= %s"
-                params.append(to_date)
-            
-            query += """
-                GROUP BY s.id, s.cloud, s.account_id, s.status, s.started_at, s.duration_seconds
-                ORDER BY s.started_at DESC
-                LIMIT %s OFFSET %s
-            """
-            params.extend([limit, offset])
-            
-            cur.execute(query, tuple(params))
+                base_filters.append("s.started_at <= %s")
+                filter_params.append(to_date)
+
+            where_clause = " AND ".join(base_filters)
+
+            if latest_only:
+                query = f"""
+                    WITH filtered_scans AS (
+                        SELECT
+                            s.id,
+                            s.cloud,
+                            s.account_id,
+                            s.status,
+                            s.started_at,
+                            s.duration_seconds,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY s.cloud, COALESCE(s.account_id, '')
+                                ORDER BY s.started_at DESC, s.id DESC
+                            ) AS rn
+                        FROM scans s
+                        WHERE {where_clause}
+                    ),
+                    selected_scans AS (
+                        SELECT id, cloud, account_id, status, started_at, duration_seconds
+                        FROM filtered_scans
+                        WHERE rn = 1
+                        ORDER BY started_at DESC, id DESC
+                        LIMIT %s OFFSET %s
+                    )
+                    SELECT
+                        ss.id,
+                        ss.cloud,
+                        ss.account_id,
+                        ss.status,
+                        ss.started_at,
+                        ss.duration_seconds,
+                        COUNT(DISTINCT r.id) as resource_count,
+                        COUNT(DISTINCT f.id) as finding_count,
+                        COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
+                    FROM selected_scans ss
+                    LEFT JOIN resources r ON ss.id = r.scan_id
+                    LEFT JOIN findings f ON ss.id = f.scan_id
+                    GROUP BY ss.id, ss.cloud, ss.account_id, ss.status, ss.started_at, ss.duration_seconds
+                    ORDER BY ss.started_at DESC, ss.id DESC
+                """
+                query_params = [*filter_params, limit, offset]
+                count_query = f"""
+                    WITH filtered_scans AS (
+                        SELECT
+                            ROW_NUMBER() OVER (
+                                PARTITION BY s.cloud, COALESCE(s.account_id, '')
+                                ORDER BY s.started_at DESC, s.id DESC
+                            ) AS rn
+                        FROM scans s
+                        WHERE {where_clause}
+                    )
+                    SELECT COUNT(*)
+                    FROM filtered_scans
+                    WHERE rn = 1
+                """
+                count_params = filter_params
+            else:
+                query = f"""
+                    SELECT
+                        s.id,
+                        s.cloud,
+                        s.account_id,
+                        s.status,
+                        s.started_at,
+                        s.duration_seconds,
+                        COUNT(DISTINCT r.id) as resource_count,
+                        COUNT(DISTINCT f.id) as finding_count,
+                        COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
+                    FROM scans s
+                    LEFT JOIN resources r ON s.id = r.scan_id
+                    LEFT JOIN findings f ON s.id = f.scan_id
+                    WHERE {where_clause}
+                    GROUP BY s.id, s.cloud, s.account_id, s.status, s.started_at, s.duration_seconds
+                    ORDER BY s.started_at DESC, s.id DESC
+                    LIMIT %s OFFSET %s
+                """
+                query_params = [*filter_params, limit, offset]
+                count_query = f"SELECT COUNT(*) FROM scans s WHERE {where_clause}"
+                count_params = filter_params
+
+            cur.execute(query, tuple(query_params))
             results = cur.fetchall()
-            
-            # Get total count
-            count_query = "SELECT COUNT(*) FROM scans WHERE user_id = %s"
-            count_params = [user_id]
-            if provider:
-                count_query += " AND cloud = %s"
-                count_params.append(provider)
-            if status:
-                count_query += " AND status = %s"
-                count_params.append(status)
-            if from_date:
-                count_query += " AND started_at >= %s"
-                count_params.append(from_date)
-            if to_date:
-                count_query += " AND started_at <= %s"
-                count_params.append(to_date)
-            
+
             cur.execute(count_query, tuple(count_params))
             total = cur.fetchone()[0]
         
@@ -1989,6 +2080,23 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
     logger.info(f"🚀 ENHANCED multi-cloud scan: {request.providers}")
     
     user_id = get_user_id(req)
+    if is_scan_worker_enabled():
+        result = await start_scan_on_worker(
+            "/internal/scan/multi-cloud",
+            {
+                "providers": request.providers,
+                "account_ids": request.account_ids,
+                "deep_scan": request.deep_scan,
+                "offensive_scan": request.offensive_scan,
+                "user_id": user_id,
+                "credential_id": request.credential_id,
+            },
+        )
+        result.setdefault("notes", []).append(
+            "Enhanced endpoint ran through the remote worker. Persistent memory and specialist-agent post-processing were skipped in control-plane mode."
+        )
+        result["enhanced_mode_limited"] = True
+        return result
     
     # Initialize MCP servers
     await initialize_mcp_servers_for_user(user_id, request.providers)
@@ -2235,6 +2343,12 @@ async def compare_analysis_methods(request: MultiCloudScanRequest, req: Request)
     For demonstration and validation purposes
     """
     logger.info("📊 Running comparison scan...")
+
+    if not ai_engine or not multi_agent_analyzer:
+        raise HTTPException(
+            status_code=503,
+            detail="OpenAI-powered analysis is not configured on this deployment",
+        )
     
     user_id = get_user_id(req)
     await initialize_mcp_servers_for_user(user_id, request.providers)
@@ -2374,63 +2488,8 @@ async def get_schedule(schedule_id: int, req: Request):
 @app.post("/api/schedules/{schedule_id}/run")
 async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Run a scheduled scan immediately"""
-    auth_user_id = get_user_id(req)
-    conn = get_conn()
     try:
-        with conn.cursor() as cur:
-            # Get schedule details
-            cur.execute("""
-                SELECT user_id, providers, account_ids, deep_scan, credential_id
-                FROM scan_schedules
-                WHERE id = %s AND user_id = %s
-            """, (schedule_id, auth_user_id))
-            
-            row = cur.fetchone()
-            if not row:
-                raise HTTPException(status_code=404, detail="Schedule not found")
-            
-            user_id, providers_json, account_ids_json, deep_scan, credential_id = row
-            
-            providers = json.loads(providers_json) if providers_json else []
-            account_ids = json.loads(account_ids_json) if account_ids_json else {}
-            
-            # 🛡️ Permission Check
-            if "aws" in providers:
-                logger.info(f"🛡️ Testing AWS permissions for schedule {schedule_id} before run...")
-                try:
-                    await initialize_mcp_servers_for_user(user_id, ["aws"], credential_id)
-                except Exception as e:
-                    if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
-                        logger.warning(f"🛡️ Permission check failed for schedule {schedule_id}")
-                        iam_user_name = e.iam_user_arn.split('/')[-1] if '/' in e.iam_user_arn else e.iam_user_arn
-                        return JSONResponse(
-                            status_code=200,
-                            content={
-                                "status": "permission_required",
-                                "permission_error": {
-                                    "type": "missing_assume_role_permission",
-                                    "iam_user_name": iam_user_name,
-                                    "iam_user_arn": e.iam_user_arn,
-                                    "role_arn": getattr(e, 'role_arn', None),
-                                    "policy_arn": e.recommended_policy_arn,
-                                    "credential_id": credential_id,
-                                    "can_auto_grant": True
-                                }
-                            }
-                        )
-
-            # Run MCP scan in background
-            background_tasks.add_task(
-                run_multi_cloud_scan_internal,
-                providers=providers,
-                account_ids=account_ids,
-                deep_scan=deep_scan,
-                user_id=user_id,
-                credential_id=credential_id,
-            )
-            
-            return {"status": "started", "message": "Scan started in background"}
-
+        return await _run_schedule_now_impl(schedule_id, background_tasks, req)
     except HTTPException:
         raise
     except Exception as e:
@@ -2454,6 +2513,7 @@ async def get_system_status():
         "overall_status": "healthy",
         "components": {
             "mcp_servers": [],
+            "scan_worker": [],
             "vulnerability_scanners": [],
             "database": [],
             "api_endpoints": []
@@ -2489,7 +2549,19 @@ async def get_system_status():
             })
 
         # --------------------------------------------------
-        # 2. Vulnerability Scanners
+        # 2. Scan Worker
+        # --------------------------------------------------
+        worker_health = await get_scan_worker_health()
+        if worker_health.get("configured"):
+            status["components"]["scan_worker"].append({
+                "name": "scan-worker",
+                "status": worker_health.get("status", "unknown"),
+                "detail": worker_health.get("detail"),
+                "last_check": datetime.utcnow().isoformat(),
+            })
+
+        # --------------------------------------------------
+        # 3. Vulnerability Scanners
         # --------------------------------------------------
         try:
             vuln_tools = vuln_scanner.tools_available
@@ -2509,7 +2581,7 @@ async def get_system_status():
             })
 
         # --------------------------------------------------
-        # 3. Database
+        # 4. Database
         # --------------------------------------------------
         try:
             conn = get_conn()
@@ -2561,7 +2633,7 @@ async def get_system_status():
             })
 
         # --------------------------------------------------
-        # 4. API Endpoints
+        # 5. API Endpoints
         # --------------------------------------------------
         api_endpoints = [
             "/health",
@@ -2579,7 +2651,7 @@ async def get_system_status():
             })
 
         # --------------------------------------------------
-        # 5. Overall Status Calculation
+        # 6. Overall Status Calculation
         # --------------------------------------------------
         all_statuses = []
 
@@ -2926,6 +2998,7 @@ async def store_scan_result(
     aws_credential_id: int | None = None,
 ) -> int:
     conn = get_conn()
+    scan_id: int | None = None
     try:
         account_id = result.account_id or "default"
         logger.info(f"DEBUG store_scan_result got aws_credential_id={aws_credential_id}")
@@ -2979,11 +3052,30 @@ async def store_scan_result(
                     f.vuln_metadata,
                 )
 
+        scan_status = "failed" if result.errors else "completed"
+        error_message = "; ".join(result.errors)[:5000] if result.errors else None
+        finalize_scan_record(
+            scan_id,
+            status=scan_status,
+            duration_seconds=result.scan_duration,
+            error_message=error_message,
+        )
+
         conn.commit()
-        logger.info(f"Stored scan {scan_id}")
+        logger.info("Stored scan %s with status=%s", scan_id, scan_status)
         return scan_id
-    except Exception:
+    except Exception as exc:
         conn.rollback()
+        if scan_id is not None:
+            try:
+                finalize_scan_record(
+                    scan_id,
+                    status="failed",
+                    duration_seconds=result.scan_duration,
+                    error_message=str(exc)[:5000],
+                )
+            except Exception:
+                logger.exception("Failed to finalize errored scan record %s", scan_id)
         logger.exception("Failed to store scan result")
         raise
 # ============================================================
@@ -3006,6 +3098,7 @@ async def debug_user_credentials(user_id: str, req: Request):
         # Get default credentials
         aws_default = credential_manager.get_default_credential(user_id, "aws")
         gcp_default = credential_manager.get_default_credential(user_id, "gcp")
+        kubernetes_default = credential_manager.get_default_credential(user_id, "kubernetes")
         openai_default = credential_manager.get_default_credential(user_id, "openai")
         
         return {
@@ -3014,6 +3107,7 @@ async def debug_user_credentials(user_id: str, req: Request):
             "credentials_by_provider": {
                 "aws": len([c for c in all_creds if c['cloud_provider'] == 'aws']),
                 "gcp": len([c for c in all_creds if c['cloud_provider'] == 'gcp']),
+                "kubernetes": len([c for c in all_creds if c['cloud_provider'] == 'kubernetes']),
                 "openai": len([c for c in all_creds if c['cloud_provider'] == 'openai']),
             },
             "default_credentials": {
@@ -3027,6 +3121,11 @@ async def debug_user_credentials(user_id: str, req: Request):
                     "exists": gcp_default is not None,
                     "id": gcp_default.id if gcp_default else None,
                 } if gcp_default else None,
+                "kubernetes": {
+                    "exists": kubernetes_default is not None,
+                    "id": kubernetes_default.id if kubernetes_default else None,
+                    "name": kubernetes_default.credential_name if kubernetes_default else None,
+                } if kubernetes_default else None,
                 "openai": {
                     "exists": openai_default is not None,
                     "id": openai_default.id if openai_default else None,
@@ -3323,9 +3422,14 @@ async def shutdown_mcp_architecture():
 async def startup_enhanced():
     """Initialize enhanced AI systems"""
     global multi_agent_analyzer
-    
-    logger.info("🤖 Initializing Multi-Agent Analysis System...")
-    multi_agent_analyzer = get_multi_agent_analyzer(os.getenv("OPENAI_API_KEY"))
+
+    api_key = _get_openai_api_key()
+    if api_key:
+        logger.info("🤖 Initializing Multi-Agent Analysis System...")
+        multi_agent_analyzer = get_multi_agent_analyzer(api_key)
+    else:
+        logger.warning("OPENAI_API_KEY not set - enhanced AI startup skipped")
+        multi_agent_analyzer = None
     
     logger.info("🧠 Initializing Persistent Memory System...")
     memory_system._ensure_tables_exist()

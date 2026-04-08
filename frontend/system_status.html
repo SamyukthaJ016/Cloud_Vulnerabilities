@@ -14,8 +14,8 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #f1f5f9;
+            background: linear-gradient(135deg, #091413 0%, #285A48 100%);
+            color: #B0E4CC;
             min-height: 100vh;
             line-height: 1.6;
         }
@@ -32,11 +32,11 @@
             justify-content: space-between;
             align-items: center;
             padding: 24px 32px;
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(40, 90, 72, 0.82);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             margin-bottom: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .title {
@@ -48,7 +48,7 @@
         .title h1 {
             font-size: 2rem;
             font-weight: 700;
-            background: linear-gradient(135deg, #60a5fa, #8b5cf6);
+            background: linear-gradient(135deg, #B0E4CC 0%, #408A71 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -107,14 +107,14 @@
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(176, 228, 204, 0.12);
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.12);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 25px rgba(64, 138, 113, 0.3);
         }
 
         /* Overview Cards */
@@ -126,10 +126,10 @@
         }
 
         .overview-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 32px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .chart-container {
@@ -151,10 +151,10 @@
         }
 
         .component-group {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(40, 90, 72, 0.74);
             border-radius: 16px;
             padding: 24px;
-            border: 1px solid rgba(148, 163, 184, 0.1);
+            border: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         .group-header {
@@ -198,7 +198,7 @@
         }
 
         .component-card {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(9, 20, 19, 0.52);
             border-radius: 12px;
             padding: 20px;
             border-left: 4px solid;
@@ -207,7 +207,7 @@
 
         .component-card:hover {
             transform: translateY(-2px);
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(40, 90, 72, 0.82);
         }
 
         .component-card.online { border-left-color: #10b981; }
@@ -260,7 +260,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            color: #94a3b8;
+            color: #B0E4CC;
             font-size: 0.9rem;
         }
 
@@ -270,11 +270,11 @@
         }
 
         .info-label {
-            color: #64748b;
+            color: #408A71;
         }
 
         .info-value {
-            color: #cbd5e1;
+            color: #B0E4CC;
             font-weight: 500;
         }
 
@@ -287,7 +287,7 @@
         }
 
         .stat-card {
-            background: rgba(15, 23, 42, 0.5);
+            background: rgba(9, 20, 19, 0.52);
             padding: 20px;
             border-radius: 12px;
             text-align: center;
@@ -302,7 +302,7 @@
 
         .stat-label {
             font-size: 0.9rem;
-            color: #94a3b8;
+            color: #B0E4CC;
             text-transform: uppercase;
         }
 
@@ -310,14 +310,14 @@
         .loading {
             text-align: center;
             padding: 60px 20px;
-            color: #64748b;
+            color: #408A71;
         }
 
         .spinner {
             width: 50px;
             height: 50px;
-            border: 4px solid rgba(148, 163, 184, 0.2);
-            border-top-color: #60a5fa;
+            border: 4px solid rgba(176, 228, 204, 0.22);
+            border-top-color: #B0E4CC;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
@@ -330,11 +330,11 @@
         /* Last Updated */
         .last-updated {
             text-align: center;
-            color: #64748b;
+            color: #408A71;
             font-size: 0.9rem;
             margin-top: 32px;
             padding-top: 32px;
-            border-top: 1px solid rgba(148, 163, 184, 0.1);
+            border-top: 1px solid rgba(176, 228, 204, 0.14);
         }
 
         /* Responsive */
@@ -527,7 +527,7 @@
                             <div>
                                 <div class="group-title">
                                     ${group.title}
-                                    <span style="color: #64748b; font-size: 0.9rem; font-weight: 400;">
+                                    <span style="color: #408A71; font-size: 0.9rem; font-weight: 400;">
                                         ${group.description}
                                     </span>
                                 </div>
@@ -539,7 +539,7 @@
 
                         <div class="components-grid">
                             ${componentsList.length === 0 ? `
-                                <div style="color:#64748b;font-size:0.9rem">
+                                <div style="color:#408A71;font-size:0.9rem">
                                     No components available
                                 </div>
                             ` : componentsList.map(comp => `
@@ -644,16 +644,16 @@
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: '#94a3b8',
+                                color: '#B0E4CC',
                                 padding: 20,
                                 font: { size: 12 }
                             }
                         },
                         tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#f1f5f9',
-                            bodyColor: '#cbd5e1',
-                            borderColor: '#475569',
+                            backgroundColor: 'rgba(9, 20, 19, 0.9)',
+                            titleColor: '#B0E4CC',
+                            bodyColor: '#B0E4CC',
+                            borderColor: '#408A71',
                             borderWidth: 1,
                             padding: 12
                         }

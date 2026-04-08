@@ -4,6 +4,9 @@ __pycache__/
 
 # Virtual env
 venv/
+.venv/
+.venv311/
+.venv-worker/
 
 # Local env file (secrets)
 .env
@@ -27,3 +30,5 @@ logs/
 
 # Project Reports
 reports/
+.vercel
+.env*.local
