@@ -1,136 +1,263 @@
-# Cloud Vulnerability Scanner
+# CloudGuard
 
-A comprehensive, containerized security scanning tool designed to identify vulnerabilities in cloud infrastructure (AWS) and web applications. It integrates multiple open-source security tools into a unified dashboard.
+CloudGuard is a multi-cloud security scanner with a FastAPI control plane, HTML dashboard, PostgreSQL-backed findings store, and optional worker-based execution for long-running scans.
 
-## 🚀 Features
+It currently focuses on:
 
-- **Multi-Cloud Support**: Scans AWS environments (IAM, EC2, S3) and GCP Projects.
-- **Web App Scanning**: Integrated OWASP ZAP and Nuclei for web vulnerability detection.
-- **Secret Scanning**: Detects hardcoded secrets using Gitleaks.
-- **Dependency Analysis**: Checks for vulnerable dependencies with Trivy and Safety.
-- **Unified Dashboard**: View all findings in a single, easy-to-use web interface.
-- **Dockerized**: Fully containerized for easy deployment.
+- AWS posture scanning
+- GCP posture scanning
+- Kubernetes cluster posture scanning
+- AI-generated remediation summaries
+- scan history, dashboard, schedules, and credential management
 
-## 📋 Prerequisites
+## What It Scans
 
-Before you begin, ensure you have the following installed:
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
-- [Git](https://git-scm.com/)
+### AWS
 
-## 🛠️ Installation & Setup
+- S3 bucket exposure and hardening
+- IAM user hygiene
+- EC2 security group inventory
+- CloudTrail coverage
+- GuardDuty status
+- VPC Flow Logs coverage
+- optional CloudFox offensive enumeration
 
-### 1. Clone the Repository
+### GCP
+
+- GCS bucket exposure and hardening
+- Compute Engine instance posture
+- project IAM policy risks
+- firewall exposure
+
+### Kubernetes
+
+- namespaces, pods, services, ingresses, secrets, service accounts
+- RBAC risks
+- network policy coverage
+- storage exposure patterns
+- workload hardening issues
+- optional Trivy image vulnerability scanning
+
+## Main Technologies
+
+- FastAPI
+- PostgreSQL
+- `boto3` / `botocore`
+- Google Cloud Python clients
+- Kubernetes Python client
+- OpenAI API
+- optional scanner binaries such as Trivy, Gitleaks, Nuclei, Grype, ZAP, and CloudFox
+
+## Project Shape
+
+This repo supports two main runtime shapes:
+
+1. Local or VM-style deployment
+   The FastAPI app runs directly and can execute scans itself.
+
+2. Vercel control plane plus separate worker
+   Vercel serves the UI and lightweight API routes, while a separate worker host runs heavy scans and scheduled work.
+
+This second option is the recommended production setup for this repo.
+
+## Authentication Modes
+
+CloudGuard supports two auth modes:
+
+- standalone mode
+- external SSO mode
+
+Standalone mode is used automatically when:
+
+- `SSO_LOGIN_URL` is not set, or
+- `SSO_LOGIN_URL` points back to the same app, or
+- `CLOUDGUARD_AUTH_MODE=standalone`
+
+In standalone mode, the app uses the built-in `anonymous` user flow and does not require a separate login app.
+
+## Core Pages
+
+- `/`
+- `/dashboard`
+- `/frontend/history.html`
+- `/schedules`
+- `/system-status`
+- `/api/info`
+- `/health`
+
+## Environment Variables
+
+Minimum variables for the app to boot:
+
+```env
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME?sslmode=require
+SECRET_KEY=replace-me
+ENCRYPTION_KEY=replace-me
+APP_ENV=development
+LOG_LEVEL=INFO
+```
+
+Useful optional variables:
+
+```env
+OPENAI_API_KEY=
+OPENAI_AGENT_MODEL=gpt-4o-mini
+DEFAULT_AWS_REGION=ap-south-1
+AWS_PROFILE=default
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+GCP_PROJECT_ID=
+GCP_SERVICE_ACCOUNT_JSON=
+CLOUDGUARD_AUTH_MODE=standalone
+SSO_LOGIN_URL=
+```
+
+Worker-related variables:
+
+```env
+SCAN_WORKER_URL=https://your-worker.example.com
+SCAN_WORKER_TOKEN=shared-secret
+WORKER_API_TOKEN=shared-secret
+```
+
+## Local Python Run
+
+1. Create and activate a virtual environment.
+2. Install dependencies.
+3. Point `DATABASE_URL` to a working PostgreSQL instance.
+4. Start the FastAPI app.
+
 ```bash
-git clone <your-repo-url>
-cd Cloud_Vulnerabilities
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
 ```
 
-### 2. Configure Environment Variables
-Create a `.env` file in the root directory. You can start by copying the example (if available) or ensuring you have the following keys:
+Then open:
 
-```ini
-# Database (PostgreSQL)
-POSTGRES_USER=scanner_user
-POSTGRES_PASSWORD=scanner_pass
-POSTGRES_DB=scanner_db
+- [http://localhost:8000](http://localhost:8000)
+- [http://localhost:8000/dashboard](http://localhost:8000/dashboard)
 
-# Redis
-REDIS_PASSWORD=redis_password
+## Local Worker Run
 
-# Application Secrets
-SECRET_KEY=your-super-secret-key-change-this
-ENCRYPTION_KEY=your-encryption-key
-
-# AWS Configuration (Required for Cloud Scans)
-# You can also map your ~/.aws folder in docker-compose.yml
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_PROFILE=company
-AWS_SDK_LOAD_CONFIG=1
-AWS_REGION=us-east-1
-
-# GCP Configuration (Optional)
-GCP_PROJECT_ID=your_project_id
-GCP_SERVICE_ACCOUNT_JSON=/app/config/gcp-service-account.json
-
-# AI Analysis (Optional)
-OPENAI_API_KEY=your_openai_key
-
-# Public Deployment (HTTPS)
-DOMAIN=your-domain.com
-CADDY_EMAIL=you@example.com
-```
-
-### 3. Setup Cloud Permissions (AWS)
-To scan your AWS account, the scanner needs specific **Read-Only** permissions.
-1. Navigate to the `infra/` folder.
-2. Use the provided CloudFormation template or `iam_permissions.json` to configure an IAM Role or User with the necessary permissions.
-   - See `infra/README.md` for detailed instructions on deploying the permissions stack.
-3. Any resource created through the provided AWS templates/examples should carry the tag `Owner=cloudvul@iitm`.
-4. To switch the AWS account used by local Docker-based scans, set `AWS_PROFILE` to the company profile before starting the stack.
-
-## 🏃‍♂️ Usage
-
-### Start the Application
-Run the entire stack using Docker Compose:
+If you want the control plane to stay lightweight, run the worker separately:
 
 ```bash
-docker compose up --build
+export WORKER_API_TOKEN=replace-me
+uvicorn backend.worker_app:app --host 0.0.0.0 --port 8010 --workers 2
 ```
 
-This will start:
-- **Backend API**: http://localhost:8000
-- **Frontend Dashboard**: http://localhost:80
-- **Database & Redis**: Background services
+Health check:
 
-### Access the Dashboard
-Open your browser and navigate to:
-**[http://localhost](http://localhost)**
-
-### Running a Scan
-1. Log in to the dashboard.
-2. Configure your target (URL, IP, or Cloud Account).
-3. Click **"New Scan"**.
-4. View real-time progress and detailed reports.
-
-## 🏗️ Architecture
-
-- **Frontend**: HTML/JS Dashboard (served via Nginx)
-- **Backend**: FastAPI (Python)
-- **Database**: PostgreSQL (Findings storage)
-- **Queue**: Redis (Task management)
-- **Tools**: Trivy, Gitleaks, Nuclei, CloudFox, OWASP ZAP
-
-## 🛡️ Security Note
-
-**Never commit your `.env` file.** It contains sensitive API keys and secrets. This repository includes a `.gitignore` to prevent accidental commits, but always double-check.
-
-## 🌐 Deploy Online (Production + HTTPS)
-
-This project includes a production profile with Caddy reverse proxy (automatic HTTPS).
-
-### 1. DNS + Firewall
-- Point your domain `A` record to your server public IP.
-- Open inbound ports: `80` and `443`.
-
-### 2. Set deployment env vars
-In your `.env` (or `.env.prod`) set:
-- `DOMAIN=your-domain.com`
-- `CADDY_EMAIL=you@example.com`
-- `SECRET_KEY`, `ENCRYPTION_KEY`, cloud credentials, DB/Redis passwords
-
-### 3. Start production stack
 ```bash
-docker compose --profile prod up -d --build postgres redis backend caddy
+curl http://127.0.0.1:8010/health
 ```
 
-### 4. Verify
-```bash
-docker compose --profile prod ps
-curl -I https://your-domain.com
-```
+## Docker Notes
 
-### 5. Security defaults included
-- PostgreSQL port bound to localhost only.
-- Redis port bound to localhost only.
-- Backend is no longer exposed directly on host port in production.
+Docker support is still present through [docker-compose.yml](docker-compose.yml), including:
+
+- `backend-dev`
+- `backend`
+- `redis`
+- `scheduler-worker`
+- optional standalone `postgres`
+- optional `caddy` reverse proxy
+
+Because this repo has evolved toward a split control-plane and worker model, the Docker stack is best treated as a local or VM deployment option rather than the primary production target.
+
+## Vercel Deployment
+
+This repo is prepared for Vercel through:
+
+- [index.py](index.py)
+- [vercel.json](vercel.json)
+
+Important:
+
+- Vercel is a good fit for the UI and control plane
+- Vercel is not a good fit for long-running scans or bundled scanner binaries
+- use a separate worker for real scan execution
+
+Detailed guide:
+
+- [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)
+
+## Worker Deployment
+
+The worker runs:
+
+- heavy multi-cloud scans
+- manual schedule execution
+- due-schedule processing
+- binaries like CloudFox and Trivy that should not live in Vercel Functions
+
+Detailed guide:
+
+- [WORKER_DEPLOY.md](WORKER_DEPLOY.md)
+
+Repo configs included for worker hosting:
+
+- [render.worker.yaml](render.worker.yaml)
+- [deploy/railway.worker.toml](deploy/railway.worker.toml)
+- [deploy/railway.cron.toml](deploy/railway.cron.toml)
+- [deploy/run-worker.sh](deploy/run-worker.sh)
+- [deploy/run-due-schedules.sh](deploy/run-due-schedules.sh)
+
+## Scanner Notes
+
+### AWS Scanner
+
+Implemented in [backend/mcp_servers/aws_server.py](backend/mcp_servers/aws_server.py).
+
+Uses:
+
+- `boto3`
+- `STS AssumeRole`
+- optional CloudFox
+
+Default region in this repo is `ap-south-1`.
+
+### GCP Scanner
+
+Implemented in [backend/mcp_servers/gcp_server.py](backend/mcp_servers/gcp_server.py).
+
+Uses:
+
+- `google-cloud-storage`
+- `google-cloud-compute`
+- Google IAM / Resource Manager APIs
+
+### Kubernetes Scanner
+
+Implemented in [backend/mcp_servers/kubernetes_server.py](backend/mcp_servers/kubernetes_server.py).
+
+Uses:
+
+- Kubernetes Python client
+- optional Trivy image scanning in deep-scan mode
+
+## Current Production Guidance
+
+Best practical setup:
+
+- Vercel for the web app and API control plane
+- managed PostgreSQL for storage
+- a separate worker host for scans
+- optional tunnel only for temporary local-worker testing
+
+If your Kubernetes cluster or scanner binaries live on your laptop, the worker must also run somewhere that can reach them.
+
+## Useful Docs In This Repo
+
+- [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)
+- [WORKER_DEPLOY.md](WORKER_DEPLOY.md)
+- [infra/README.md](infra/README.md)
+
+## Security Reminder
+
+- do not commit real secrets
+- do not commit production cloud credentials
+- use least-privilege IAM and service-account access where possible
+- prefer role assumption and managed secret storage for production
