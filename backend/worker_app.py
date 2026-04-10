@@ -9,7 +9,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from backend.cloudfox.cloudfox_scanner import cloudfox_scanner
-from backend.credentials.manager import credential_manager
+from backend.credentials.manager import CloudCredential, credential_manager
 from backend.database import get_conn
 from backend.main import (
     format_scan_completion_response,
@@ -42,6 +42,13 @@ class WorkerMultiCloudScanRequest(BaseModel):
 
 class WorkerScheduleRunRequest(BaseModel):
     auth_user_id: str
+
+
+class WorkerKubernetesValidationRequest(BaseModel):
+    user_id: str
+    kubeconfig: str
+    context: Optional[str] = None
+    cluster_name: Optional[str] = None
 
 
 def _async_scan_mode_enabled() -> bool:
@@ -136,6 +143,27 @@ async def health():
         "cloudfox_available": cloudfox_scanner.available,
         "vulnerability_tools": list(worker_vuln_scanner.tools_available.keys()),
     }
+
+
+@app.post("/internal/credentials/validate-kubernetes")
+async def validate_kubernetes_credential(
+    request: WorkerKubernetesValidationRequest,
+    _: None = Depends(_verify_worker_token),
+):
+    aws_exec_cred = credential_manager.get_default_credential(request.user_id, "aws")
+    credential = CloudCredential(
+        user_id=request.user_id,
+        cloud_provider="kubernetes",
+        credential_name="worker-validation",
+        kubernetes_kubeconfig=request.kubeconfig,
+        kubernetes_context=request.context,
+        kubernetes_cluster_name=request.cluster_name,
+        aws_access_key_id=aws_exec_cred.aws_access_key_id if aws_exec_cred else None,
+        aws_secret_access_key=aws_exec_cred.aws_secret_access_key if aws_exec_cred else None,
+        aws_session_token=aws_exec_cred.aws_session_token if aws_exec_cred else None,
+        aws_region=aws_exec_cred.aws_region if aws_exec_cred else None,
+    )
+    return credential_manager._validate_kubernetes_credential(credential)
 
 
 @app.post("/internal/scan/multi-cloud")

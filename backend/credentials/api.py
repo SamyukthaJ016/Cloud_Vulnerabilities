@@ -27,6 +27,7 @@ from backend.credentials import auto_permission
 from backend.user_context import resolve_user_id
 from backend.utils.kubeconfig import KubeconfigPreparationError
 from backend.worker_client import is_scan_worker_enabled
+from backend.worker_client import post_to_scan_worker
 
 logger = logging.getLogger("credentials_api")
 
@@ -145,6 +146,42 @@ def get_user_id(request: Request) -> str:
     user_id = resolve_user_id(request)
     logger.info("Resolved credential user_id=%s", user_id)
     return user_id
+
+
+async def _validate_kubernetes_credential_via_worker(
+    credential_id: int,
+    credential: CloudCredential,
+) -> Dict[str, Any]:
+    try:
+        result = await post_to_scan_worker(
+            "/internal/credentials/validate-kubernetes",
+            {
+                "user_id": credential.user_id,
+                "kubeconfig": credential.kubernetes_kubeconfig,
+                "context": credential.kubernetes_context,
+                "cluster_name": credential.kubernetes_cluster_name,
+            },
+        )
+    except HTTPException as exc:
+        result = {
+            "valid": False,
+            "message": f"Worker validation failed: {exc.detail}",
+            "details": {},
+        }
+    except Exception as exc:
+        result = {
+            "valid": False,
+            "message": f"Worker validation error: {exc}",
+            "details": {},
+        }
+
+    credential_manager._update_validation_status(
+        credential_id=credential_id,
+        user_id=credential.user_id,
+        is_valid=bool(result.get("valid")),
+        message=str(result.get("message") or "Validation completed"),
+    )
+    return result
 
 
 @router.post("/aws", response_model=CredentialResponse)
@@ -325,10 +362,17 @@ async def save_kubernetes_credential(
 
         credential_id, save_action = credential_manager.save_credential(credential)
 
-        bg_tasks.add_task(
-            credential_manager.validate_credential,
-            credential
-        )
+        if is_scan_worker_enabled():
+            bg_tasks.add_task(
+                _validate_kubernetes_credential_via_worker,
+                credential_id,
+                credential,
+            )
+        else:
+            bg_tasks.add_task(
+                credential_manager.validate_credential,
+                credential
+            )
 
         return CredentialResponse(
             id=credential_id,
@@ -400,7 +444,13 @@ async def validate_credential(request: ValidationRequest):
         if not credential:
             raise HTTPException(status_code=404, detail="Credential not found")
         
-        result = credential_manager.validate_credential(credential)
+        if credential.cloud_provider == "kubernetes" and is_scan_worker_enabled():
+            result = await _validate_kubernetes_credential_via_worker(
+                request.credential_id,
+                credential,
+            )
+        else:
+            result = credential_manager.validate_credential(credential)
         
         return ValidationResponse(
             valid=result['valid'],
