@@ -64,6 +64,7 @@ async def run_due_schedules():
                     deep_scan=deep_scan,
                     user_id=user_id,
                     credential_id=credential_id,  # NEW: Use saved credential
+                    scan_targets=(schedule_data or {}).get("scan_targets", {}),
                 )
                 
                 scan_ids = result_ctx.get("scan_ids", [])

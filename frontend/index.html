@@ -209,6 +209,16 @@
             color: #326ce5;
         }
 
+        .iac-icon {
+            background: rgba(244, 114, 182, 0.12);
+            color: #f472b6;
+        }
+
+        .container-icon {
+            background: rgba(56, 189, 248, 0.12);
+            color: #38bdf8;
+        }
+
         .provider-name {
             font-weight: 600;
             color: #B0E4CC;
@@ -363,6 +373,80 @@
 
         .form-input::placeholder {
             color: #408A71;
+        }
+
+        .scan-targets {
+            margin-bottom: 24px;
+            display: grid;
+            gap: 16px;
+        }
+
+        .scan-target-card {
+            background: rgba(9, 20, 19, 0.45);
+            border: 1px solid rgba(176, 228, 204, 0.14);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .scan-target-title {
+            color: #B0E4CC;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .scan-target-hint {
+            color: rgba(176, 228, 204, 0.78);
+            font-size: 0.85rem;
+            margin-bottom: 14px;
+        }
+
+        .tool-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .tool-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border: 1px solid rgba(176, 228, 204, 0.18);
+            border-radius: 999px;
+            background: rgba(176, 228, 204, 0.06);
+            color: #B0E4CC;
+            font-size: 0.82rem;
+        }
+
+        .tool-toggle input {
+            accent-color: #10b981;
+        }
+
+        .tool-summary {
+            margin-bottom: 18px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .tool-summary-card {
+            border: 1px solid rgba(176, 228, 204, 0.14);
+            background: rgba(176, 228, 204, 0.04);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .tool-summary-title {
+            color: #B0E4CC;
+            font-size: 0.82rem;
+            margin-bottom: 6px;
+        }
+
+        .tool-summary-value {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
         /* Recurring Schedule */
@@ -1019,6 +1103,51 @@
                     </span>
                 </div>
 
+                <div class="scan-targets">
+                    <div class="scan-target-card">
+                        <div class="scan-target-title">IaC Security Scanning</div>
+                        <div class="scan-target-hint">
+                            Enter a local folder or file containing Terraform or CloudFormation templates. The scanner can use Trivy, Checkov, tfsec, Semgrep, and Gitleaks when available.
+                        </div>
+                        <input type="text" id="iacTargetPath" class="form-input"
+                            placeholder="Examples: ./infra or C:\\projects\\terraform">
+                        <div class="tool-grid">
+                            <label class="tool-toggle"><input type="checkbox" id="iacToolTrivy" checked> Trivy</label>
+                            <label class="tool-toggle"><input type="checkbox" id="iacToolCheckov" checked> Checkov</label>
+                            <label class="tool-toggle"><input type="checkbox" id="iacToolTfsec" checked> tfsec</label>
+                            <label class="tool-toggle"><input type="checkbox" id="iacToolSemgrep" checked> Semgrep</label>
+                            <label class="tool-toggle"><input type="checkbox" id="iacToolGitleaks" checked> Gitleaks</label>
+                        </div>
+                    </div>
+
+                    <div class="scan-target-card">
+                        <div class="scan-target-title">Container Security</div>
+                        <div class="scan-target-hint">
+                            Provide a Docker image reference for CVE and SBOM scanning, or a local extracted image/filesystem path. The scanner can use Trivy, Grype, Snyk, Syft, and Hadolint when available.
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Docker Image</label>
+                                <input type="text" id="containerImageTarget" class="form-input"
+                                    placeholder="nginx:latest or ghcr.io/org/app:1.2.3">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Local Path</label>
+                                <input type="text" id="containerPathTarget" class="form-input"
+                                    placeholder="./image-rootfs">
+                            </div>
+                        </div>
+                        <div class="tool-grid">
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolTrivy" checked> Trivy</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolGrype" checked> Grype</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolSnyk"> Snyk</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolHadolint" checked> Hadolint</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerSbomTrivy" checked> SBOM via Trivy</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerSbomSyft" checked> SBOM via Syft</label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Scan Options -->
                 <div class="scan-options">
                     <div class="option-item">
@@ -1171,6 +1300,8 @@
             'aws': false,
             'gcp': false,
             'kubernetes': false,
+            'iac': false,
+            'container': false,
             'openai': false,
             'azure': false
         };
@@ -1178,9 +1309,11 @@
         let selectedFrequency = 'daily';
         let allCredentialsMap = {}; // Global map ID -> detail
         const scanProviders = [
-            { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon' },
-            { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon' },
-            { id: 'kubernetes', name: 'Kubernetes', icon: '⎈', iconClass: 'kubernetes-icon' }
+            { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon', requiresCredentials: true, autoSelect: true },
+            { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon', requiresCredentials: true, autoSelect: true },
+            { id: 'kubernetes', name: 'Kubernetes', icon: '⎈', iconClass: 'kubernetes-icon', requiresCredentials: true, autoSelect: true },
+            { id: 'iac', name: 'IaC', icon: '🧱', iconClass: 'iac-icon', requiresCredentials: false, autoSelect: false },
+            { id: 'container', name: 'Container', icon: '🐳', iconClass: 'container-icon', requiresCredentials: false, autoSelect: false }
         ];
 
         // Initialize
@@ -1396,16 +1529,60 @@
             }
         }
 
+        function getConfiguredScanTargets() {
+            return {
+                iac: {
+                    path: document.getElementById('iacTargetPath')?.value?.trim() || '',
+                    enabled_tools: [
+                        document.getElementById('iacToolTrivy')?.checked ? 'trivy' : null,
+                        document.getElementById('iacToolCheckov')?.checked ? 'checkov' : null,
+                        document.getElementById('iacToolTfsec')?.checked ? 'tfsec' : null,
+                        document.getElementById('iacToolSemgrep')?.checked ? 'semgrep' : null,
+                        document.getElementById('iacToolGitleaks')?.checked ? 'gitleaks' : null,
+                    ].filter(Boolean)
+                },
+                container: {
+                    image: document.getElementById('containerImageTarget')?.value?.trim() || '',
+                    path: document.getElementById('containerPathTarget')?.value?.trim() || '',
+                    enabled_tools: [
+                        document.getElementById('containerToolTrivy')?.checked ? 'trivy' : null,
+                        document.getElementById('containerToolGrype')?.checked ? 'grype' : null,
+                        document.getElementById('containerToolSnyk')?.checked ? 'snyk' : null,
+                        document.getElementById('containerToolHadolint')?.checked ? 'hadolint' : null,
+                    ].filter(Boolean),
+                    sbom_tools: [
+                        document.getElementById('containerSbomTrivy')?.checked ? 'trivy' : null,
+                        document.getElementById('containerSbomSyft')?.checked ? 'syft' : null,
+                    ].filter(Boolean)
+                }
+            };
+        }
+
+        function providerIsReady(provider) {
+            if (provider.requiresCredentials) {
+                return Boolean(availableProviders[provider.id]);
+            }
+
+            const targets = getConfiguredScanTargets();
+            if (provider.id === 'iac') {
+                return Boolean(targets.iac.path);
+            }
+            if (provider.id === 'container') {
+                return Boolean(targets.container.image || targets.container.path);
+            }
+            return false;
+        }
+
         function renderProviderOptions() {
             const providersGrid = document.getElementById('providersGrid');
             if (!providersGrid) return;
 
             providersGrid.innerHTML = scanProviders.map(provider => {
-                const hasCredentials = availableProviders[provider.id];
+                const hasCredentials = providerIsReady(provider);
                 const isSelected = selectedProviders.includes(provider.id);
                 const helperText = isSelected
-                    ? (hasCredentials ? 'Selected for this scan' : 'Selected, but credentials are still needed')
-                    : (hasCredentials ? 'Ready to add to this scan' : 'Add credentials to enable');
+                    ? (hasCredentials ? 'Selected for this scan' : (provider.requiresCredentials ? 'Selected, but credentials are still needed' : 'Selected, but target details are still needed'))
+                    : (hasCredentials ? 'Ready to add to this scan' : (provider.requiresCredentials ? 'Add credentials to enable' : 'Add target details to enable'));
 
                 return `
                     <div class="provider-option ${isSelected ? 'selected' : ''} ${hasCredentials ? 'has-credentials' : ''}" 
@@ -1436,6 +1613,8 @@
                         'aws': (data.aws?.selectable ?? data.aws?.valid) || false,
                         'gcp': (data.gcp?.selectable ?? data.gcp?.valid) || false,
                         'kubernetes': (data.kubernetes?.selectable ?? data.kubernetes?.valid) || false,
+                        'iac': false,
+                        'container': false,
                         'openai': (data.openai?.selectable ?? data.openai?.valid) || false,
                         'azure': (data.azure?.selectable ?? data.azure?.valid) || false
                     };
@@ -1444,7 +1623,9 @@
                     const currentSelected = new Set(selectedProviders);
 
                     // Identify providers that actually have credentials (STRICT check)
-                    const configuredProviders = scanProviders.filter(p => availableProviders[p.id]).map(p => p.id);
+                    const configuredProviders = scanProviders
+                        .filter(p => p.autoSelect && availableProviders[p.id])
+                        .map(p => p.id);
 
                     // Additive Selection: if credentials for a provider are newly found AND 
                     // this is the first load or the provider was just added, select it.
@@ -1554,8 +1735,33 @@
             const userId = getUserId();
             console.log('🚀 Starting scan for user:', userId);
 
+            const scanTargets = getConfiguredScanTargets();
+            const targetValidationErrors = [];
+            if (selectedProviders.includes('iac') && !scanTargets.iac.path) {
+                targetValidationErrors.push('IaC target path is required when IaC scanning is selected.');
+            }
+            if (selectedProviders.includes('iac') && scanTargets.iac.enabled_tools.length === 0) {
+                targetValidationErrors.push('Select at least one IaC scanning tool.');
+            }
+            if (selectedProviders.includes('container') && !scanTargets.container.image && !scanTargets.container.path) {
+                targetValidationErrors.push('Container scanning requires a Docker image or local path.');
+            }
+            if (selectedProviders.includes('container') && scanTargets.container.enabled_tools.length === 0) {
+                targetValidationErrors.push('Select at least one container scanning tool.');
+            }
+            if (selectedProviders.includes('container') && scanTargets.container.sbom_tools.length === 0) {
+                targetValidationErrors.push('Select at least one SBOM generator for container scanning.');
+            }
+            if (targetValidationErrors.length > 0) {
+                alert(targetValidationErrors.join('\n'));
+                return;
+            }
+
             // Check if we have credentials for selected providers
-            const missingCredentials = selectedProviders.filter(p => !availableProviders[p]);
+            const missingCredentials = selectedProviders.filter(p => {
+                const provider = scanProviders.find(item => item.id === p);
+                return provider?.requiresCredentials && !availableProviders[p];
+            });
             if (missingCredentials.length > 0) {
                 const confirmScan = confirm(
                     `No credentials configured for: ${missingCredentials.join(', ')}. ` +
@@ -1575,6 +1781,7 @@
                 deep_scan: deepScan,
                 user_id: userId,
                 credential_id: selectedCredentialId ? parseInt(selectedCredentialId) : null,
+                scan_targets: scanTargets,
                 notify_email: document.getElementById('emailNotification').checked,
                 email_address: document.getElementById('notificationEmail').value || null,
                 test_permissions: true // 🛡️ NEW: Check permissions before scheduling
@@ -2000,6 +2207,19 @@
                     if (!scanInProgress) {
                         document.getElementById('scanModal').classList.remove('active');
                     }
+                }
+            });
+
+            [
+                'iacTargetPath', 'containerImageTarget', 'containerPathTarget',
+                'iacToolTrivy', 'iacToolCheckov', 'iacToolTfsec', 'iacToolSemgrep', 'iacToolGitleaks',
+                'containerToolTrivy', 'containerToolGrype', 'containerToolSnyk', 'containerToolHadolint',
+                'containerSbomTrivy', 'containerSbomSyft'
+            ].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('input', () => renderProviderOptions());
+                    element.addEventListener('change', () => renderProviderOptions());
                 }
             });
         }

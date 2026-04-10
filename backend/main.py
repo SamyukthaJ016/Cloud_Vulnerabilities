@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import textwrap
+from pathlib import Path
 from io import BytesIO
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta, timezone
@@ -87,6 +88,9 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp_scanner")
+
+MCP_SCAN_PROVIDERS = {"aws", "gcp", "kubernetes"}
+SPECIALIZED_SCAN_PROVIDERS = {"iac", "container"}
 
 
 def _get_openai_api_key() -> Optional[str]:
@@ -234,6 +238,7 @@ class MultiCloudScanRequest(BaseModel):
     session_id: Optional[str] = None
     user_id: Optional[str] = None
     credential_id: Optional[int] = None  # NEW: Allow selecting specific credential
+    scan_targets: dict[str, dict[str, Any]] = {}
 
 class ScheduledScanRequest(BaseModel):
     providers: list[str]
@@ -245,6 +250,7 @@ class ScheduledScanRequest(BaseModel):
     notify_email: bool = False           # NEW: Notification preference
     email_address: Optional[str] = None  # NEW: Target email address
     test_permissions: bool = True        # NEW: Validate permissions before scheduling
+    scan_targets: dict[str, dict[str, Any]] = {}
 
 
 class VulnScanRequest(BaseModel):
@@ -408,7 +414,7 @@ async def _run_schedule_now_impl(
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT user_id, providers, account_ids, deep_scan, credential_id
+            SELECT user_id, providers, account_ids, deep_scan, credential_id, schedule
             FROM scan_schedules
             WHERE id = %s AND user_id = %s
             """,
@@ -419,9 +425,10 @@ async def _run_schedule_now_impl(
     if not row:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
-    user_id, providers_text, account_ids_text, deep_scan, credential_id = row
+    user_id, providers_text, account_ids_text, deep_scan, credential_id, schedule_payload = row
     providers = json.loads(providers_text) if providers_text else []
     account_ids = json.loads(account_ids_text) if account_ids_text else {}
+    scan_targets = (schedule_payload or {}).get("scan_targets", {}) if isinstance(schedule_payload, dict) else {}
 
     if is_scan_worker_enabled():
         logger.info(
@@ -450,6 +457,7 @@ async def _run_schedule_now_impl(
         deep_scan=deep_scan,
         user_id=user_id,
         credential_id=credential_id,
+        scan_targets=scan_targets,
     )
 
     return {"status": "started", "message": "Scan started in background"}
@@ -693,23 +701,234 @@ async def run_gpt_agent(prompt: str) -> str:
         logger.error("GPT Agent error: %s", e)
         return f"Agent error: {e}"
 
+
+def _resolve_local_scan_path(raw_path: str) -> Path:
+    resolved = Path(raw_path).expanduser()
+    if not resolved.is_absolute():
+        resolved = (Path.cwd() / resolved).resolve()
+    return resolved
+
+
+def _build_vulnerability_scan_result(
+    provider: str,
+    account_id: str,
+    target_name: str,
+    resource_type: str,
+    vulnerabilities: list[Any],
+    resource_config: Optional[dict[str, Any]] = None,
+    extra_findings: Optional[list[SecurityFinding]] = None,
+) -> ScanResult:
+    resource = CloudResource(
+        provider=provider,
+        resource_type=resource_type,
+        name=target_name,
+        region="local",
+        config=resource_config or {},
+        is_public=False,
+    )
+
+    findings: list[SecurityFinding] = []
+    for vuln in vulnerabilities:
+        finding = SecurityFinding(
+            resource=resource,
+            severity=Severity[vuln.severity.value],
+            issue=f"[{vuln.tool.upper()}] {vuln.vuln_id}: {vuln.title}",
+            description=vuln.description,
+            recommendation=(
+                f"Update {vuln.affected_package or 'the affected component'} "
+                f"to {vuln.fixed_version or 'a patched version'}."
+            ),
+            cve_id=vuln.vuln_id if str(vuln.vuln_id).startswith("CVE-") else None,
+            compliance=["OWASP-A06:2021"],
+            detection_tool=vuln.tool.upper(),
+            tool_category="vuln_scan",
+        )
+        finding.vuln_metadata = {
+            "vuln_id": vuln.vuln_id,
+            "title": vuln.title,
+            "severity": vuln.severity.value,
+            "description": vuln.description,
+            "affected_package": vuln.affected_package,
+            "fixed_version": vuln.fixed_version,
+            "references": vuln.references,
+            "cvss_score": vuln.cvss_score,
+            "tool": vuln.tool,
+        }
+        findings.append(finding)
+
+    if extra_findings:
+        findings.extend(extra_findings)
+
+    return ScanResult(
+        provider=provider,
+        account_id=account_id,
+        resources=[resource],
+        findings=findings,
+        scan_duration=0.0,
+    )
+
+
+async def _run_specialized_scan(
+    provider: str,
+    target_config: dict[str, Any],
+) -> ScanResult:
+    if provider == "iac":
+        raw_path = (target_config or {}).get("path", "").strip()
+        enabled_tools = (target_config or {}).get("enabled_tools", []) or []
+        if not raw_path:
+            raise HTTPException(status_code=400, detail="IaC scan requires a target path.")
+
+        resolved_path = _resolve_local_scan_path(raw_path)
+        if not resolved_path.exists():
+            raise HTTPException(status_code=400, detail=f"IaC path not found: {resolved_path}")
+
+        vulnerabilities = await vuln_scanner.scan_all(
+            ScanTarget(
+                target_type="iac",
+                path=str(resolved_path),
+                metadata={
+                    "path": str(resolved_path),
+                    "enabled_tools": enabled_tools,
+                },
+            )
+        )
+        return _build_vulnerability_scan_result(
+            provider="iac",
+            account_id=str(resolved_path),
+            target_name=str(resolved_path),
+            resource_type="iac_directory",
+            vulnerabilities=vulnerabilities,
+            resource_config={
+                "path": str(resolved_path),
+                "frameworks": ["terraform", "cloudformation"],
+                "enabled_tools": enabled_tools,
+            },
+        )
+
+    if provider == "container":
+        image_ref = (target_config or {}).get("image", "").strip()
+        raw_path = (target_config or {}).get("path", "").strip()
+        enabled_tools = (target_config or {}).get("enabled_tools", []) or []
+        sbom_tools = (target_config or {}).get("sbom_tools", []) or ["trivy", "syft"]
+
+        if not image_ref and not raw_path:
+            raise HTTPException(
+                status_code=400,
+                detail="Container scan requires a Docker image reference or local path.",
+            )
+
+        target_mode = "image"
+        target_name = image_ref
+        resource_type = "container_image"
+        resource_config: dict[str, Any] = {"scan_mode": "image", "enabled_tools": enabled_tools}
+
+        if raw_path and not image_ref:
+            resolved_path = _resolve_local_scan_path(raw_path)
+            if not resolved_path.exists():
+                raise HTTPException(status_code=400, detail=f"Container path not found: {resolved_path}")
+            target_mode = "fs"
+            target_name = str(resolved_path)
+            resource_type = "container_filesystem"
+            resource_config = {
+                "scan_mode": "filesystem",
+                "path": str(resolved_path),
+                "enabled_tools": enabled_tools,
+            }
+
+        vulnerabilities = await vuln_scanner.scan_all(
+            ScanTarget(
+                target_type="container" if target_mode == "image" else "filesystem",
+                path=target_name,
+                metadata={
+                    "path": target_name,
+                    "container_target_mode": target_mode,
+                    "enabled_tools": enabled_tools,
+                },
+            )
+        )
+        sbom = await vuln_scanner.generate_sbom(
+            target_name,
+            target_mode=target_mode,
+            preferred_tools=sbom_tools,
+        )
+
+        extra_findings: list[SecurityFinding] = []
+        if sbom.get("generated"):
+            resource = CloudResource(
+                provider="container",
+                resource_type=resource_type,
+                name=target_name,
+                region="local",
+                config=resource_config,
+                is_public=False,
+            )
+            component_count = sbom.get("component_count", 0)
+            extra_findings.append(
+                SecurityFinding(
+                    resource=resource,
+                    severity=Severity.INFO,
+                    issue="[TRIVY-SBOM] Software bill of materials generated",
+                    description=(
+                        f"SBOM generated for {target_name} with approximately "
+                        f"{component_count} components in {sbom.get('format', 'CycloneDX')} format."
+                    ),
+                    recommendation="Review the component inventory alongside the CVE findings.",
+                    detection_tool="TRIVY-SBOM",
+                    tool_category="inventory",
+                )
+            )
+
+        resource_config["sbom"] = {
+            "generated": sbom.get("generated", False),
+            "component_count": sbom.get("component_count", 0),
+            "format": sbom.get("format", "CycloneDX"),
+            "generator": sbom.get("generator"),
+        }
+
+        return _build_vulnerability_scan_result(
+            provider="container",
+            account_id=target_name,
+            target_name=target_name,
+            resource_type=resource_type,
+            vulnerabilities=vulnerabilities,
+            resource_config=resource_config,
+            extra_findings=extra_findings,
+        )
+
+    raise HTTPException(status_code=400, detail=f"Unsupported specialized provider: {provider}")
+
 async def run_multi_cloud_scan_internal(
     providers: list[str],
     account_ids: dict[str, str],
     deep_scan: bool,
     user_id: str,
     credential_id: Optional[int] = None,  # NEW: Support specific credential
+    scan_targets: Optional[dict[str, dict[str, Any]]] = None,
 ):
     """Core multi-cloud scan logic reused by API and scheduler."""
     logger.info(f"🚀 Multi-cloud scan for providers: {providers}")
     logger.info(f"👤 User ID: {user_id}")
 
-    # ✅ STEP 1: Initialize plugins with user credentials
-    await initialize_mcp_servers_for_user(user_id, providers, credential_id)
-    
-    # Get initialized providers from registry
-    initialized_list = mcp_registry.list_providers()
-    providers_initialized = {p: True for p in initialized_list}
+    scan_targets = scan_targets or {}
+    unsupported_providers = [
+        provider
+        for provider in providers
+        if provider not in MCP_SCAN_PROVIDERS and provider not in SPECIALIZED_SCAN_PROVIDERS
+    ]
+    if unsupported_providers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported providers requested: {', '.join(unsupported_providers)}",
+        )
+
+    mcp_providers = [provider for provider in providers if provider in MCP_SCAN_PROVIDERS]
+    providers_initialized: dict[str, bool] = {}
+    if mcp_providers:
+        await initialize_mcp_servers_for_user(user_id, mcp_providers, credential_id)
+        
+        # Get initialized providers from registry
+        initialized_list = mcp_registry.list_providers()
+        providers_initialized = {p: True for p in initialized_list}
     
     # Get AWS credential ID if available
     aws_cred_id = None
@@ -723,7 +942,7 @@ async def run_multi_cloud_scan_internal(
 
     # ✅ STEP 2: Verify ALL requested providers are initialized
     missing_providers = []
-    for provider in providers:
+    for provider in mcp_providers:
         if provider not in providers_initialized:
             missing_providers.append(provider)
             logger.error(f"❌ Provider {provider} not initialized - no credentials available")
@@ -742,32 +961,38 @@ async def run_multi_cloud_scan_internal(
             account_id = account_ids.get(provider, "default") or "default"
             logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
 
-            # Scan using the registry (which now has the user's credentials)
-            raw_result = await mcp_registry.scan(provider, account_id)
-            
-            # Convert dict to ScanResult
-            result = _mcp_to_scan_result(provider, raw_result)
+            if provider in SPECIALIZED_SCAN_PROVIDERS:
+                result = await _run_specialized_scan(
+                    provider,
+                    scan_targets.get(provider, {}),
+                )
+            else:
+                # Scan using the registry (which now has the user's credentials)
+                raw_result = await mcp_registry.scan(provider, account_id)
+                
+                # Convert dict to ScanResult
+                result = _mcp_to_scan_result(provider, raw_result)
 
-            # Deep scan if requested
-            if deep_scan:
-                logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
-                plugin = mcp_registry.get_plugin(provider)
-                cloud_client = None
-                if plugin:
-                    cloud_client = getattr(plugin, "s3", None) or getattr(
-                        plugin, "storage_client", None
-                    )
-
-                for resource in result.resources:
-                    try:
-                        vuln_findings = await vuln_integration.scan_cloud_resource(
-                            resource, cloud_client
+                # Deep scan if requested
+                if deep_scan:
+                    logger.info(f"🔬 Running deep vulnerability scan for {provider}...")
+                    plugin = mcp_registry.get_plugin(provider)
+                    cloud_client = None
+                    if plugin:
+                        cloud_client = getattr(plugin, "s3", None) or getattr(
+                            plugin, "storage_client", None
                         )
-                        result.findings.extend(vuln_findings)
-                    except Exception as e:
-                        logger.error(f"Failed to scan resource {resource.name}: {e}")
 
-                logger.info(f"✅ Deep scan completed for {provider}")
+                    for resource in result.resources:
+                        try:
+                            vuln_findings = await vuln_integration.scan_cloud_resource(
+                                resource, cloud_client
+                            )
+                            result.findings.extend(vuln_findings)
+                        except Exception as e:
+                            logger.error(f"Failed to scan resource {resource.name}: {e}")
+
+                    logger.info(f"✅ Deep scan completed for {provider}")
 
             scan_results.append(result)
 
@@ -784,30 +1009,34 @@ async def run_multi_cloud_scan_internal(
             logger.error(f"❌ Scan failed for {provider}: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            
-            # Create a "Failed Scan" result so it's visible on the dashboard
+            failed_resource = CloudResource(
+                provider=provider,
+                resource_type="scan_error",
+                name=f"{provider}-scanner",
+                region="local",
+                config={"error": str(e)},
+                is_public=False,
+            )
             failed_result = ScanResult(
                 provider=provider,
                 account_id=account_id,
-                resources=[],
+                resources=[failed_resource],
                 findings=[
                     SecurityFinding(
-                        id=f"error_{provider}_{int(datetime.now().timestamp())}",
-                        title=f"Scan Error: {provider.upper()}",
-                        description=f"The scan for {provider} failed with the following error: {str(e)}. Please check your credentials and network connectivity.",
-                        severity="high",
-                        provider=provider,
-                        resource="Scanner",
-                        remediation="Ensure that the service account JSON or AWS keys provided in the Settings are valid and have the necessary permissions (e.g., Viewer role for GCP, SecurityAudit for AWS)."
+                        resource=failed_resource,
+                        severity=Severity.HIGH,
+                        issue=f"[SCANNER] {provider.upper()} scan failed",
+                        description=str(e),
+                        recommendation="Review the scan configuration, credentials, or target details and retry.",
+                        detection_tool="SCANNER",
+                        tool_category="execution",
                     )
                 ],
                 errors=[str(e)]
             )
             scan_results.append(failed_result)
-            
-            # Store the error as a scan record so it's not lost
+
             try:
-                # Get appropriate credential ID if possible
                 aws_id = aws_cred_id if provider == "aws" else None
                 scan_id = await store_scan_result(
                     failed_result,
@@ -836,6 +1065,9 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
     logger.info(f"📅 Received schedule scan request from user={user_id}: {request}")
 
     schedule = request.schedule or {}
+    schedule_payload = dict(schedule)
+    if request.scan_targets:
+        schedule_payload["scan_targets"] = request.scan_targets
     stype = schedule.get("type")
     if stype not in ("once", "recurring"):
         logger.warning(f"❌ Invalid schedule type: {stype}")
@@ -944,7 +1176,7 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
                 json.dumps(request.providers),
                 json.dumps(request.account_ids),
                 request.deep_scan,
-                Json(schedule),
+                Json(schedule_payload),
                 next_run_at,
                 request.credential_id,
                 request.notify_email,
@@ -1029,12 +1261,19 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
                 "offensive_scan": request.offensive_scan,
                 "user_id": user_id,
                 "credential_id": request.credential_id,
+                "scan_targets": request.scan_targets,
             },
         )
 
-    # 🔥 Initialize MCP servers FIRST
     try:
-        await initialize_mcp_servers_for_user(user_id, request.providers, request.credential_id)
+        result_ctx = await run_multi_cloud_scan_internal(
+            providers=request.providers,
+            account_ids=request.account_ids,
+            deep_scan=request.deep_scan,
+            user_id=user_id,
+            credential_id=request.credential_id,
+            scan_targets=request.scan_targets,
+        )
     except Exception as e:
         # Check if this is our structured permission error from aws_assume_role.py
         if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
@@ -1060,74 +1299,11 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
             detail=f"Initialization failed: {str(e)}"
         )
 
-    # ✅ NOW validate
-    available_providers = mcp_registry.list_providers()
-    logger.info(f"✅ Available MCP providers: {available_providers}")
-
-    for provider in request.providers:
-        if provider not in available_providers:
-            raise HTTPException(
-                status_code=400,
-                detail=f"{provider} scan failed: MCP server not initialized"
-            )
-
-
-    scan_results: list[ScanResult] = []
-    stored_ids: list[int] = []
-
-    for provider in request.providers:
-        try:
-            account_id = request.account_ids.get(provider, "default") or "default"
-            logger.info(f"📡 Scanning {provider} with account_id: {account_id}")
-            mcp_result = await mcp_registry.scan(
-            provider=provider,
-            account_id=account_id,
-            options={
-                "deep_scan": request.deep_scan,
-                "offensive_scan": request.offensive_scan,
-                }
-            )
-
-            # Convert MCP dict → ScanResult
-            scan_result_obj = _mcp_to_scan_result(provider, mcp_result)
-            scan_results.append(scan_result_obj)
-
-            # 🔥 FIX: resolve credential_id safely
-            credential_id = None
-            if provider == "aws":
-                aws_server = mcp_registry.get_plugin("aws")
-                if aws_server:
-                    credential_id = aws_server.config.get("credential_id")
-
-            scan_id = await store_scan_result(
-                scan_result_obj,
-                user_id=user_id,
-                aws_credential_id=credential_id,
-            )
-            stored_ids.append(scan_id)
-
-
-
-            logger.info(
-                f"✅ {provider.upper()} scan finished, "
-                f"stored as scan_id={scan_id}"
-            )
-
-        except Exception as e:
-            logger.exception(f"❌ Scan failed for {provider}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"{provider} scan failed: {e}",
-            )
-
-    # ✅ AI analysis (non-blocking failure)
-    ai_analysis = await _analyze_scan_results_with_ai(scan_results)
-
     # ✅ Final response (NO legacy fields)
     response = format_scan_completion_response(
-        stored_ids,
-        scan_results,
-        ai_analysis,
+        result_ctx["scan_ids"],
+        result_ctx["scan_results"],
+        result_ctx["ai_analysis"],
     )
 
     response.update({
@@ -1141,7 +1317,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
                 "findings": len(r.findings),
                 "duration": r.scan_duration,
             }
-            for r in scan_results
+            for r in result_ctx["scan_results"]
         ],
     })
 
@@ -2090,6 +2266,7 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
                 "offensive_scan": request.offensive_scan,
                 "user_id": user_id,
                 "credential_id": request.credential_id,
+                "scan_targets": request.scan_targets,
             },
         )
         result.setdefault("notes", []).append(

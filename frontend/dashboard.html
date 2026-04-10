@@ -521,6 +521,32 @@
             color: #B0E4CC;
         }
 
+        .tool-summary {
+            margin-bottom: 18px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .tool-summary-card {
+            border: 1px solid rgba(176, 228, 204, 0.14);
+            background: rgba(176, 228, 204, 0.04);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .tool-summary-title {
+            color: #B0E4CC;
+            font-size: 0.82rem;
+            margin-bottom: 6px;
+        }
+
+        .tool-summary-value {
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
         /* Cloud Badge */
         .cloud-badge {
             display: inline-flex;
@@ -993,6 +1019,13 @@
                     <button class="severity-filter" onclick="filterVulnerabilities('critical')">Critical</button>
                     <button class="severity-filter" onclick="filterVulnerabilities('high')">High</button>
                     <button class="severity-filter" onclick="filterVulnerabilities('medium')">Medium</button>
+                </div>
+            </div>
+
+            <div class="tool-summary" id="tool-summary">
+                <div class="tool-summary-card">
+                    <div class="tool-summary-title">Active Detection Tools</div>
+                    <div class="tool-summary-value">Loading...</div>
                 </div>
             </div>
 
@@ -1870,6 +1903,7 @@ kubectl apply -f deployment.yaml`,
                 await loadCloudChart(providers.data || []);
                 await loadRecentScans();
                 await loadCloudProviders(providers.data || []);
+                renderToolSummary(findings.data || []);
 
                 await loadVulnerabilities(findings.data || [], {
                     isFullScanResults: Boolean(scanIds),
@@ -1943,6 +1977,39 @@ kubectl apply -f deployment.yaml`,
 
         function viewScanDetails(scanId) {
             window.location.href = `/dashboard?scanIds=${scanId}`;
+        }
+
+        function renderToolSummary(findings) {
+            const container = document.getElementById('tool-summary');
+            if (!container) return;
+
+            if (!findings || findings.length === 0) {
+                container.innerHTML = `
+                    <div class="tool-summary-card">
+                        <div class="tool-summary-title">Active Detection Tools</div>
+                        <div class="tool-summary-value">No findings yet</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const counts = {};
+            findings.forEach(finding => {
+                const raw = (finding.tool || 'unknown').split(',');
+                raw.forEach(tool => {
+                    const normalized = tool.trim();
+                    if (!normalized) return;
+                    counts[normalized] = (counts[normalized] || 0) + 1;
+                });
+            });
+
+            const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+            container.innerHTML = entries.map(([tool, count]) => `
+                <div class="tool-summary-card">
+                    <div class="tool-summary-title">${tool}</div>
+                    <div class="tool-summary-value">${count} finding${count === 1 ? '' : 's'}</div>
+                </div>
+            `).join('');
         }
 
         function generateAIRemediation(vuln) {
@@ -2214,6 +2281,8 @@ kubectl apply -f deployment.yaml`,
                 'aws': { icon: '☁️', class: 'aws-icon', color: '#ff9900' },
                 'gcp': { icon: '📊', class: 'gcp-icon', color: '#4285f4' },
                 'kubernetes': { icon: '⎈', class: 'kubernetes-icon', color: '#326ce5' },
+                'iac': { icon: '🧱', class: 'openai-icon', color: '#f472b6' },
+                'container': { icon: '🐳', class: 'azure-icon', color: '#38bdf8' },
                 'azure': { icon: '🔷', class: 'azure-icon', color: '#0078d4' },
                 'openai': { icon: '🤖', class: 'openai-icon', color: '#10a37f' }
             };

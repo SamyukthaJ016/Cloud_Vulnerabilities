@@ -38,6 +38,7 @@ class WorkerMultiCloudScanRequest(BaseModel):
     offensive_scan: bool = True
     user_id: str
     credential_id: Optional[int] = None
+    scan_targets: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class WorkerScheduleRunRequest(BaseModel):
@@ -97,6 +98,7 @@ def _resolve_requested_credential(
 async def _preflight_multi_cloud_scan(request: WorkerMultiCloudScanRequest) -> None:
     missing = [
         provider for provider in request.providers
+        if provider in {"aws", "gcp", "kubernetes"}
         if not _resolve_requested_credential(request, provider)
     ]
     if missing:
@@ -114,6 +116,7 @@ async def _run_multi_cloud_scan_background(request: WorkerMultiCloudScanRequest)
             deep_scan=request.deep_scan,
             user_id=request.user_id,
             credential_id=request.credential_id,
+            scan_targets=request.scan_targets,
         )
         logger.info(
             "Background worker scan completed for user=%s scan_ids=%s",
@@ -180,6 +183,7 @@ async def run_multi_cloud_scan(
             deep_scan=request.deep_scan,
             user_id=request.user_id,
             credential_id=request.credential_id,
+            scan_targets=request.scan_targets,
         )
     except Exception as exc:
         if hasattr(exc, "iam_user_arn") and hasattr(exc, "recommended_policy_arn"):
@@ -218,7 +222,7 @@ async def run_schedule_now(
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT user_id, providers, account_ids, deep_scan, credential_id
+            SELECT user_id, providers, account_ids, deep_scan, credential_id, schedule
             FROM scan_schedules
             WHERE id = %s AND user_id = %s
             """,
@@ -229,9 +233,10 @@ async def run_schedule_now(
     if not row:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
-    user_id, providers_json, account_ids_json, deep_scan, credential_id = row
+    user_id, providers_json, account_ids_json, deep_scan, credential_id, schedule_payload = row
     providers = json.loads(providers_json) if providers_json else []
     account_ids = json.loads(account_ids_json) if account_ids_json else {}
+    scan_targets = (schedule_payload or {}).get("scan_targets", {}) if isinstance(schedule_payload, dict) else {}
 
     if "aws" in providers:
         try:
@@ -248,6 +253,7 @@ async def run_schedule_now(
         deep_scan=deep_scan,
         user_id=user_id,
         credential_id=credential_id,
+        scan_targets=scan_targets,
     )
     return {"status": "started", "message": "Scan started on worker"}
 

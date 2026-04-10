@@ -5,6 +5,7 @@ A comprehensive, containerized security scanning tool designed to identify vulne
 ## 🚀 Features
 
 - **Multi-Cloud Support**: Scans AWS environments (IAM, EC2, S3) and GCP Projects.
+- **Kubernetes Support**: Scans container images and performs local Kubernetes cluster vulnerability assessments.
 - **Web App Scanning**: Integrated OWASP ZAP and Nuclei for web vulnerability detection.
 - **Secret Scanning**: Detects hardcoded secrets using Gitleaks.
 - **Dependency Analysis**: Checks for vulnerable dependencies with Trivy and Safety.
@@ -92,6 +93,29 @@ Open your browser and navigate to:
 2. Configure your target (URL, IP, or Cloud Account).
 3. Click **"New Scan"**.
 4. View real-time progress and detailed reports.
+
+### Optional Tooling For Stronger IaC And Container Coverage
+The new **IaC Security** and **Container Security** flows automatically use any of these CLIs when present on the host:
+
+- IaC: `trivy`, `checkov`, `tfsec`, `semgrep`, `gitleaks`
+- Container: `trivy`, `grype`, `snyk`, `syft`, `hadolint`
+
+Examples:
+
+```bash
+# IaC scanners
+pip install checkov semgrep
+choco install tfsec
+
+# Container scanners
+choco install trivy grype syft hadolint
+npm install -g snyk
+```
+
+Notes:
+- `snyk` requires prior authentication with `snyk auth`
+- `syft` is used as an SBOM fallback when Trivy SBOM generation is unavailable
+- the dashboard tool summary reflects whichever scanners actually produced findings
 
 ## 🏗️ Architecture
 
