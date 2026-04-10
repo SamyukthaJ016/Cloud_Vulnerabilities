@@ -565,11 +565,20 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
 
         elif provider == "kubernetes":
             logger.info(f"[ServerInit] Attempting to retrieve default Kubernetes credential for user: {user_id}")
-            kube_cred = credential_manager.get_default_credential(user_id, "kubernetes")
+            if credential_id:
+                candidate_cred = credential_manager.get_credential_by_id(user_id, credential_id)
+                kube_cred = candidate_cred if candidate_cred and candidate_cred.cloud_provider == "kubernetes" else None
+            else:
+                kube_cred = None
+
+            if not kube_cred:
+                kube_cred = credential_manager.get_default_credential(user_id, "kubernetes")
 
             if not kube_cred:
                 logger.warning(f"⚠️ No Kubernetes credentials found in DB for user {user_id}")
                 continue
+
+            aws_exec_cred = credential_manager.get_default_credential(user_id, "aws")
 
             logger.info(
                 f"[ServerInit] (Re)initializing Kubernetes server with credentials (cred_id={kube_cred.id}) for user: {user_id}"
@@ -578,6 +587,10 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
                 "kubeconfig": kube_cred.kubernetes_kubeconfig,
                 "context": kube_cred.kubernetes_context,
                 "cluster_name": kube_cred.kubernetes_cluster_name,
+                "aws_access_key_id": aws_exec_cred.aws_access_key_id if aws_exec_cred else None,
+                "aws_secret_access_key": aws_exec_cred.aws_secret_access_key if aws_exec_cred else None,
+                "aws_session_token": aws_exec_cred.aws_session_token if aws_exec_cred else None,
+                "aws_region": aws_exec_cred.aws_region if aws_exec_cred else None,
             }
 
             server = create_kubernetes_server(kube_config)

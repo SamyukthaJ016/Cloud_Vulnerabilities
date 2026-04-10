@@ -41,6 +41,20 @@ def normalize_aws_region(region: Optional[str]) -> str:
     return AWS_REGION_ALIASES.get(raw.lower(), raw)
 
 
+def build_aws_exec_env(credential: Optional["CloudCredential"]) -> Dict[str, str]:
+    if not credential:
+        return {}
+
+    exec_env = {
+        "AWS_ACCESS_KEY_ID": credential.aws_access_key_id or "",
+        "AWS_SECRET_ACCESS_KEY": credential.aws_secret_access_key or "",
+        "AWS_SESSION_TOKEN": credential.aws_session_token or "",
+        "AWS_REGION": normalize_aws_region(credential.aws_region),
+        "AWS_DEFAULT_REGION": normalize_aws_region(credential.aws_region),
+    }
+    return {key: value for key, value in exec_env.items() if value}
+
+
 @dataclass
 class CloudCredential:
     
@@ -926,7 +940,10 @@ class CredentialManager:
                     'details': {}
                 }
 
-            kubeconfig_text = prepare_kubeconfig_text(credential.kubernetes_kubeconfig)
+            kubeconfig_text = prepare_kubeconfig_text(
+                credential.kubernetes_kubeconfig,
+                exec_env=build_aws_exec_env(credential),
+            )
 
             with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
                 handle.write(kubeconfig_text)

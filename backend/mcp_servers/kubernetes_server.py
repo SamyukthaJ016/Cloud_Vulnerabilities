@@ -14,6 +14,7 @@ from kubernetes import client, config
 from kubernetes.client import ApiClient
 from kubernetes.config.config_exception import ConfigException
 
+from backend.credentials.manager import normalize_aws_region
 from backend.mcp_servers.base_server import BaseMCPServer, MCPResource, MCPTool, ToolCategory
 from backend.utils.kubeconfig import KubeconfigPreparationError, prepare_kubeconfig_text
 from backend.vulnerability.vulnerability_scanner import Vulnerability, VulnerabilityScanner
@@ -78,7 +79,18 @@ class KubernetesMCPServer(BaseMCPServer):
 
         try:
             if kubeconfig_text:
-                kubeconfig_text = prepare_kubeconfig_text(kubeconfig_text)
+                aws_region = normalize_aws_region(cfg.get("aws_region"))
+                exec_env = {
+                    "AWS_ACCESS_KEY_ID": cfg.get("aws_access_key_id") or "",
+                    "AWS_SECRET_ACCESS_KEY": cfg.get("aws_secret_access_key") or "",
+                    "AWS_SESSION_TOKEN": cfg.get("aws_session_token") or "",
+                    "AWS_REGION": aws_region,
+                    "AWS_DEFAULT_REGION": aws_region,
+                }
+                kubeconfig_text = prepare_kubeconfig_text(
+                    kubeconfig_text,
+                    exec_env={key: value for key, value in exec_env.items() if value},
+                )
                 with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
                     handle.write(kubeconfig_text)
                     self._temp_kubeconfig_path = Path(handle.name)

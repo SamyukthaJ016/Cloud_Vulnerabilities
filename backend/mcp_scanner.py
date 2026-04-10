@@ -90,10 +90,15 @@ class MCPSecurityScanner:
                     results["credential_mapping"]["gcp"] = credential.id
 
                 elif provider == "kubernetes":
+                    aws_cred = credential_manager.get_default_credential(user_id, "aws")
                     server = create_kubernetes_server({
                         "kubeconfig": credential.kubernetes_kubeconfig,
                         "context": credential.kubernetes_context,
                         "cluster_name": credential.kubernetes_cluster_name,
+                        "aws_access_key_id": aws_cred.aws_access_key_id if aws_cred else None,
+                        "aws_secret_access_key": aws_cred.aws_secret_access_key if aws_cred else None,
+                        "aws_session_token": aws_cred.aws_session_token if aws_cred else None,
+                        "aws_region": aws_cred.aws_region if aws_cred else None,
                     })
                     results["credential_mapping"]["kubernetes"] = credential.id
                 

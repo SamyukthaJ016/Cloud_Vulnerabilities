@@ -2,6 +2,7 @@
 .venv
 .venv311
 .venv-worker
+gigachad grc
 **/__pycache__/**
 **/*.pyc
 .env
