@@ -1,3 +1,29 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    {
+      "src": "^/$",
+      "dest": "/index.html"
+    },
+    {
+      "src": "^/dashboard/?$",
+      "dest": "/dashboard.html"
+    },
+    {
+      "src": "^/frontend/history\\.html$",
+      "dest": "/frontend/history.html"
+    },
+    {
+      "src": "^/schedules/?$",
+      "dest": "/scheduled_scans.html"
+    },
+    {
+      "src": "^/system-status/?$",
+      "dest": "/system_status.html"
+    },
+    {
+      "src": "^/(.*)$",
+      "dest": "/index.py"
+    }
+  ]
 }

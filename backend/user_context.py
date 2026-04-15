@@ -15,6 +15,8 @@ SSO_SESSION_COOKIE_NAMES = (
 PUBLIC_PATHS = {
     "/health",
     "/api/info",
+    "/api/billing/webhook",
+    "/api/billing/verify",
 }
 HTML_PAGE_PATHS = {
     "/",

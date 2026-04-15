@@ -6,7 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -17,11 +18,29 @@ if str(ROOT) not in sys.path:
 
 USER_ID_COOKIE = "cloudguard_user_id"
 LIGHTWEIGHT_PATHS = {
+    "/",
+    "/dashboard",
+    "/frontend/history.html",
+    "/schedules",
+    "/system-status",
     "/health",
     "/api/info",
+    "/api/grc/status",
+    "/api/grc/sync",
+    "/api/billing/plans",
+    "/api/billing/subscription",
+    "/api/billing/entitlements",
+    "/api/billing/subscribe",
+    "/api/billing/webhook",
+    "/api/billing/verify",
+    "/api/uploads/iac-folder",
+    "/api/credentials/providers/status",
+    "/api/provider-breakdown",
+    "/api/scan-history",
     "/api/scans",
     "/api/latest-findings",
     "/api/system/status",
+    "/posture/dashboard",
     "/scan/multi-cloud",
 }
 
@@ -75,6 +94,317 @@ def _parse_bool(value: Optional[str], default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_lightweight_path(path: str) -> bool:
+    normalized = path.rstrip("/") or "/"
+    return normalized in LIGHTWEIGHT_PATHS or normalized.startswith("/api/credentials")
+
+
+def _frontend_file_response(filename: str) -> HTMLResponse:
+    possible_paths = [
+        ROOT / "frontend" / filename,
+        Path("/app/frontend") / filename,
+    ]
+
+    for path in possible_paths:
+        if path.exists():
+            return HTMLResponse(path.read_text(encoding="utf-8"))
+
+    raise FileNotFoundError(filename)
+
+
+def _parse_scan_ids(scan_ids: Optional[str]) -> list[int]:
+    if not scan_ids:
+        return []
+
+    try:
+        return [int(item.strip()) for item in scan_ids.split(",") if item.strip()]
+    except ValueError:
+        return []
+
+
+def _available_vulnerability_tools_payload(worker_health: dict[str, Any]) -> dict[str, bool]:
+    tools = worker_health.get("vulnerability_tools") or []
+    return {str(tool): True for tool in tools if tool}
+
+
+def _credential_manager():
+    from backend.credentials.manager import credential_manager
+
+    return credential_manager
+
+
+def _billing_helpers():
+    from backend.billing import (
+        billing_enabled,
+        billing_enforcement_enabled,
+        create_subscription_request,
+        get_billing_dashboard,
+        get_provider_access_decision,
+        list_plans,
+        process_razorpay_webhook,
+        verify_product_access,
+    )
+
+    return {
+        "billing_enabled": billing_enabled,
+        "billing_enforcement_enabled": billing_enforcement_enabled,
+        "create_subscription_request": create_subscription_request,
+        "get_billing_dashboard": get_billing_dashboard,
+        "get_provider_access_decision": get_provider_access_decision,
+        "list_plans": list_plans,
+        "process_razorpay_webhook": process_razorpay_webhook,
+        "verify_product_access": verify_product_access,
+    }
+
+
+def _cloud_credential_cls():
+    from backend.credentials.manager import CloudCredential
+
+    return CloudCredential
+
+
+def _normalize_aws_region_value(region: Optional[str]) -> str:
+    from backend.credentials.manager import normalize_aws_region
+
+    return normalize_aws_region(region)
+
+
+def _serialize_credential_response(
+    credential_id: int,
+    credential: Any,
+    save_action: Optional[str] = None,
+    validation_status: str = "pending",
+    validation_message: Optional[str] = None,
+    is_valid: bool = False,
+) -> dict[str, Any]:
+    return {
+        "id": credential_id,
+        "user_id": credential.user_id,
+        "cloud_provider": credential.cloud_provider,
+        "credential_name": credential.credential_name,
+        "is_default": credential.is_default,
+        "is_valid": is_valid,
+        "validation_status": validation_status,
+        "validation_message": validation_message,
+        "last_used": None,
+        "created_at": datetime.utcnow().isoformat(),
+        "save_action": save_action,
+        "aws_role_arn": getattr(credential, "aws_role_arn", None),
+        "aws_access_key_id": getattr(credential, "aws_access_key_id", None),
+        "kubernetes_context": getattr(credential, "kubernetes_context", None),
+        "kubernetes_cluster_name": getattr(credential, "kubernetes_cluster_name", None),
+        "iac_target_path": getattr(credential, "iac_target_path", None),
+        "iac_enabled_tools": getattr(credential, "iac_enabled_tools", None),
+        "container_image_target": getattr(credential, "container_image_target", None),
+        "container_path_target": getattr(credential, "container_path_target", None),
+        "container_enabled_tools": getattr(credential, "container_enabled_tools", None),
+        "container_sbom_tools": getattr(credential, "container_sbom_tools", None),
+    }
+
+
+async def _validate_saved_kubernetes_credential(
+    credential_id: int,
+    credential: Any,
+) -> dict[str, Any]:
+    from backend.credentials.api import _validate_kubernetes_credential_via_worker
+
+    return await _validate_kubernetes_credential_via_worker(credential_id, credential)
+
+
+@lightweight_app.get("/", response_class=HTMLResponse)
+async def lightweight_root():
+    return _frontend_file_response("index.html")
+
+
+@lightweight_app.get("/dashboard", response_class=HTMLResponse)
+async def lightweight_dashboard_page():
+    return _frontend_file_response("dashboard.html")
+
+
+@lightweight_app.get("/frontend/history.html", response_class=HTMLResponse)
+async def lightweight_history_page():
+    return _frontend_file_response("history.html")
+
+
+@lightweight_app.get("/schedules", response_class=HTMLResponse)
+async def lightweight_schedules_page():
+    return _frontend_file_response("scheduled_scans.html")
+
+
+@lightweight_app.get("/system-status", response_class=HTMLResponse)
+async def lightweight_system_status_page():
+    return _frontend_file_response("system_status.html")
+
+
+@lightweight_app.get("/api/credentials")
+async def lightweight_get_credentials(request: Request):
+    user_id = _standalone_user_id(request)
+    provider = (request.query_params.get("provider") or "").strip() or None
+
+    try:
+        return _credential_manager().get_all_user_credentials(user_id, provider=provider)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@lightweight_app.delete("/api/credentials/{credential_id}")
+async def lightweight_delete_credential(credential_id: int, request: Request):
+    user_id = _standalone_user_id(request)
+
+    try:
+        deleted = _credential_manager().delete_credential(credential_id, user_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Credential not found")
+
+    return {"success": True, "credential_id": credential_id}
+
+
+@lightweight_app.post("/api/credentials/aws")
+async def lightweight_save_aws_credential(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+    user_id = _standalone_user_id(request)
+    CloudCredential = _cloud_credential_cls()
+    credential = CloudCredential(
+        user_id=user_id,
+        cloud_provider="aws",
+        credential_name=(payload.get("credential_name") or "").strip(),
+        aws_access_key_id=payload.get("aws_access_key_id"),
+        aws_secret_access_key=payload.get("aws_secret_access_key"),
+        aws_region=_normalize_aws_region_value(payload.get("aws_region")),
+        aws_role_arn=payload.get("aws_role_arn"),
+        aws_session_token=payload.get("aws_session_token"),
+        is_default=bool(payload.get("is_default", True)),
+    )
+
+    credential_id, save_action = _credential_manager().save_credential(credential)
+    credential.id = credential_id
+    background_tasks.add_task(_credential_manager().validate_credential, credential)
+    return _serialize_credential_response(credential_id, credential, save_action=save_action)
+
+
+@lightweight_app.post("/api/credentials/openai")
+async def lightweight_save_openai_credential(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+    user_id = _standalone_user_id(request)
+    CloudCredential = _cloud_credential_cls()
+    credential = CloudCredential(
+        user_id=user_id,
+        cloud_provider="openai",
+        credential_name=(payload.get("credential_name") or "").strip(),
+        openai_api_key=payload.get("openai_api_key"),
+        openai_org_id=payload.get("openai_org_id"),
+        is_default=bool(payload.get("is_default", True)),
+    )
+
+    credential_id, save_action = _credential_manager().save_credential(credential)
+    credential.id = credential_id
+    background_tasks.add_task(_credential_manager().validate_credential, credential)
+    return _serialize_credential_response(credential_id, credential, save_action=save_action)
+
+
+@lightweight_app.post("/api/credentials/gcp")
+async def lightweight_save_gcp_credential(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+    user_id = _standalone_user_id(request)
+
+    try:
+        service_account_json = payload.get("gcp_service_account_json") or ""
+        service_account_data = json.loads(service_account_json)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON for service account")
+
+    CloudCredential = _cloud_credential_cls()
+    credential = CloudCredential(
+        user_id=user_id,
+        cloud_provider="gcp",
+        credential_name=(payload.get("credential_name") or "").strip(),
+        gcp_service_account_json=service_account_json,
+        gcp_project_id=payload.get("gcp_project_id") or service_account_data.get("project_id"),
+        is_default=bool(payload.get("is_default", True)),
+    )
+
+    credential_id, save_action = _credential_manager().save_credential(credential)
+    credential.id = credential_id
+    background_tasks.add_task(_credential_manager().validate_credential, credential)
+    return _serialize_credential_response(credential_id, credential, save_action=save_action)
+
+
+@lightweight_app.post("/api/credentials/kubernetes")
+async def lightweight_save_kubernetes_credential(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+    user_id = _standalone_user_id(request)
+    CloudCredential = _cloud_credential_cls()
+    credential = CloudCredential(
+        user_id=user_id,
+        cloud_provider="kubernetes",
+        credential_name=(payload.get("credential_name") or "").strip(),
+        kubernetes_kubeconfig=payload.get("kubernetes_kubeconfig"),
+        kubernetes_context=payload.get("kubernetes_context"),
+        kubernetes_cluster_name=payload.get("kubernetes_cluster_name"),
+        is_default=bool(payload.get("is_default", True)),
+    )
+
+    try:
+        credential_id, save_action = _credential_manager().save_credential(credential)
+    except Exception as exc:
+        detail = str(exc)
+        raise HTTPException(status_code=400 if "kubeconfig" in detail.lower() else 500, detail=detail)
+
+    credential.id = credential_id
+    if (os.getenv("SCAN_WORKER_URL") or "").strip():
+        background_tasks.add_task(_validate_saved_kubernetes_credential, credential_id, credential)
+    else:
+        background_tasks.add_task(_credential_manager().validate_credential, credential)
+    return _serialize_credential_response(credential_id, credential, save_action=save_action)
+
+
+@lightweight_app.post("/api/credentials/iac")
+async def lightweight_save_iac_credential(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+    user_id = _standalone_user_id(request)
+    CloudCredential = _cloud_credential_cls()
+    credential = CloudCredential(
+        user_id=user_id,
+        cloud_provider="iac",
+        credential_name=(payload.get("credential_name") or "").strip(),
+        iac_target_path=(payload.get("iac_target_path") or "").strip() or None,
+        iac_enabled_tools=payload.get("iac_enabled_tools") or [],
+        is_default=bool(payload.get("is_default", True)),
+    )
+
+    credential_id, save_action = _credential_manager().save_credential(credential)
+    credential.id = credential_id
+    background_tasks.add_task(_credential_manager().validate_credential, credential)
+    return _serialize_credential_response(credential_id, credential, save_action=save_action)
+
+
+@lightweight_app.post("/api/credentials/container")
+async def lightweight_save_container_credential(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+    user_id = _standalone_user_id(request)
+    CloudCredential = _cloud_credential_cls()
+    credential = CloudCredential(
+        user_id=user_id,
+        cloud_provider="container",
+        credential_name=(payload.get("credential_name") or "").strip(),
+        container_image_target=(payload.get("container_image_target") or "").strip() or None,
+        container_path_target=(payload.get("container_path_target") or "").strip() or None,
+        container_enabled_tools=payload.get("container_enabled_tools") or [],
+        container_sbom_tools=payload.get("container_sbom_tools") or [],
+        is_default=bool(payload.get("is_default", True)),
+    )
+
+    credential_id, save_action = _credential_manager().save_credential(credential)
+    credential.id = credential_id
+    background_tasks.add_task(_credential_manager().validate_credential, credential)
+    return _serialize_credential_response(credential_id, credential, save_action=save_action)
+
+
 @lightweight_app.get("/health")
 async def lightweight_health():
     try:
@@ -117,6 +447,188 @@ async def lightweight_info():
     }
 
 
+@lightweight_app.get("/api/credentials/providers/status")
+async def lightweight_provider_status(request: Request):
+    user_id = _standalone_user_id(request)
+    worker_enabled = bool((os.getenv("SCAN_WORKER_URL") or "").strip())
+
+    providers = {
+        "aws": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+        "gcp": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+        "openai": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+        "azure": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+        "kubernetes": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+        "iac": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+        "container": {"configured": False, "valid": False, "selectable": False, "default_id": None},
+    }
+
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, cloud_provider, is_default, COALESCE(is_valid, FALSE), validation_status
+                FROM cloud_credentials
+                WHERE user_id = %s
+                ORDER BY is_default DESC, updated_at DESC, id DESC
+                """,
+                (user_id,),
+            )
+            rows = cur.fetchall()
+
+        for cred_id, provider, is_default, is_valid, validation_status in rows:
+            if provider not in providers:
+                continue
+
+            valid = bool(is_valid) or (validation_status or "").lower() == "valid"
+            providers[provider]["configured"] = True
+            providers[provider]["valid"] = providers[provider]["valid"] or valid
+            providers[provider]["selectable"] = (
+                providers[provider]["selectable"]
+                or valid
+                or (provider == "kubernetes" and worker_enabled)
+            )
+            if is_default and not providers[provider]["default_id"]:
+                providers[provider]["default_id"] = cred_id
+
+        return providers
+    except Exception as exc:
+        return {"status": "error", "message": str(exc), **providers}
+
+
+@lightweight_app.get("/api/grc/status")
+async def lightweight_grc_status():
+    from backend.grc_bridge import get_grc_status
+
+    return await get_grc_status()
+
+
+@lightweight_app.post("/api/grc/sync")
+async def lightweight_grc_sync():
+    from backend.grc_bridge import trigger_grc_sync
+
+    return await trigger_grc_sync()
+
+
+@lightweight_app.get("/api/billing/plans")
+async def lightweight_billing_plans():
+    billing = _billing_helpers()
+    return {
+        "billing_enabled": billing["billing_enabled"](),
+        "plans": billing["list_plans"](),
+    }
+
+
+@lightweight_app.get("/api/billing/subscription")
+async def lightweight_billing_subscription(request: Request):
+    billing = _billing_helpers()
+    return billing["get_billing_dashboard"](_standalone_user_id(request))
+
+
+@lightweight_app.get("/api/billing/entitlements")
+async def lightweight_billing_entitlements(request: Request):
+    billing = _billing_helpers()
+    snapshot = billing["get_billing_dashboard"](_standalone_user_id(request))
+    return {
+        "role": snapshot["role"],
+        "entitled_providers": snapshot["entitled_providers"],
+        "current_subscription": snapshot["current_subscription"],
+        "billing_enforcement": snapshot["billing_enforcement"],
+    }
+
+
+@lightweight_app.post("/api/billing/subscribe")
+async def lightweight_billing_subscribe(request: Request):
+    billing = _billing_helpers()
+    payload = await request.json()
+    try:
+        return billing["create_subscription_request"](
+            user_id=_standalone_user_id(request),
+            plan_id=str(payload.get("plan_id") or "").strip(),
+            email=(payload.get("email") or "").strip() or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@lightweight_app.post("/api/billing/webhook")
+async def lightweight_billing_webhook(
+    request: Request,
+):
+    billing = _billing_helpers()
+    signature = request.headers.get("X-Razorpay-Signature")
+    event_id = request.headers.get("X-Razorpay-Event-Id")
+
+    try:
+        raw_body = await request.body()
+        return billing["process_razorpay_webhook"](
+            raw_body=raw_body,
+            signature=signature,
+            provided_event_id=event_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@lightweight_app.get("/api/billing/verify")
+async def lightweight_billing_verify(request: Request):
+    billing = _billing_helpers()
+    email = (request.query_params.get("email") or "").strip()
+    product = (request.query_params.get("product") or "").strip()
+    api_key = (request.headers.get("X-API-Key") or "").strip()
+    try:
+        return billing["verify_product_access"](email=email, product_id=product, api_key=api_key)
+    except PermissionError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@lightweight_app.post("/api/uploads/iac-folder")
+async def lightweight_upload_iac_folder(
+    req: Request,
+    files: list[UploadFile] = File(...),
+    relative_paths: list[str] = Form(default=[]),
+):
+    user_id = _standalone_user_id(req)
+
+    if (os.getenv("SCAN_WORKER_URL") or "").strip():
+        from backend.worker_client import upload_iac_folder_to_scan_worker
+
+        worker_files: list[tuple[str, bytes, str]] = []
+        for upload in files:
+            worker_files.append(
+                (
+                    upload.filename or "uploaded-file",
+                    await upload.read(),
+                    upload.content_type or "application/octet-stream",
+                )
+            )
+            await upload.close()
+
+        return await upload_iac_folder_to_scan_worker(
+            user_id=user_id,
+            files=worker_files,
+            relative_paths=relative_paths,
+        )
+
+    from backend.upload_utils import store_uploaded_directory
+
+    result = await store_uploaded_directory(
+        files=files,
+        relative_paths=relative_paths,
+        user_id=user_id,
+        scan_type="iac",
+    )
+    result.update(
+        {
+            "status": "stored",
+            "message": "IaC folder uploaded",
+        }
+    )
+    return result
+
+
 def _worker_headers() -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
     token = (os.getenv("SCAN_WORKER_TOKEN") or os.getenv("WORKER_API_TOKEN") or "").strip()
@@ -148,6 +660,158 @@ async def _fetch_worker_health() -> dict[str, Any]:
         return {"configured": True, "status": "online", "data": data}
     except Exception as exc:
         return {"configured": True, "status": "offline", "detail": str(exc)}
+
+
+@lightweight_app.get("/posture/dashboard")
+async def lightweight_posture_dashboard(request: Request):
+    user_id = _standalone_user_id(request)
+    scan_ids = request.query_params.get("scan_ids")
+    parsed_scan_ids = _parse_scan_ids(scan_ids)
+    worker_health = await _fetch_worker_health()
+    dashboard = {
+        "clouds": [],
+        "total_resources": 0,
+        "total_findings": 0,
+        "public_resources": 0,
+        "vulnerability_tools_available": _available_vulnerability_tools_payload(worker_health),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            query = """
+                SELECT
+                    r.cloud,
+                    COUNT(DISTINCT r.id),
+                    COUNT(DISTINCT f.id),
+                    COUNT(DISTINCT CASE WHEN r.public THEN r.id END)
+                FROM resources r
+                JOIN scans s ON s.id = r.scan_id
+                LEFT JOIN findings f ON r.id = f.resource_id
+                WHERE s.user_id = %s
+            """
+            params: list[Any] = [user_id]
+            if parsed_scan_ids:
+                query += " AND r.scan_id = ANY(%s)"
+                params.append(parsed_scan_ids)
+            query += " GROUP BY r.cloud"
+            cur.execute(query, tuple(params))
+            summary = cur.fetchall()
+
+        for provider, resources, findings, public in summary:
+            dashboard["clouds"].append(
+                {
+                    "provider": provider,
+                    "resources": resources,
+                    "findings": findings,
+                    "public": public,
+                }
+            )
+            dashboard["total_resources"] += int(resources or 0)
+            dashboard["total_findings"] += int(findings or 0)
+            dashboard["public_resources"] += int(public or 0)
+
+        if dashboard["total_resources"]:
+            risk_ratio = dashboard["total_findings"] / dashboard["total_resources"]
+            score = max(0, 100 - (risk_ratio * 100))
+        else:
+            score = 100
+
+        dashboard["security_score"] = round(score, 2)
+        return dashboard
+    except Exception as exc:
+        return {
+            **dashboard,
+            "status": "error",
+            "message": str(exc),
+            "security_score": 100,
+        }
+
+
+@lightweight_app.get("/api/provider-breakdown")
+async def lightweight_provider_breakdown(request: Request):
+    user_id = _standalone_user_id(request)
+    scan_ids = _parse_scan_ids(request.query_params.get("scan_ids"))
+
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            query = """
+                SELECT
+                    r.cloud AS provider,
+                    COUNT(DISTINCT r.id) AS resources,
+                    COUNT(DISTINCT f.id) AS findings
+                FROM resources r
+                JOIN scans s ON s.id = r.scan_id
+                LEFT JOIN findings f ON r.id = f.resource_id
+                WHERE s.user_id = %s
+            """
+            params: list[Any] = [user_id]
+            if scan_ids:
+                query += " AND r.scan_id = ANY(%s)"
+                params.append(scan_ids)
+            query += " GROUP BY r.cloud ORDER BY resources DESC"
+            cur.execute(query, tuple(params))
+            results = cur.fetchall()
+
+        data = []
+        for provider, resources, findings in results:
+            score = max(0, 100 - (((findings or 0) / resources) * 100)) if resources else 100
+            data.append(
+                {
+                    "provider": provider,
+                    "resources": resources,
+                    "findings": findings,
+                    "security_score": round(score, 1),
+                }
+            )
+
+        return {"status": "success", "data": data}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc), "data": []}
+
+
+@lightweight_app.get("/api/scan-history")
+async def lightweight_scan_history(request: Request):
+    user_id = _standalone_user_id(request)
+    days = _parse_int(request.query_params.get("days"), 30, minimum=1, maximum=365)
+
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    DATE(s.started_at) AS scan_date,
+                    COUNT(DISTINCT s.id) AS scan_count,
+                    COUNT(DISTINCT f.id) AS findings_count,
+                    COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) AS critical_count
+                FROM scans s
+                LEFT JOIN findings f ON s.id = f.scan_id
+                WHERE s.user_id = %s
+                  AND s.started_at >= NOW() - (%s || ' days')::interval
+                GROUP BY DATE(s.started_at)
+                ORDER BY scan_date ASC
+                """,
+                (user_id, days),
+            )
+            results = cur.fetchall()
+
+        return {
+            "status": "success",
+            "data": [
+                {
+                    "date": scan_date.isoformat() if scan_date else None,
+                    "scans": scan_count,
+                    "findings": findings_count,
+                    "critical": critical_count,
+                }
+                for scan_date, scan_count, findings_count, critical_count in results
+            ],
+        }
+    except Exception as exc:
+        return {"status": "error", "message": str(exc), "data": []}
 
 
 @lightweight_app.get("/api/system/status")
@@ -249,6 +913,19 @@ async def lightweight_start_scan(request: Request):
         payload = {}
 
     payload.setdefault("user_id", _standalone_user_id(request))
+
+    billing = _billing_helpers()
+    if billing["billing_enforcement_enabled"]():
+        access = billing["get_provider_access_decision"](payload["user_id"], payload.get("providers") or [])
+        if not access["allowed"]:
+            return JSONResponse(
+                status_code=402,
+                content={
+                    "status": "subscription_required",
+                    "detail": "An active CloudGuard subscription is required for one or more selected scanners.",
+                    "billing": access,
+                },
+            )
 
     try:
         import httpx
@@ -482,7 +1159,7 @@ class LazyCloudGuardApp:
     async def __call__(self, scope, receive, send):
         if scope.get("type") == "http":
             path = (scope.get("path") or "").rstrip("/") or "/"
-            if path in LIGHTWEIGHT_PATHS:
+            if _is_lightweight_path(path):
                 await lightweight_app(scope, receive, send)
                 return
 

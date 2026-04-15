@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import secrets
 
-from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks, File, Form, UploadFile
 from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -54,6 +54,8 @@ from backend.ai.agentic_orchestrator import get_agentic_orchestrator
 from backend.ai.agentic_core import ToolRegistry
 
 # Credential Management
+from backend.billing import billing_enforcement_enabled, get_provider_access_decision
+from backend.billing_api import router as billing_router
 from backend.credentials.api import router as credentials_router
 from backend.credentials.manager import credential_manager, CloudCredential
 from backend.scan_api_helpers import permission_required_json_response
@@ -63,7 +65,10 @@ from backend.worker_client import (
     is_scan_worker_enabled,
     post_to_scan_worker,
     start_scan_on_worker,
+    upload_iac_folder_to_scan_worker,
 )
+from backend.grc_bridge import get_grc_status, is_grc_server_sync_enabled, trigger_grc_sync
+from backend.upload_utils import store_uploaded_directory
 
 # CloudFox (Offensive Security)
 from backend.cloudfox.cloudfox_scanner import (
@@ -91,6 +96,23 @@ logger = logging.getLogger("mcp_scanner")
 
 MCP_SCAN_PROVIDERS = {"aws", "gcp", "kubernetes"}
 SPECIALIZED_SCAN_PROVIDERS = {"iac", "container"}
+
+
+async def _maybe_sync_grc_after_scans(scan_ids: list[int]) -> dict[str, Any]:
+    if not scan_ids:
+        return {"status": "skipped", "message": "No scans were stored."}
+
+    if not is_grc_server_sync_enabled():
+        return {
+            "status": "browser_bridge",
+            "message": "Server-side GRC sync is not configured. Use the GRC button on the dashboard to open and sync GigaChad locally.",
+        }
+
+    try:
+        return await trigger_grc_sync()
+    except Exception as exc:
+        logger.warning("GRC sync failed after scan completion: %s", exc)
+        return {"status": "error", "message": str(exc)}
 
 
 def _get_openai_api_key() -> Optional[str]:
@@ -147,6 +169,7 @@ app.add_middleware(
 )
 
 app.include_router(credentials_router)
+app.include_router(billing_router)
 
 
 @app.middleware("http")
@@ -398,6 +421,47 @@ def build_scan_report(scan_id: int, user_id: Optional[str] = None) -> dict:
         for r in rows
         if r[5]
     ]
+
+
+@app.post("/api/uploads/iac-folder")
+async def upload_iac_folder(
+    req: Request,
+    files: list[UploadFile] = File(...),
+    relative_paths: list[str] = Form(default=[]),
+):
+    user_id = get_user_id(req)
+
+    if is_scan_worker_enabled():
+        worker_files: list[tuple[str, bytes, str]] = []
+        for upload in files:
+            worker_files.append(
+                (
+                    upload.filename or "uploaded-file",
+                    await upload.read(),
+                    upload.content_type or "application/octet-stream",
+                )
+            )
+            await upload.close()
+
+        return await upload_iac_folder_to_scan_worker(
+            user_id=user_id,
+            files=worker_files,
+            relative_paths=relative_paths,
+        )
+
+    result = await store_uploaded_directory(
+        files=files,
+        relative_paths=relative_paths,
+        user_id=user_id,
+        scan_type="iac",
+    )
+    result.update(
+        {
+            "status": "stored",
+            "message": "IaC folder uploaded",
+        }
+    )
+    return result
 
 
 # ============================================================
@@ -784,6 +848,7 @@ def _build_vulnerability_scan_result(
 async def _run_specialized_scan(
     provider: str,
     target_config: dict[str, Any],
+    requested_account_id: str | None = None,
 ) -> ScanResult:
     if provider == "iac":
         raw_path = (target_config or {}).get("path", "").strip()
@@ -807,7 +872,11 @@ async def _run_specialized_scan(
         )
         return _build_vulnerability_scan_result(
             provider="iac",
-            account_id=str(resolved_path),
+            account_id=(
+                requested_account_id
+                or (target_config or {}).get("uploaded_root_name")
+                or resolved_path.name
+            ),
             target_name=str(resolved_path),
             resource_type="iac_directory",
             vulnerabilities=vulnerabilities,
@@ -900,7 +969,7 @@ async def _run_specialized_scan(
 
         return _build_vulnerability_scan_result(
             provider="container",
-            account_id=target_name,
+            account_id=requested_account_id or target_name,
             target_name=target_name,
             resource_type=resource_type,
             vulnerabilities=vulnerabilities,
@@ -978,6 +1047,7 @@ async def run_multi_cloud_scan_internal(
                 result = await _run_specialized_scan(
                     provider,
                     scan_targets.get(provider, {}),
+                    account_id,
                 )
             else:
                 # Scan using the registry (which now has the user's credentials)
@@ -1063,11 +1133,13 @@ async def run_multi_cloud_scan_internal(
 
     # ✅ STEP 4: AI Analysis
     ai_analysis = await _analyze_scan_results_with_ai(scan_results)
+    grc_sync = await _maybe_sync_grc_after_scans(stored_ids)
 
     return {
         "scan_ids": stored_ids,
         "scan_results": scan_results,
         "ai_analysis": ai_analysis,
+        "grc_sync": grc_sync,
         "deep_scan_enabled": deep_scan,
         "user_credentials_used": len(providers_initialized) > 0,
     }
@@ -1263,6 +1335,18 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     request.user_id = user_id
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
+    if billing_enforcement_enabled():
+        access = get_provider_access_decision(user_id, request.providers)
+        if not access["allowed"]:
+            return JSONResponse(
+                status_code=402,
+                content={
+                    "status": "subscription_required",
+                    "detail": "An active CloudGuard subscription is required for one or more selected scanners.",
+                    "billing": access,
+                },
+            )
+
     if is_scan_worker_enabled():
         logger.info("Delegating multi-cloud scan to worker at %s", get_scan_worker_url())
         return await start_scan_on_worker(
@@ -1323,6 +1407,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
         "deep_scan_enabled": request.deep_scan,
         "offensive_scan_enabled": request.offensive_scan,
         "providers_scanned": request.providers,
+        "grc_sync": result_ctx.get("grc_sync"),
         "scan_results": [
             {
                 "provider": r.provider,
@@ -1725,6 +1810,16 @@ async def api_info():
             "Offensive Security Testing",
         ],
     }
+
+
+@app.get("/api/grc/status")
+async def api_grc_status():
+    return await get_grc_status()
+
+
+@app.post("/api/grc/sync")
+async def api_grc_sync():
+    return await trigger_grc_sync()
 
 @app.get("/providers")
 async def list_providers():

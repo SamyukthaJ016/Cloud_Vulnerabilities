@@ -51,6 +51,14 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
     kubernetes_context VARCHAR(255),
     kubernetes_cluster_name VARCHAR(255),
 
+    iac_target_path TEXT,
+    iac_enabled_tools TEXT,
+
+    container_image_target TEXT,
+    container_path_target TEXT,
+    container_enabled_tools TEXT,
+    container_sbom_tools TEXT,
+
     is_default BOOLEAN DEFAULT FALSE,
     is_valid BOOLEAN DEFAULT TRUE,
     last_used TIMESTAMP,
@@ -63,7 +71,7 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
     updated_at TIMESTAMP DEFAULT NOW(),
 
     CONSTRAINT valid_cloud_provider
-        CHECK (cloud_provider IN ('aws','gcp','openai','azure','kubernetes')),
+        CHECK (cloud_provider IN ('aws','gcp','openai','azure','kubernetes','iac','container')),
 
     CONSTRAINT valid_validation_status
         CHECK (validation_status IN ('pending','valid','invalid')),
@@ -204,6 +212,8 @@ SELECT
     COUNT(*) FILTER (WHERE c.cloud_provider = 'openai') AS openai_credentials,
     COUNT(*) FILTER (WHERE c.cloud_provider = 'azure') AS azure_credentials,
     COUNT(*) FILTER (WHERE c.cloud_provider = 'kubernetes') AS kubernetes_credentials,
+    COUNT(*) FILTER (WHERE c.cloud_provider = 'iac') AS iac_credentials,
+    COUNT(*) FILTER (WHERE c.cloud_provider = 'container') AS container_credentials,
     COUNT(*) FILTER (WHERE c.is_valid) AS valid_credentials,
     MAX(c.last_used) AS last_used_credential
 FROM user_profiles u

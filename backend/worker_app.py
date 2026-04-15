@@ -1,11 +1,12 @@
 import asyncio
+import base64
 import json
 import logging
 import os
 import secrets
 from typing import Any, Optional
 
-from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from backend.cloudfox.cloudfox_scanner import cloudfox_scanner
@@ -17,6 +18,7 @@ from backend.main import (
     run_multi_cloud_scan_internal,
 )
 from backend.scan_api_helpers import build_permission_required_payload
+from backend.upload_utils import store_uploaded_directory, store_uploaded_file_payloads
 from backend.vulnerability.vulnerability_scanner import VulnerabilityScanner
 
 
@@ -50,6 +52,18 @@ class WorkerKubernetesValidationRequest(BaseModel):
     kubeconfig: str
     context: Optional[str] = None
     cluster_name: Optional[str] = None
+
+
+class WorkerUploadedIacFile(BaseModel):
+    filename: str
+    relative_path: str
+    content_b64: str
+    content_type: Optional[str] = None
+
+
+class WorkerIacFolderUploadRequest(BaseModel):
+    user_id: str
+    files: list[WorkerUploadedIacFile]
 
 
 def _async_scan_mode_enabled() -> bool:
@@ -237,6 +251,61 @@ async def run_multi_cloud_scan(
         }
     )
     return response
+
+
+@app.post("/internal/uploads/iac-folder")
+async def upload_iac_folder(
+    files: list[UploadFile] = File(...),
+    relative_paths: list[str] = Form(default_factory=list),
+    user_id: str = Form(...),
+    _: None = Depends(_verify_worker_token),
+):
+    result = await store_uploaded_directory(
+        files=files,
+        relative_paths=relative_paths,
+        user_id=user_id,
+        scan_type="iac",
+    )
+    result.update(
+        {
+            "status": "stored",
+            "message": "IaC folder uploaded to worker",
+        }
+    )
+    return result
+
+
+@app.post("/internal/uploads/iac-folder-json")
+async def upload_iac_folder_json(
+    request: WorkerIacFolderUploadRequest,
+    _: None = Depends(_verify_worker_token),
+):
+    decoded_files: list[tuple[str, str, bytes]] = []
+    for file_payload in request.files:
+        try:
+            contents = base64.b64decode(file_payload.content_b64, validate=True)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid file payload for {file_payload.filename}") from exc
+        decoded_files.append(
+            (
+                file_payload.filename,
+                file_payload.relative_path,
+                contents,
+            )
+        )
+
+    result = store_uploaded_file_payloads(
+        files=decoded_files,
+        user_id=request.user_id,
+        scan_type="iac",
+    )
+    result.update(
+        {
+            "status": "stored",
+            "message": "IaC folder uploaded to worker",
+        }
+    )
+    return result
 
 
 @app.post("/internal/schedules/{schedule_id}/run")

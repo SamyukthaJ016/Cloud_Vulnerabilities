@@ -1,8 +1,11 @@
+import asyncio
+import base64
 import logging
 import os
 from typing import Any, Optional
 
 import httpx
+import requests
 from fastapi import HTTPException
 
 
@@ -28,6 +31,14 @@ def _worker_timeout() -> float:
 
 def _worker_headers() -> dict[str, str]:
     headers = {"Content-Type": "application/json"}
+    token = (os.getenv("SCAN_WORKER_TOKEN") or os.getenv("WORKER_API_TOKEN") or "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _worker_auth_headers() -> dict[str, str]:
+    headers: dict[str, str] = {}
     token = (os.getenv("SCAN_WORKER_TOKEN") or os.getenv("WORKER_API_TOKEN") or "").strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -167,3 +178,79 @@ async def get_scan_worker_health() -> dict[str, Any]:
             "status": "offline",
             "detail": str(exc),
         }
+
+
+async def post_multipart_to_scan_worker(
+    path: str,
+    *,
+    data: list[tuple[str, str]],
+    files: list[tuple[str, tuple[str, bytes, str]]],
+) -> dict[str, Any]:
+    base_url = get_scan_worker_url()
+    if not base_url:
+        raise HTTPException(status_code=500, detail="SCAN_WORKER_URL is not configured")
+
+    url = f"{base_url}{path}"
+    def _send_multipart() -> requests.Response:
+        return requests.post(
+            url,
+            data=data,
+            files=files,
+            headers=_worker_auth_headers(),
+            timeout=_worker_timeout(),
+        )
+
+    try:
+        response = await asyncio.to_thread(_send_multipart)
+    except (httpx.TimeoutException, requests.Timeout) as exc:
+        logger.error("Timed out calling scan worker multipart endpoint: %s", exc)
+        raise HTTPException(status_code=504, detail="Scan worker timed out") from exc
+    except (httpx.HTTPError, requests.RequestException) as exc:
+        logger.error("Failed to reach scan worker multipart endpoint: %s", exc)
+        raise HTTPException(status_code=502, detail="Scan worker is unreachable") from exc
+
+    try:
+        payload = response.json() if response.content else {}
+    except ValueError:
+        payload = {"detail": response.text}
+
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=_map_worker_status(response.status_code),
+            detail=(
+                f"Scan worker error ({response.status_code}): "
+                f"{_format_worker_error_detail(response, payload)}"
+            ),
+        )
+
+    return payload if isinstance(payload, dict) else {"data": payload}
+
+
+async def upload_iac_folder_to_scan_worker(
+    *,
+    user_id: str,
+    files: list[tuple[str, bytes, str]],
+    relative_paths: list[str],
+) -> dict[str, Any]:
+    if relative_paths and len(relative_paths) != len(files):
+        raise HTTPException(status_code=400, detail="Uploaded file metadata is inconsistent")
+
+    payload_files: list[dict[str, str]] = []
+    for index, (filename, contents, content_type) in enumerate(files):
+        relative_path = relative_paths[index] if relative_paths else filename or f"file-{index}"
+        payload_files.append(
+            {
+                "filename": filename or f"file-{index}",
+                "relative_path": relative_path,
+                "content_type": content_type or "application/octet-stream",
+                "content_b64": base64.b64encode(contents).decode("ascii"),
+            }
+        )
+
+    return await post_to_scan_worker(
+        "/internal/uploads/iac-folder-json",
+        {
+            "user_id": user_id,
+            "files": payload_files,
+        },
+    )

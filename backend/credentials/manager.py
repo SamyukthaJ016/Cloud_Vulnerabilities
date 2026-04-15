@@ -32,6 +32,12 @@ AWS_REGION_ALIASES = {
     "ist": "ap-south-1",
 }
 
+LIST_SERIALIZED_CREDENTIAL_FIELDS = (
+    "iac_enabled_tools",
+    "container_enabled_tools",
+    "container_sbom_tools",
+)
+
 
 def normalize_aws_region(region: Optional[str]) -> str:
     raw = (region or "").strip()
@@ -53,6 +59,41 @@ def build_aws_exec_env(credential: Optional["CloudCredential"]) -> Dict[str, str
         "AWS_DEFAULT_REGION": normalize_aws_region(credential.aws_region),
     }
     return {key: value for key, value in exec_env.items() if value}
+
+
+def serialize_string_list(values: Optional[Any]) -> Optional[str]:
+    if values is None:
+        return None
+    if isinstance(values, str):
+        raw = values.strip()
+        return raw if raw else json.dumps([])
+
+    normalized = []
+    for value in values:
+        text = str(value).strip()
+        if text:
+            normalized.append(text)
+    return json.dumps(normalized)
+
+
+def deserialize_string_list(raw_value: Optional[Any]) -> List[str]:
+    if raw_value is None:
+        return []
+    if isinstance(raw_value, list):
+        return [str(item).strip() for item in raw_value if str(item).strip()]
+
+    text = str(raw_value).strip()
+    if not text:
+        return []
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return [segment.strip() for segment in text.split(",") if segment.strip()]
 
 
 @dataclass
@@ -82,6 +123,14 @@ class CloudCredential:
     kubernetes_kubeconfig: Optional[str] = None
     kubernetes_context: Optional[str] = None
     kubernetes_cluster_name: Optional[str] = None
+
+    iac_target_path: Optional[str] = None
+    iac_enabled_tools: Optional[List[str]] = None
+
+    container_image_target: Optional[str] = None
+    container_path_target: Optional[str] = None
+    container_enabled_tools: Optional[List[str]] = None
+    container_sbom_tools: Optional[List[str]] = None
 
     is_default: bool = False
     is_valid: bool = False
@@ -192,6 +241,14 @@ class CredentialManager:
                 or credential.kubernetes_context
                 or "cluster"
             ).strip()
+        elif provider == "iac":
+            descriptor = (credential.iac_target_path or "iac-profile").strip()
+        elif provider == "container":
+            descriptor = (
+                credential.container_image_target
+                or credential.container_path_target
+                or "container-target"
+            ).strip()
         elif provider == "openai":
             descriptor = (credential.openai_org_id or "api").strip()
         elif provider == "azure":
@@ -216,6 +273,24 @@ class CredentialManager:
         # Ensure user exists
             self.ensure_user(credential.user_id)
             credential.aws_region = normalize_aws_region(credential.aws_region)
+            credential.iac_target_path = (credential.iac_target_path or "").strip() or None
+            credential.iac_enabled_tools = (
+                deserialize_string_list(credential.iac_enabled_tools)
+                if credential.cloud_provider == "iac" or credential.iac_enabled_tools is not None
+                else None
+            )
+            credential.container_image_target = (credential.container_image_target or "").strip() or None
+            credential.container_path_target = (credential.container_path_target or "").strip() or None
+            credential.container_enabled_tools = (
+                deserialize_string_list(credential.container_enabled_tools)
+                if credential.cloud_provider == "container" or credential.container_enabled_tools is not None
+                else None
+            )
+            credential.container_sbom_tools = (
+                deserialize_string_list(credential.container_sbom_tools)
+                if credential.cloud_provider == "container" or credential.container_sbom_tools is not None
+                else None
+            )
             credential.credential_name = (
                 (credential.credential_name or "").strip()
                 or self._build_generated_credential_name(credential)
@@ -247,6 +322,9 @@ class CredentialManager:
                 encrypted_credential['azure_client_secret'] = self.encrypt(credential.azure_client_secret)
             if credential.kubernetes_kubeconfig:
                 encrypted_credential['kubernetes_kubeconfig'] = self.encrypt(credential.kubernetes_kubeconfig)
+            for field in LIST_SERIALIZED_CREDENTIAL_FIELDS:
+                if field in encrypted_credential:
+                    encrypted_credential[field] = serialize_string_list(encrypted_credential.get(field))
         
         # Check if credential already exists
             cur.execute(
@@ -450,6 +528,8 @@ class CredentialManager:
                     logger.warning("Kubernetes kubeconfig could not be normalized on read: %s", exc)
 
             credential_dict["aws_region"] = normalize_aws_region(credential_dict.get("aws_region"))
+            for field in LIST_SERIALIZED_CREDENTIAL_FIELDS:
+                credential_dict[field] = deserialize_string_list(credential_dict.get(field))
         
         # 🔥 Remove fields that aren't part of CloudCredential constructor
             fields_to_remove = [
@@ -497,6 +577,14 @@ class CredentialManager:
                 kubernetes_context=credential_dict.get("kubernetes_context"),
                 kubernetes_cluster_name=credential_dict.get("kubernetes_cluster_name"),
 
+                iac_target_path=credential_dict.get("iac_target_path"),
+                iac_enabled_tools=credential_dict.get("iac_enabled_tools"),
+
+                container_image_target=credential_dict.get("container_image_target"),
+                container_path_target=credential_dict.get("container_path_target"),
+                container_enabled_tools=credential_dict.get("container_enabled_tools"),
+                container_sbom_tools=credential_dict.get("container_sbom_tools"),
+
                 is_default=credential_dict["is_default"],
                 is_valid=credential_dict["is_valid"],
             )
@@ -526,6 +614,9 @@ class CredentialManager:
                         aws_region, gcp_project_id, openai_org_id,
                         azure_tenant_id, azure_subscription_id,
                         kubernetes_context, kubernetes_cluster_name,
+                        iac_target_path, iac_enabled_tools,
+                        container_image_target, container_path_target,
+                        container_enabled_tools, container_sbom_tools,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
@@ -543,6 +634,9 @@ class CredentialManager:
                         aws_region, gcp_project_id, openai_org_id,
                         azure_tenant_id, azure_subscription_id,
                         kubernetes_context, kubernetes_cluster_name,
+                        iac_target_path, iac_enabled_tools,
+                        container_image_target, container_path_target,
+                        container_enabled_tools, container_sbom_tools,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
@@ -557,6 +651,8 @@ class CredentialManager:
             credentials = [dict(row) for row in rows]
             for credential in credentials:
                 credential["aws_region"] = normalize_aws_region(credential.get("aws_region"))
+                for field in LIST_SERIALIZED_CREDENTIAL_FIELDS:
+                    credential[field] = deserialize_string_list(credential.get(field))
             return credentials
         
         except Exception as e:
@@ -728,6 +824,10 @@ class CredentialManager:
                 validation_result = self._validate_azure_credential(credential)
             elif credential.cloud_provider == 'kubernetes':
                 validation_result = self._validate_kubernetes_credential(credential)
+            elif credential.cloud_provider == 'iac':
+                validation_result = self._validate_iac_credential(credential)
+            elif credential.cloud_provider == 'container':
+                validation_result = self._validate_container_credential(credential)
             else:
                 validation_result['message'] = f'Unknown provider: {credential.cloud_provider}'
             
@@ -992,6 +1092,75 @@ class CredentialManager:
         finally:
             if temp_path and os.path.exists(temp_path):
                 os.unlink(temp_path)
+
+    def _validate_iac_credential(self, credential: CloudCredential) -> Dict[str, Any]:
+        """Validate IaC scan target configuration."""
+        enabled_tools = deserialize_string_list(credential.iac_enabled_tools)
+
+        if not enabled_tools:
+            return {
+                'valid': False,
+                'message': 'Select at least one IaC scanning tool',
+                'details': {}
+            }
+
+        if not credential.iac_target_path:
+            return {
+                'valid': True,
+                'message': 'IaC scan profile saved. Upload a folder for immediate scans, or add a worker-local path for scheduled scans.',
+                'details': {
+                    'target_path': None,
+                    'enabled_tools': enabled_tools,
+                    'mode': 'upload-first',
+                }
+            }
+
+        return {
+            'valid': True,
+            'message': 'IaC scan configuration validated successfully',
+            'details': {
+                'target_path': credential.iac_target_path,
+                'enabled_tools': enabled_tools,
+                'mode': 'worker-path',
+            }
+        }
+
+    def _validate_container_credential(self, credential: CloudCredential) -> Dict[str, Any]:
+        """Validate container scan target configuration."""
+        enabled_tools = deserialize_string_list(credential.container_enabled_tools)
+        sbom_tools = deserialize_string_list(credential.container_sbom_tools)
+
+        if not credential.container_image_target and not credential.container_path_target:
+            return {
+                'valid': False,
+                'message': 'Provide a container image or local container path',
+                'details': {}
+            }
+
+        if not enabled_tools:
+            return {
+                'valid': False,
+                'message': 'Select at least one container scanning tool',
+                'details': {}
+            }
+
+        if not sbom_tools:
+            return {
+                'valid': False,
+                'message': 'Select at least one SBOM tool for container scanning',
+                'details': {}
+            }
+
+        return {
+            'valid': True,
+            'message': 'Container scan configuration validated successfully',
+            'details': {
+                'image_target': credential.container_image_target,
+                'path_target': credential.container_path_target,
+                'enabled_tools': enabled_tools,
+                'sbom_tools': sbom_tools,
+            }
+        }
     
     def _update_validation_status(self, credential_id: Optional[int], user_id: str, 
                                  is_valid: bool, message: str) -> None:

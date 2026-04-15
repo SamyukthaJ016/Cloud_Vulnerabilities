@@ -90,6 +90,22 @@ class KubernetesCredentialRequest(CredentialBase):
     kubernetes_cluster_name: Optional[str] = None
 
 
+class IACCredentialRequest(CredentialBase):
+    """IaC credential request model"""
+    cloud_provider: str = Field(default="iac")
+    iac_target_path: Optional[str] = None
+    iac_enabled_tools: List[str] = Field(default_factory=list)
+
+
+class ContainerCredentialRequest(CredentialBase):
+    """Container credential request model"""
+    cloud_provider: str = Field(default="container")
+    container_image_target: Optional[str] = None
+    container_path_target: Optional[str] = None
+    container_enabled_tools: List[str] = Field(default_factory=list)
+    container_sbom_tools: List[str] = Field(default_factory=list)
+
+
 class CredentialResponse(BaseModel):
     """Credential response model"""
     id: int
@@ -107,6 +123,12 @@ class CredentialResponse(BaseModel):
     aws_access_key_id: Optional[str] = None
     kubernetes_context: Optional[str] = None
     kubernetes_cluster_name: Optional[str] = None
+    iac_target_path: Optional[str] = None
+    iac_enabled_tools: Optional[List[str]] = None
+    container_image_target: Optional[str] = None
+    container_path_target: Optional[str] = None
+    container_enabled_tools: Optional[List[str]] = None
+    container_sbom_tools: Optional[List[str]] = None
 
 
 class ValidationRequest(BaseModel):
@@ -397,6 +419,100 @@ async def save_kubernetes_credential(
         logger.error(f"Failed to save Kubernetes credential: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/iac", response_model=CredentialResponse)
+async def save_iac_credential(
+    request: IACCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save IaC scan configuration."""
+    try:
+        request.user_id = user_id
+
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            iac_target_path=request.iac_target_path,
+            iac_enabled_tools=request.iac_enabled_tools,
+            is_default=request.is_default,
+        )
+
+        credential_id, save_action = credential_manager.save_credential(credential)
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow(),
+            save_action=save_action,
+            iac_target_path=credential.iac_target_path,
+            iac_enabled_tools=credential.iac_enabled_tools,
+        )
+    except Exception as e:
+        logger.error(f"Failed to save IaC credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/container", response_model=CredentialResponse)
+async def save_container_credential(
+    request: ContainerCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save container scan configuration."""
+    try:
+        request.user_id = user_id
+
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            container_image_target=request.container_image_target,
+            container_path_target=request.container_path_target,
+            container_enabled_tools=request.container_enabled_tools,
+            container_sbom_tools=request.container_sbom_tools,
+            is_default=request.is_default,
+        )
+
+        credential_id, save_action = credential_manager.save_credential(credential)
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow(),
+            save_action=save_action,
+            container_image_target=credential.container_image_target,
+            container_path_target=credential.container_path_target,
+            container_enabled_tools=credential.container_enabled_tools,
+            container_sbom_tools=credential.container_sbom_tools,
+        )
+    except Exception as e:
+        logger.error(f"Failed to save container credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/", response_model=List[CredentialResponse])
 async def get_credentials(
     user_id: str = Depends(get_user_id),
@@ -423,6 +539,12 @@ async def get_credentials(
                 aws_access_key_id=cred.get('aws_access_key_id'),
                 kubernetes_context=cred.get('kubernetes_context'),
                 kubernetes_cluster_name=cred.get('kubernetes_cluster_name'),
+                iac_target_path=cred.get('iac_target_path'),
+                iac_enabled_tools=cred.get('iac_enabled_tools') or [],
+                container_image_target=cred.get('container_image_target'),
+                container_path_target=cred.get('container_path_target'),
+                container_enabled_tools=cred.get('container_enabled_tools') or [],
+                container_sbom_tools=cred.get('container_sbom_tools') or [],
             ))
         
         return response
@@ -590,16 +712,22 @@ async def get_providers_status(user_id: str = Depends(get_user_id)):
             'gcp': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None},
             'openai': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None},
             'azure': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None},
-            'kubernetes': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None}
+            'kubernetes': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None},
+            'iac': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None},
+            'container': {'configured': False, 'valid': False, 'selectable': False, 'default_id': None},
         }
         
         for cred in credentials:
             provider = cred['cloud_provider']
             if provider in providers:
                 providers[provider]['configured'] = True
-                providers[provider]['valid'] = cred.get('is_valid', False)
-                providers[provider]['selectable'] = (
+                providers[provider]['valid'] = (
                     providers[provider]['valid']
+                    or cred.get('is_valid', False)
+                )
+                providers[provider]['selectable'] = (
+                    providers[provider]['selectable']
+                    or cred.get('is_valid', False)
                     or (provider == 'kubernetes' and worker_enabled)
                 )
                 if cred.get('is_default'):
