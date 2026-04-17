@@ -3,7 +3,27 @@
   "routes": [
     {
       "src": "^/$",
+      "has": [
+        {
+          "type": "query",
+          "key": "token"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/$",
       "dest": "/index.html"
+    },
+    {
+      "src": "^/dashboard/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "token"
+        }
+      ],
+      "dest": "/index.py"
     },
     {
       "src": "^/dashboard/?$",
@@ -11,11 +31,41 @@
     },
     {
       "src": "^/frontend/history\\.html$",
+      "has": [
+        {
+          "type": "query",
+          "key": "token"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/frontend/history\\.html$",
       "dest": "/frontend/history.html"
     },
     {
       "src": "^/schedules/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "token"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/schedules/?$",
       "dest": "/scheduled_scans.html"
+    },
+    {
+      "src": "^/system-status/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "token"
+        }
+      ],
+      "dest": "/index.py"
     },
     {
       "src": "^/system-status/?$",

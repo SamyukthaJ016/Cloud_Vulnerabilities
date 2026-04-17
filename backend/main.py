@@ -77,12 +77,15 @@ from backend.cloudfox.cloudfox_scanner import (
     format_cloudfox_report
 )
 from backend.user_context import (
+    SSO_TOKEN_COOKIE,
     USER_ID_COOKIE,
     authenticate_sso_user,
     build_sso_login_redirect,
     is_html_navigation,
     is_public_path,
     resolve_user_id,
+    use_standalone_auth,
+    verify_sso_token,
 )
 
 # Database Migrations
@@ -1810,6 +1813,78 @@ async def api_info():
             "Offensive Security Testing",
         ],
     }
+
+
+@app.get("/api/auth/status")
+async def auth_status(request: Request):
+    standalone = use_standalone_auth(request)
+    user = authenticate_sso_user(request)
+    if not user:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "authenticated": False,
+                "auth_mode": "standalone" if standalone else "sso",
+                "login_url": build_sso_login_redirect(request) if not standalone else None,
+            },
+        )
+
+    return {
+        "authenticated": True,
+        "auth_mode": "standalone" if standalone else "sso",
+        "user": {
+            "id": user["id"],
+            "email": user.get("email"),
+            "name": user.get("name"),
+            "role": user.get("role"),
+        },
+    }
+
+
+class SsoExchangeRequest(BaseModel):
+    token: str
+
+
+@app.post("/api/auth/sso/exchange")
+async def auth_sso_exchange(payload: SsoExchangeRequest, request: Request):
+    token = (payload.token or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Missing SSO token")
+
+    user = verify_sso_token(token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired SSO token")
+
+    response = JSONResponse(
+        content={
+            "authenticated": True,
+            "auth_mode": "sso",
+            "user": {
+                "id": user["id"],
+                "email": user.get("email"),
+                "name": user.get("name"),
+                "role": user.get("role"),
+            },
+        }
+    )
+    response.set_cookie(
+        USER_ID_COOKIE,
+        user["id"],
+        max_age=60 * 60 * 24 * 30,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    response.set_cookie(
+        SSO_TOKEN_COOKIE,
+        token,
+        max_age=60 * 60,
+        httponly=True,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    return response
 
 
 @app.get("/api/grc/status")

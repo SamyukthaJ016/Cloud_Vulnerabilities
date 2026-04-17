@@ -5,9 +5,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -17,6 +18,7 @@ if str(ROOT) not in sys.path:
 
 
 USER_ID_COOKIE = "cloudguard_user_id"
+SSO_TOKEN_COOKIE = "cloudguard_sso_token"
 LIGHTWEIGHT_PATHS = {
     "/",
     "/dashboard",
@@ -25,6 +27,8 @@ LIGHTWEIGHT_PATHS = {
     "/system-status",
     "/health",
     "/api/info",
+    "/api/auth/status",
+    "/api/auth/sso/exchange",
     "/api/grc/status",
     "/api/grc/sync",
     "/api/billing/plans",
@@ -53,6 +57,56 @@ lightweight_app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@lightweight_app.middleware("http")
+async def require_sso_session(request: Request, call_next):
+    helpers = _user_context_helpers()
+    incoming_token = (request.query_params.get("token") or "").strip()
+
+    if (
+        request.method == "OPTIONS"
+        or helpers["is_public_path"](request.url.path)
+        or (incoming_token and helpers["is_html_navigation"](request))
+    ):
+        return await call_next(request)
+
+    user = helpers["authenticate_sso_user"](request)
+    if not user:
+        if helpers["is_html_navigation"](request):
+            return RedirectResponse(helpers["build_sso_login_redirect"](request), status_code=307)
+        return JSONResponse(
+            status_code=401,
+            content={
+                "detail": "Authentication required",
+                "login_url": helpers["build_sso_login_redirect"](request),
+                "auth_mode": "sso" if not helpers["use_standalone_auth"](request) else "standalone",
+            },
+        )
+
+    response = await call_next(request)
+    response.set_cookie(
+        helpers["USER_ID_COOKIE"],
+        user["id"],
+        max_age=60 * 60 * 24 * 30,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+
+    token = getattr(request.state, "sso_token", None) or user.get("token")
+    if token:
+        response.set_cookie(
+            helpers["SSO_TOKEN_COOKIE"],
+            token,
+            max_age=60 * 60,
+            httponly=True,
+            path="/",
+            samesite="lax",
+            secure=request.url.scheme == "https",
+        )
+
+    return response
+
 _main_app = None
 
 
@@ -69,6 +123,30 @@ def _get_conn():
     from backend.database import get_conn
 
     return get_conn()
+
+
+def _user_context_helpers():
+    from backend.user_context import (
+        SSO_TOKEN_COOKIE as user_context_sso_cookie,
+        USER_ID_COOKIE as user_context_cookie,
+        authenticate_sso_user,
+        build_sso_login_redirect,
+        is_html_navigation,
+        is_public_path,
+        use_standalone_auth,
+        verify_sso_token,
+    )
+
+    return {
+        "SSO_TOKEN_COOKIE": user_context_sso_cookie,
+        "USER_ID_COOKIE": user_context_cookie,
+        "authenticate_sso_user": authenticate_sso_user,
+        "build_sso_login_redirect": build_sso_login_redirect,
+        "is_html_navigation": is_html_navigation,
+        "is_public_path": is_public_path,
+        "use_standalone_auth": use_standalone_auth,
+        "verify_sso_token": verify_sso_token,
+    }
 
 
 def _standalone_user_id(request: Request) -> str:
@@ -110,6 +188,57 @@ def _frontend_file_response(filename: str) -> HTMLResponse:
             return HTMLResponse(path.read_text(encoding="utf-8"))
 
     raise FileNotFoundError(filename)
+
+
+def _clean_sso_landing_url(request: Request) -> str:
+    parsed = urlparse(str(request.url))
+    filtered_query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key not in {"token", "from", "service"}
+    ]
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            "",
+            urlencode(filtered_query, doseq=True),
+            "",
+        )
+    )
+
+
+def _maybe_complete_sso_html_landing(request: Request) -> Optional[RedirectResponse]:
+    token = (request.query_params.get("token") or "").strip()
+    if not token:
+        return None
+
+    helpers = _user_context_helpers()
+    user = helpers["verify_sso_token"](token)
+    response = RedirectResponse(_clean_sso_landing_url(request), status_code=307)
+
+    if not user:
+        return response
+
+    response.set_cookie(
+        helpers["USER_ID_COOKIE"],
+        user["id"],
+        max_age=60 * 60 * 24 * 30,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    response.set_cookie(
+        helpers["SSO_TOKEN_COOKIE"],
+        token,
+        max_age=60 * 60,
+        httponly=True,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    return response
 
 
 def _parse_scan_ids(scan_ids: Optional[str]) -> list[int]:
@@ -212,27 +341,42 @@ async def _validate_saved_kubernetes_credential(
 
 
 @lightweight_app.get("/", response_class=HTMLResponse)
-async def lightweight_root():
+async def lightweight_root(request: Request):
+    landing_response = _maybe_complete_sso_html_landing(request)
+    if landing_response:
+        return landing_response
     return _frontend_file_response("index.html")
 
 
 @lightweight_app.get("/dashboard", response_class=HTMLResponse)
-async def lightweight_dashboard_page():
+async def lightweight_dashboard_page(request: Request):
+    landing_response = _maybe_complete_sso_html_landing(request)
+    if landing_response:
+        return landing_response
     return _frontend_file_response("dashboard.html")
 
 
 @lightweight_app.get("/frontend/history.html", response_class=HTMLResponse)
-async def lightweight_history_page():
+async def lightweight_history_page(request: Request):
+    landing_response = _maybe_complete_sso_html_landing(request)
+    if landing_response:
+        return landing_response
     return _frontend_file_response("history.html")
 
 
 @lightweight_app.get("/schedules", response_class=HTMLResponse)
-async def lightweight_schedules_page():
+async def lightweight_schedules_page(request: Request):
+    landing_response = _maybe_complete_sso_html_landing(request)
+    if landing_response:
+        return landing_response
     return _frontend_file_response("scheduled_scans.html")
 
 
 @lightweight_app.get("/system-status", response_class=HTMLResponse)
-async def lightweight_system_status_page():
+async def lightweight_system_status_page(request: Request):
+    landing_response = _maybe_complete_sso_html_landing(request)
+    if landing_response:
+        return landing_response
     return _frontend_file_response("system_status.html")
 
 
@@ -445,6 +589,78 @@ async def lightweight_info():
             "Offensive Security Testing",
         ],
     }
+
+
+@lightweight_app.get("/api/auth/status")
+async def lightweight_auth_status(request: Request):
+    helpers = _user_context_helpers()
+    standalone = helpers["use_standalone_auth"](request)
+    user = helpers["authenticate_sso_user"](request)
+
+    if not user:
+        return JSONResponse(
+            status_code=401,
+            content={
+                "authenticated": False,
+                "auth_mode": "standalone" if standalone else "sso",
+                "login_url": helpers["build_sso_login_redirect"](request) if not standalone else None,
+            },
+        )
+
+    return {
+        "authenticated": True,
+        "auth_mode": "standalone" if standalone else "sso",
+        "user": {
+            "id": user["id"],
+            "email": user.get("email"),
+            "name": user.get("name"),
+            "role": user.get("role"),
+        },
+    }
+
+
+@lightweight_app.post("/api/auth/sso/exchange")
+async def lightweight_sso_exchange(request: Request):
+    helpers = _user_context_helpers()
+    payload = await request.json()
+    token = str(payload.get("token") or "").strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="Missing SSO token")
+
+    user = helpers["verify_sso_token"](token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired SSO token")
+
+    response = JSONResponse(
+        {
+            "authenticated": True,
+            "auth_mode": "sso",
+            "user": {
+                "id": user["id"],
+                "email": user.get("email"),
+                "name": user.get("name"),
+                "role": user.get("role"),
+            },
+        }
+    )
+    response.set_cookie(
+        helpers["USER_ID_COOKIE"],
+        user["id"],
+        max_age=60 * 60 * 24 * 30,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    response.set_cookie(
+        helpers["SSO_TOKEN_COOKIE"],
+        token,
+        max_age=60 * 60,
+        httponly=True,
+        path="/",
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    return response
 
 
 @lightweight_app.get("/api/credentials/providers/status")

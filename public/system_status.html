@@ -424,9 +424,80 @@
     <script>
         let healthChart = null;
         let autoRefreshInterval = null;
+        let authContext = {
+            authenticated: false,
+            auth_mode: 'standalone',
+            user: null
+        };
+
+        function stripSsoQueryParams() {
+            const currentUrl = new URL(window.location.href);
+            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            window.history.replaceState({}, document.title, currentUrl.toString());
+        }
+
+        async function exchangeSsoTokenFromUrl() {
+            const url = new URL(window.location.href);
+            const token = url.searchParams.get('token');
+            if (!token) {
+                return null;
+            }
+
+            const response = await fetch('/api/auth/sso/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.detail || 'Failed to accept SSO token');
+            }
+
+            stripSsoQueryParams();
+            return payload;
+        }
+
+        async function ensureAuthenticatedPage() {
+            try {
+                const exchanged = await exchangeSsoTokenFromUrl();
+                if (exchanged?.user) {
+                    authContext = exchanged;
+                    document.cookie = `cloudguard_user_id=${encodeURIComponent(exchanged.user.id)}; path=/; max-age=2592000; SameSite=Lax`;
+                }
+            } catch (error) {
+                console.error('SSO token exchange failed:', error);
+                alert(`SSO login failed: ${error.message}`);
+            }
+
+            try {
+                const response = await fetch(`/api/auth/status?return_to=${encodeURIComponent(window.location.href)}`, { credentials: 'same-origin' });
+                const payload = await response.json().catch(() => ({}));
+
+                if (response.status === 401) {
+                    if (payload.auth_mode === 'sso' && payload.login_url) {
+                        window.location.href = payload.login_url;
+                        return false;
+                    }
+                    return true;
+                }
+
+                authContext = payload;
+                if (payload.user?.id) {
+                    document.cookie = `cloudguard_user_id=${encodeURIComponent(payload.user.id)}; path=/; max-age=2592000; SameSite=Lax`;
+                }
+                return true;
+            } catch (error) {
+                console.error('Auth status check failed:', error);
+                return true;
+            }
+        }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const authReady = await ensureAuthenticatedPage();
+            if (!authReady) return;
+
             loadSystemStatus();
             
             // Auto-refresh every 30 seconds

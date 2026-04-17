@@ -1074,6 +1074,81 @@
         let currentFilter = 'all';
         let scanInProgress = false;
         let grcStatus = null;
+        let authContext = {
+            authenticated: false,
+            auth_mode: 'standalone',
+            user: null
+        };
+
+        function stripSsoQueryParams() {
+            const currentUrl = new URL(window.location.href);
+            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            window.history.replaceState({}, document.title, currentUrl.toString());
+        }
+
+        async function exchangeSsoTokenFromUrl() {
+            const url = new URL(window.location.href);
+            const token = url.searchParams.get('token');
+            if (!token) {
+                return null;
+            }
+
+            const response = await fetch('/api/auth/sso/exchange', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.detail || 'Failed to accept SSO token');
+            }
+
+            stripSsoQueryParams();
+            return payload;
+        }
+
+        function persistAuthenticatedUser(user) {
+            if (!user?.id) return;
+            sessionStorage.setItem('cloudguard_user_id', user.id);
+            localStorage.setItem('cloudguard_user_id', user.id);
+            document.cookie = `cloudguard_user_id=${encodeURIComponent(user.id)}; path=/; max-age=2592000; SameSite=Lax`;
+        }
+
+        async function ensureAuthenticatedPage() {
+            try {
+                const exchanged = await exchangeSsoTokenFromUrl();
+                if (exchanged?.user) {
+                    authContext = exchanged;
+                    persistAuthenticatedUser(exchanged.user);
+                }
+            } catch (error) {
+                console.error('SSO token exchange failed:', error);
+                alert(`SSO login failed: ${error.message}`);
+            }
+
+            try {
+                const response = await fetch(`/api/auth/status?return_to=${encodeURIComponent(window.location.href)}`, { credentials: 'same-origin' });
+                const payload = await response.json().catch(() => ({}));
+
+                if (response.status === 401) {
+                    if (payload.auth_mode === 'sso' && payload.login_url) {
+                        window.location.href = payload.login_url;
+                        return false;
+                    }
+                    return true;
+                }
+
+                authContext = payload;
+                if (payload.user) {
+                    persistAuthenticatedUser(payload.user);
+                }
+                return true;
+            } catch (error) {
+                console.error('Auth status check failed:', error);
+                return true;
+            }
+        }
 
         function initializeUserContext() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1087,6 +1162,9 @@
                 (cookieMatch ? decodeURIComponent(cookieMatch.split('=')[1]) : null);
 
             if (!userId) {
+                if (authContext.auth_mode === 'sso') {
+                    return 'anonymous';
+                }
                 userId = 'user_' + Math.random().toString(36).slice(2, 11);
             }
 
@@ -1825,7 +1903,10 @@ kubectl apply -f deployment.yaml`,
         }
 
         // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const authReady = await ensureAuthenticatedPage();
+            if (!authReady) return;
+
             initializeUserContext();
             console.log('CloudGuard Dashboard initializing...');
             updateTimestamp();

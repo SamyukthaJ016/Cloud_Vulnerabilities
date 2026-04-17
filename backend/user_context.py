@@ -1,8 +1,9 @@
 import os
 from typing import Optional
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode, urlparse, urlunparse
 
 import psycopg2
+import requests
 from fastapi import HTTPException, Request
 
 
@@ -15,6 +16,8 @@ SSO_SESSION_COOKIE_NAMES = (
 PUBLIC_PATHS = {
     "/health",
     "/api/info",
+    "/api/auth/status",
+    "/api/auth/sso/exchange",
     "/api/billing/webhook",
     "/api/billing/verify",
 }
@@ -27,6 +30,7 @@ HTML_PAGE_PATHS = {
 }
 
 USER_ID_COOKIE = "cloudguard_user_id"
+SSO_TOKEN_COOKIE = "cloudguard_sso_token"
 
 
 def _clean_user_id(value: str | None) -> str | None:
@@ -50,8 +54,43 @@ def get_sso_login_url() -> str:
     return os.getenv("SSO_LOGIN_URL", "http://localhost:3000/")
 
 
+def _merge_sso_path(base_url: str, path: str) -> str:
+    parsed = urlparse(base_url)
+    merged_path = path if path.startswith("/") else f"/{path}"
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            merged_path,
+            "",
+            "",
+            "",
+        )
+    )
+
+
+def get_sso_scanner_redirect_url() -> str:
+    explicit = (os.getenv("SSO_SCANNER_REDIRECT_URL") or "").strip()
+    if explicit:
+        return explicit
+    return _merge_sso_path(get_sso_login_url(), "/api/scan/redirect")
+
+
+def get_sso_verify_url() -> str:
+    explicit = (os.getenv("SSO_VERIFY_URL") or "").strip()
+    if explicit:
+        return explicit
+    return _merge_sso_path(get_sso_login_url(), "/api/sso/verify")
+
+
 def build_sso_login_redirect(request: Request) -> str:
-    return f"{get_sso_login_url()}?{urlencode({'callbackUrl': str(request.url)})}"
+    return_to = (
+        (request.query_params.get("return_to") or "").strip()
+        or (request.headers.get("x-cloudguard-return-to") or "").strip()
+        or (request.headers.get("referer") or "").strip()
+        or str(request.url)
+    )
+    return f"{get_sso_scanner_redirect_url()}?{urlencode({'returnTo': return_to})}"
 
 
 def _standalone_user_id(request: Request) -> str:
@@ -106,6 +145,59 @@ def _get_nextauth_session_token(request: Request) -> Optional[str]:
     return None
 
 
+def _get_sso_exchange_token(request: Request) -> Optional[str]:
+    header = (request.headers.get("authorization") or "").strip()
+    if header.lower().startswith("bearer "):
+        token = _clean_user_id(header[7:])
+        if token:
+            return token
+
+    query_token = _clean_user_id(request.query_params.get("token"))
+    if query_token:
+        return query_token
+
+    return _clean_user_id(request.cookies.get(SSO_TOKEN_COOKIE))
+
+
+def verify_sso_token(token: str) -> Optional[dict]:
+    verify_url = get_sso_verify_url()
+
+    try:
+        response = requests.get(
+            verify_url,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=5,
+        )
+    except requests.RequestException:
+        return None
+
+    if response.status_code >= 400:
+        return None
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+
+    if not payload.get("valid") or not isinstance(payload.get("user"), dict):
+        return None
+
+    user = payload["user"]
+    user_id = _clean_user_id(str(user.get("sub") or ""))
+    email = _clean_user_id(user.get("email"))
+    if not user_id or not email:
+        return None
+
+    return {
+        "id": user_id,
+        "email": email,
+        "name": _clean_user_id(user.get("name")) or email,
+        "role": _clean_user_id(user.get("role")),
+        "image": _clean_user_id(user.get("image")),
+        "token": token,
+    }
+
+
 def authenticate_sso_user(request: Request) -> Optional[dict]:
     cached_user = getattr(request.state, "authenticated_user", None)
     if cached_user:
@@ -116,6 +208,15 @@ def authenticate_sso_user(request: Request) -> Optional[dict]:
         request.state.authenticated_user = user
         request.state.user_id = user["id"]
         return user
+
+    sso_token = _get_sso_exchange_token(request)
+    if sso_token:
+        user = verify_sso_token(sso_token)
+        if user:
+            request.state.authenticated_user = user
+            request.state.user_id = user["id"]
+            request.state.sso_token = sso_token
+            return user
 
     session_token = _get_nextauth_session_token(request)
     if not session_token:
