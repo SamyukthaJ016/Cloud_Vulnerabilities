@@ -125,6 +125,29 @@ Notes:
 - **Queue**: Redis (Task management)
 - **Tools**: Trivy, Gitleaks, Nuclei, CloudFox, OWASP ZAP
 
+## 🔐 SSO Integration
+
+The active DeepTrustxAI SSO frontend now lives in:
+
+- [sso/new/deeptrustxai](/Users/anjali/Desktop/sum/Cloud_Vulnerabilities/sso/new/deeptrustxai)
+
+That app provides:
+
+- Google sign-in with NextAuth
+- signed SSO token handoff for CloudGuard
+- the **Cloud Penetration Testing** product tile that opens CloudGuard after login
+
+CloudGuard expects these companion SSO routes:
+
+- `/api/scan/redirect`
+- `/api/sso/verify`
+
+The older folder:
+
+- [sso/sso-login](/Users/anjali/Desktop/sum/Cloud_Vulnerabilities/sso/sso-login)
+
+is now a legacy implementation and should not be used as the primary SSO app for new deployments.
+
 ## 🛡️ Security Note
 
 **Never commit your `.env` file.** It contains sensitive API keys and secrets. This repository includes a `.gitignore` to prevent accidental commits, but always double-check.
