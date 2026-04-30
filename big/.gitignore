@@ -1,0 +1,53 @@
+# deps
+node_modules/
+**/node_modules/
+
+# build output
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+**/coverage/
+*.tsbuildinfo
+
+# vite
+**/.vite/
+
+# env
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# prisma
+packages/backend/prisma/migrations/dev.db*
+
+# editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# test
+.nyc_output/
+
+# misc
+.tmp/
+tmp/
+.turbo/
+
+# local-only: stub scanner used for manual end-to-end testing
+stub-scanner/
+.vercel

@@ -1,0 +1,47 @@
+# GigaChad GRC Backup Scheduler
+# Runs automated backups on a configurable schedule
+
+FROM alpine:3.23
+
+# Patch OS-level CVEs and install required packages
+RUN apk upgrade --no-cache && apk add --no-cache \
+    bash \
+    curl \
+    docker-cli \
+    docker-compose \
+    gzip \
+    tar \
+    postgresql16-client \
+    aws-cli \
+    jq \
+    tzdata \
+    dcron
+
+# Create directories
+RUN mkdir -p /app /backups /var/log/cron
+
+# Copy backup scripts
+COPY backup.sh /app/backup.sh
+COPY restore.sh /app/restore.sh
+COPY verify-backup.sh /app/verify-backup.sh
+COPY cron/backup-crontab /etc/crontabs/root
+
+# Make scripts executable
+RUN chmod +x /app/*.sh
+
+# Set timezone (default to UTC, override with TZ env var)
+ENV TZ=UTC
+
+# Copy entrypoint script
+COPY entrypoint-backup.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Volume for backups
+VOLUME ["/backups"]
+
+# Health check - verify cron is running and recent backup exists
+HEALTHCHECK --interval=1h --timeout=10s --start-period=5s --retries=1 \
+    CMD pgrep crond > /dev/null && \
+        (find /backups -name "backup-*.tar.gz" -mtime -2 | grep -q . || echo "Warning: No recent backup")
+
+ENTRYPOINT ["/app/entrypoint.sh"]

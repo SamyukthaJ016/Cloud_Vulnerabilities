@@ -18,8 +18,6 @@ PUBLIC_PATHS = {
     "/api/info",
     "/api/auth/status",
     "/api/auth/sso/exchange",
-    "/api/billing/webhook",
-    "/api/billing/verify",
 }
 HTML_PAGE_PATHS = {
     "/",
@@ -51,7 +49,7 @@ def is_html_navigation(request: Request) -> bool:
 
 
 def get_sso_login_url() -> str:
-    return os.getenv("SSO_LOGIN_URL", "http://localhost:3000/")
+    return (os.getenv("SSO_LOGIN_URL") or "").strip()
 
 
 def _merge_sso_path(base_url: str, path: str) -> str:
@@ -73,24 +71,34 @@ def get_sso_scanner_redirect_url() -> str:
     explicit = (os.getenv("SSO_SCANNER_REDIRECT_URL") or "").strip()
     if explicit:
         return explicit
-    return _merge_sso_path(get_sso_login_url(), "/api/scan/redirect")
+    login_url = get_sso_login_url()
+    if not login_url:
+        return ""
+    return _merge_sso_path(login_url, "/api/scan/redirect")
 
 
 def get_sso_verify_url() -> str:
     explicit = (os.getenv("SSO_VERIFY_URL") or "").strip()
     if explicit:
         return explicit
-    return _merge_sso_path(get_sso_login_url(), "/api/sso/verify")
+    login_url = get_sso_login_url()
+    if not login_url:
+        return ""
+    return _merge_sso_path(login_url, "/api/sso/verify")
 
 
 def build_sso_login_redirect(request: Request) -> str:
+    redirect_base = get_sso_scanner_redirect_url()
+    if not redirect_base:
+        return str(request.base_url)
+
     return_to = (
         (request.query_params.get("return_to") or "").strip()
         or (request.headers.get("x-cloudguard-return-to") or "").strip()
         or (request.headers.get("referer") or "").strip()
         or str(request.url)
     )
-    return f"{get_sso_scanner_redirect_url()}?{urlencode({'returnTo': return_to})}"
+    return f"{redirect_base}?{urlencode({'returnTo': return_to})}"
 
 
 def _standalone_user_id(request: Request) -> str:

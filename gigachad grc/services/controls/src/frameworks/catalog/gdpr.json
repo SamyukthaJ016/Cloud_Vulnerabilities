@@ -1,0 +1,135 @@
+{
+  "id": "gdpr",
+  "name": "GDPR",
+  "version": "2016/679",
+  "description": "General Data Protection Regulation - European Union regulation on data protection and privacy for all individuals within the EU and EEA. Addresses the transfer of personal data outside the EU and EEA areas.",
+  "source": "European Union",
+  "category": "privacy",
+  "requirements": [
+    {
+      "reference": "Chapter I",
+      "title": "General Provisions",
+      "description": "Subject-matter, objectives, material and territorial scope, and definitions.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 1", "title": "Subject-matter and objectives", "description": "This Regulation lays down rules relating to the protection of natural persons with regard to the processing of personal data and rules relating to the free movement of personal data.", "level": 1, "isCategory": false},
+        {"reference": "Art. 2", "title": "Material scope", "description": "This Regulation applies to the processing of personal data wholly or partly by automated means and to the processing other than by automated means of personal data which form part of a filing system.", "level": 1, "isCategory": false},
+        {"reference": "Art. 3", "title": "Territorial scope", "description": "This Regulation applies to the processing of personal data in the context of the activities of an establishment of a controller or a processor in the Union, regardless of whether the processing takes place in the Union or not.", "level": 1, "isCategory": false},
+        {"reference": "Art. 4", "title": "Definitions", "description": "Definitions for 'personal data', 'processing', 'controller', 'processor', 'consent', and other key terms.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Chapter II",
+      "title": "Principles",
+      "description": "Principles relating to processing of personal data.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 5", "title": "Principles relating to processing", "description": "Personal data shall be processed lawfully, fairly and in a transparent manner; collected for specified, explicit and legitimate purposes; adequate, relevant and limited; accurate and kept up to date; kept for no longer than necessary; processed securely.", "level": 1, "isCategory": false},
+        {"reference": "Art. 6", "title": "Lawfulness of processing", "description": "Processing shall be lawful only if and to the extent that at least one of the following applies: consent, contract, legal obligation, vital interests, public interest, or legitimate interests.", "level": 1, "isCategory": false},
+        {"reference": "Art. 7", "title": "Conditions for consent", "description": "Where processing is based on consent, the controller shall be able to demonstrate that the data subject has consented to processing of his or her personal data.", "level": 1, "isCategory": false},
+        {"reference": "Art. 8", "title": "Child's consent", "description": "Where consent applies, in relation to the offer of information society services directly to a child, the processing of personal data of a child shall be lawful where the child is at least 16 years old.", "level": 1, "isCategory": false},
+        {"reference": "Art. 9", "title": "Processing of special categories", "description": "Processing of personal data revealing racial or ethnic origin, political opinions, religious or philosophical beliefs, trade union membership, genetic data, biometric data, health data, or sex life/orientation shall be prohibited except in specific circumstances.", "level": 1, "isCategory": false},
+        {"reference": "Art. 10", "title": "Criminal convictions data", "description": "Processing of personal data relating to criminal convictions and offences shall be carried out only under the control of official authority or when authorized by Union or Member State law.", "level": 1, "isCategory": false},
+        {"reference": "Art. 11", "title": "Processing not requiring identification", "description": "If the purposes for which a controller processes personal data do not or do no longer require the identification of a data subject, the controller shall not be obliged to maintain, acquire or process additional information.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Chapter III",
+      "title": "Rights of the Data Subject",
+      "description": "Rights of individuals regarding their personal data.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 12", "title": "Transparent information and communication", "description": "The controller shall take appropriate measures to provide any information relating to processing to the data subject in a concise, transparent, intelligible and easily accessible form.", "level": 1, "isCategory": false},
+        {"reference": "Art. 13", "title": "Information when data collected from subject", "description": "Where personal data are collected from the data subject, the controller shall provide identity of controller, contact details of DPO, purposes, legal basis, recipients, transfer intentions, retention period, and rights.", "level": 1, "isCategory": false},
+        {"reference": "Art. 14", "title": "Information when data not from subject", "description": "Where personal data have not been obtained from the data subject, the controller shall provide the information specified, including categories of personal data and source.", "level": 1, "isCategory": false},
+        {"reference": "Art. 15", "title": "Right of access", "description": "The data subject shall have the right to obtain from the controller confirmation as to whether personal data are being processed, and access to the personal data and information about processing.", "level": 1, "isCategory": false},
+        {"reference": "Art. 16", "title": "Right to rectification", "description": "The data subject shall have the right to obtain from the controller without undue delay the rectification of inaccurate personal data concerning him or her.", "level": 1, "isCategory": false},
+        {"reference": "Art. 17", "title": "Right to erasure ('right to be forgotten')", "description": "The data subject shall have the right to obtain from the controller the erasure of personal data without undue delay where one of the specified grounds applies.", "level": 1, "isCategory": false},
+        {"reference": "Art. 18", "title": "Right to restriction of processing", "description": "The data subject shall have the right to obtain from the controller restriction of processing where the accuracy is contested, processing is unlawful, controller no longer needs data, or subject has objected.", "level": 1, "isCategory": false},
+        {"reference": "Art. 19", "title": "Notification regarding rectification/erasure", "description": "The controller shall communicate any rectification or erasure of personal data or restriction of processing to each recipient unless impossible or disproportionate effort.", "level": 1, "isCategory": false},
+        {"reference": "Art. 20", "title": "Right to data portability", "description": "The data subject shall have the right to receive personal data in a structured, commonly used and machine-readable format and have the right to transmit those data to another controller.", "level": 1, "isCategory": false},
+        {"reference": "Art. 21", "title": "Right to object", "description": "The data subject shall have the right to object, on grounds relating to his or her particular situation, at any time to processing based on public interest or legitimate interests.", "level": 1, "isCategory": false},
+        {"reference": "Art. 22", "title": "Automated decision-making", "description": "The data subject shall have the right not to be subject to a decision based solely on automated processing, including profiling, which produces legal effects or similarly significantly affects him or her.", "level": 1, "isCategory": false},
+        {"reference": "Art. 23", "title": "Restrictions", "description": "Union or Member State law may restrict the scope of obligations and rights when such a restriction respects the essence of fundamental rights and freedoms and is necessary for specified objectives.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Chapter IV",
+      "title": "Controller and Processor",
+      "description": "General obligations of controllers and processors.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 24", "title": "Responsibility of the controller", "description": "The controller shall implement appropriate technical and organisational measures to ensure and demonstrate that processing is performed in accordance with this Regulation.", "level": 1, "isCategory": false},
+        {"reference": "Art. 25", "title": "Data protection by design and by default", "description": "The controller shall implement appropriate technical and organisational measures designed to implement data-protection principles in an effective manner and integrate safeguards into processing.", "level": 1, "isCategory": false},
+        {"reference": "Art. 26", "title": "Joint controllers", "description": "Where two or more controllers jointly determine the purposes and means of processing, they shall be joint controllers and shall determine their respective responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "Art. 27", "title": "Representatives of controllers not in Union", "description": "Where the controller or processor is not established in the Union, they shall designate in writing a representative in the Union.", "level": 1, "isCategory": false},
+        {"reference": "Art. 28", "title": "Processor", "description": "Processing by a processor shall be governed by a contract or other legal act that is binding on the processor with specified requirements.", "level": 1, "isCategory": false},
+        {"reference": "Art. 29", "title": "Processing under authority", "description": "The processor and any person acting under the authority of the controller or of the processor shall not process personal data except on instructions from the controller.", "level": 1, "isCategory": false},
+        {"reference": "Art. 30", "title": "Records of processing activities", "description": "Each controller and processor shall maintain a record of processing activities under its responsibility.", "level": 1, "isCategory": false},
+        {"reference": "Art. 31", "title": "Cooperation with supervisory authority", "description": "The controller and the processor and, where applicable, their representatives, shall cooperate, on request, with the supervisory authority.", "level": 1, "isCategory": false},
+        {"reference": "Art. 32", "title": "Security of processing", "description": "The controller and processor shall implement appropriate technical and organisational measures to ensure a level of security appropriate to the risk.", "level": 1, "isCategory": false},
+        {"reference": "Art. 33", "title": "Notification of breach to authority", "description": "In the case of a personal data breach, the controller shall without undue delay and where feasible not later than 72 hours notify the supervisory authority.", "level": 1, "isCategory": false},
+        {"reference": "Art. 34", "title": "Communication of breach to data subject", "description": "When the personal data breach is likely to result in a high risk to the rights and freedoms of natural persons, the controller shall communicate the personal data breach to the data subject.", "level": 1, "isCategory": false},
+        {"reference": "Art. 35", "title": "Data protection impact assessment", "description": "Where processing is likely to result in a high risk to the rights and freedoms of natural persons, the controller shall carry out an assessment of the impact of the envisaged processing operations.", "level": 1, "isCategory": false},
+        {"reference": "Art. 36", "title": "Prior consultation", "description": "The controller shall consult the supervisory authority prior to processing where a data protection impact assessment indicates high risk.", "level": 1, "isCategory": false},
+        {"reference": "Art. 37", "title": "Designation of DPO", "description": "The controller and the processor shall designate a data protection officer in any case where processing is carried out by a public authority, involves regular monitoring, or involves special categories of data on a large scale.", "level": 1, "isCategory": false},
+        {"reference": "Art. 38", "title": "Position of DPO", "description": "The controller and processor shall ensure that the data protection officer is involved properly and in a timely manner in all issues relating to the protection of personal data.", "level": 1, "isCategory": false},
+        {"reference": "Art. 39", "title": "Tasks of DPO", "description": "The data protection officer shall have the tasks of informing and advising, monitoring compliance, providing advice regarding DPIA, cooperating with supervisory authority, and acting as contact point.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Chapter V",
+      "title": "Transfers to Third Countries",
+      "description": "Transfers of personal data to third countries or international organisations.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 44", "title": "General principle for transfers", "description": "Any transfer of personal data to a third country or an international organisation shall take place only if the conditions laid down in this Chapter are complied with.", "level": 1, "isCategory": false},
+        {"reference": "Art. 45", "title": "Transfers based on adequacy decision", "description": "A transfer may take place where the Commission has decided that the third country ensures an adequate level of protection.", "level": 1, "isCategory": false},
+        {"reference": "Art. 46", "title": "Transfers subject to safeguards", "description": "In the absence of an adequacy decision, a transfer may take place only if the controller or processor has provided appropriate safeguards.", "level": 1, "isCategory": false},
+        {"reference": "Art. 47", "title": "Binding corporate rules", "description": "The competent supervisory authority shall approve binding corporate rules that are legally binding and apply to every member of the group of undertakings.", "level": 1, "isCategory": false},
+        {"reference": "Art. 48", "title": "Transfers not authorised by Union law", "description": "Any judgment of a court or tribunal and any decision of an administrative authority of a third country requiring a controller or processor to transfer personal data may only be recognised if based on an international agreement.", "level": 1, "isCategory": false},
+        {"reference": "Art. 49", "title": "Derogations for specific situations", "description": "In the absence of an adequacy decision or appropriate safeguards, a transfer may take place only if certain conditions are met (consent, contract, legal claims, vital interests, public interest, etc.).", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Chapter VI",
+      "title": "Independent Supervisory Authorities",
+      "description": "Establishment and operation of supervisory authorities.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 51", "title": "Supervisory authority", "description": "Each Member State shall provide for one or more independent public authorities to be responsible for monitoring the application of this Regulation.", "level": 1, "isCategory": false},
+        {"reference": "Art. 52", "title": "Independence", "description": "Each supervisory authority shall act with complete independence in performing its tasks and exercising its powers.", "level": 1, "isCategory": false},
+        {"reference": "Art. 53", "title": "General conditions for members", "description": "Member States shall provide that each member of their supervisory authorities is appointed by means of a transparent procedure.", "level": 1, "isCategory": false},
+        {"reference": "Art. 54", "title": "Rules on establishment", "description": "Each Member State shall provide by law for the establishment of each supervisory authority, qualifications and conditions, and other requirements.", "level": 1, "isCategory": false},
+        {"reference": "Art. 55", "title": "Competence", "description": "Each supervisory authority shall be competent for the performance of the tasks assigned to and the exercise of the powers conferred on it in the territory of its own Member State.", "level": 1, "isCategory": false},
+        {"reference": "Art. 56", "title": "Competence of lead supervisory authority", "description": "The supervisory authority of the main establishment or of the single establishment of the controller or processor shall be competent to act as lead supervisory authority for cross-border processing.", "level": 1, "isCategory": false},
+        {"reference": "Art. 57", "title": "Tasks", "description": "Each supervisory authority shall on its territory monitor and enforce the application of this Regulation, promote public awareness, provide information to data subjects, handle complaints, and other tasks.", "level": 1, "isCategory": false},
+        {"reference": "Art. 58", "title": "Powers", "description": "Each supervisory authority shall have investigative powers, corrective powers, and authorisation and advisory powers.", "level": 1, "isCategory": false},
+        {"reference": "Art. 59", "title": "Activity reports", "description": "Each supervisory authority shall draw up an annual report on its activities, which may include a list of types of infringement notified and types of measures taken.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Chapter VIII",
+      "title": "Remedies, Liability and Penalties",
+      "description": "Legal remedies, liability, and administrative penalties.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "Art. 77", "title": "Right to lodge a complaint", "description": "Every data subject shall have the right to lodge a complaint with a supervisory authority if the data subject considers that the processing infringes this Regulation.", "level": 1, "isCategory": false},
+        {"reference": "Art. 78", "title": "Right to effective judicial remedy against authority", "description": "Each natural or legal person shall have the right to an effective judicial remedy against a legally binding decision of a supervisory authority concerning them.", "level": 1, "isCategory": false},
+        {"reference": "Art. 79", "title": "Right to effective judicial remedy against controller/processor", "description": "Each data subject shall have the right to an effective judicial remedy where they consider that their rights have been infringed as a result of processing not in compliance with this Regulation.", "level": 1, "isCategory": false},
+        {"reference": "Art. 80", "title": "Representation of data subjects", "description": "The data subject shall have the right to mandate a not-for-profit body to lodge the complaint on his or her behalf and to exercise the rights to remedy and compensation.", "level": 1, "isCategory": false},
+        {"reference": "Art. 81", "title": "Suspension of proceedings", "description": "Where a competent court has information that proceedings concerning the same subject matter are pending in a court in another Member State, it shall contact that court.", "level": 1, "isCategory": false},
+        {"reference": "Art. 82", "title": "Right to compensation and liability", "description": "Any person who has suffered material or non-material damage as a result of an infringement of this Regulation shall have the right to receive compensation from the controller or processor.", "level": 1, "isCategory": false},
+        {"reference": "Art. 83", "title": "Administrative fines", "description": "Each supervisory authority shall ensure that the imposition of administrative fines shall be effective, proportionate and dissuasive. Maximum fines of €10-20 million or 2-4% of annual worldwide turnover.", "level": 1, "isCategory": false},
+        {"reference": "Art. 84", "title": "Penalties", "description": "Member States shall lay down the rules on other penalties applicable to infringements of this Regulation and shall take all measures necessary to ensure that they are implemented.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}

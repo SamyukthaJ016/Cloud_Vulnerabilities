@@ -359,18 +359,16 @@
         <!-- Header -->
         <div class="header">
             <div class="title">
-                <h1>🔍 System Status</h1>
+                <h1>System Status</h1>
                 <div class="overall-status healthy" id="overallStatus">
                     <div class="status-indicator healthy"></div>
                     <span>All Systems Operational</span>
                 </div>
             </div>
             <div style="display: flex; gap: 12px;">
-                <button class="btn btn-secondary" onclick="refreshStatus()">
-                    🔄 Refresh Status
+                <button class="btn btn-secondary" onclick="refreshStatus()">Refresh Status
                 </button>
-                <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">
-                    📊 Dashboard
+                <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">Dashboard
                 </button>
             </div>
         </div>
@@ -378,14 +376,14 @@
         <!-- Overview Charts -->
         <div class="overview-grid">
             <div class="overview-card">
-                <div class="chart-title">📊 Component Health</div>
+                <div class="chart-title">Component Health</div>
                 <div class="chart-container">
                     <canvas id="healthChart"></canvas>
                 </div>
             </div>
 
             <div class="overview-card">
-                <div class="chart-title">📈 System Statistics</div>
+                <div class="chart-title">System Statistics</div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-label">Scans Today</div>
@@ -416,13 +414,11 @@
         </div>
 
         <!-- Last Updated -->
-        <div class="last-updated" id="lastUpdated">
-            Last updated: Loading...
+        <div class="last-updated" id="lastUpdated">Last updated: Loading...
         </div>
     </div>
 
-    <script>
-        let healthChart = null;
+    <script>let healthChart = null;
         let autoRefreshInterval = null;
         let authContext = {
             authenticated: false,
@@ -432,7 +428,7 @@
 
         function stripSsoQueryParams() {
             const currentUrl = new URL(window.location.href);
-            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            ['token', 'from', 'service'].forEach((key) =>currentUrl.searchParams.delete(key));
             window.history.replaceState({}, document.title, currentUrl.toString());
         }
 
@@ -560,22 +556,22 @@
             const groups = [
                 {
                     key: 'mcp_servers',
-                    title: '🖥️ MCP Servers',
+                    title: ' MCP Servers',
                     description: 'Cloud provider integration servers'
                 },
                 {
                     key: 'vulnerability_scanners',
-                    title: '🔍 Vulnerability Scanners',
+                    title: ' Vulnerability Scanners',
                     description: 'Security scanning tools'
                 },
                 {
                     key: 'database',
-                    title: '💾 Database',
+                    title: ' Database',
                     description: 'PostgreSQL database connection'
                 },
                 {
                     key: 'api_endpoints',
-                    title: '🌐 API Endpoints',
+                    title: ' API Endpoints',
                     description: 'REST API availability'
                 }
             ];
@@ -585,7 +581,7 @@
                     ? components[group.key]
                     : [];
 
-                const allOperational = componentsList.length > 0 &&
+                const allOperational = componentsList.length >0 &&
                     componentsList.every(comp =>
                         ['online', 'available', 'operational'].includes(comp.status)
                     );
@@ -610,8 +606,7 @@
 
                         <div class="components-grid">
                             ${componentsList.length === 0 ? `
-                                <div style="color:#408A71;font-size:0.9rem">
-                                    No components available
+                                <div style="color:#408A71;font-size:0.9rem">No components available
                                 </div>
                             ` : componentsList.map(comp => `
                                 <div class="component-card ${comp.status}">
@@ -753,7 +748,7 @@
                 .replace(/_/g, ' ')
                 .replace(/\//g, ' / ')
                 .split(' ')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .map(word =>word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
         }
 
@@ -773,7 +768,7 @@
             // Show feedback
             const btn = event.target;
             const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Refreshing...';
+            btn.innerHTML = ' Refreshing...';
             btn.disabled = true;
             
             setTimeout(() => {
@@ -785,10 +780,9 @@
         function showError() {
             document.getElementById('componentGroups').innerHTML = `
                 <div style="text-align: center; padding: 60px; color: #fca5a5;">
-                    <h2>⚠️ Failed to Load System Status</h2>
+                    <h2>Failed to Load System Status</h2>
                     <p>Please try refreshing the page</p>
-                    <button class="btn btn-secondary" onclick="loadSystemStatus()" style="margin-top: 20px;">
-                        🔄 Retry
+                    <button class="btn btn-secondary" onclick="loadSystemStatus()" style="margin-top: 20px;">Retry
                     </button>
                 </div>
             `;

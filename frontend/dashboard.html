@@ -898,25 +898,20 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="logo">
-                🛡️ CloudGuard Security
+            <div class="logo">CloudGuard Security
                 <div class="status-indicator">
                     <span class="live-badge">● LIVE</span>
                     <span id="last-updated">Loading...</span>
                 </div>
             </div>
             <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="loadDashboard()">
-                    🔄 Refresh Dashboard
+                <button class="btn btn-secondary" onclick="loadDashboard()">Refresh Dashboard
                 </button>
-                <button class="btn btn-secondary" id="grc-button" onclick="openGrc()">
-                    🔗 GRC
+                <button class="btn btn-secondary" id="grc-button" onclick="openGrc()">GRC
                 </button>
-                <button class="btn btn-secondary" onclick="window.location.href='/schedules'">
-                    📅 Scheduled Scans
+                <button class="btn btn-secondary" onclick="window.location.href='/schedules'">Scheduled Scans
                 </button>
-                <button class="btn btn-primary" onclick="startNewScan()">
-                    🚀 New Security Scan
+                <button class="btn btn-primary" onclick="startNewScan()">New Security Scan
                 </button>
             </div>
         </div>
@@ -960,7 +955,7 @@
         <div class="charts-section">
             <div class="chart-container">
                 <div class="chart-header">
-                    <div class="chart-title">📈 Security Trend Over Time</div>
+                    <div class="chart-title">Security Trend Over Time</div>
                     <div class="chart-subtitle">Vulnerabilities found in the last 30 days</div>
                 </div>
                 <div class="chart-wrapper">
@@ -970,7 +965,7 @@
 
             <div class="chart-container">
                 <div class="chart-header">
-                    <div class="chart-title">☁️ Cloud Distribution</div>
+                    <div class="chart-title">Cloud Distribution</div>
                     <div class="chart-subtitle">Resources and findings by cloud platform</div>
                 </div>
                 <div class="chart-wrapper">
@@ -981,9 +976,8 @@
 
         <div class="recent-scans-section">
             <div class="section-header">
-                <div class="section-title">🕒 Recent Scan Runs</div>
-                <button class="btn btn-secondary" onclick="window.location.href='/frontend/history.html'">
-                    View Full History
+                <div class="section-title">Recent Scan Runs</div>
+                <button class="btn btn-secondary" onclick="window.location.href='/frontend/history.html'">View Full History
                 </button>
             </div>
             <div class="recent-scans-table-wrapper">
@@ -1016,7 +1010,7 @@
         <!-- Vulnerabilities Section -->
         <div class="vulnerabilities-section" id="vulnerabilities-section">
             <div class="section-header">
-                <div class="section-title">🔍 Security Findings with AI Remediation</div>
+                <div class="section-title">Security Findings with AI Remediation</div>
                 <div class="severity-filters">
                     <button class="severity-filter active" onclick="filterVulnerabilities('all')">All</button>
                     <button class="severity-filter" onclick="filterVulnerabilities('critical')">Critical</button>
@@ -1041,7 +1035,7 @@
     <!-- Scan Progress Modal -->
     <div class="scan-progress" id="scan-progress">
         <div class="progress-header">
-            <div class="progress-title">🔄 Scan in Progress</div>
+            <div class="progress-title">Scan in Progress</div>
             <button onclick="hideScanProgress()"
                 style="background: none; border: none; color: #B0E4CC; cursor: pointer; font-size: 1.2rem;">✕</button>
         </div>
@@ -1063,8 +1057,7 @@
             <div class="progress-fill" id="progress-fill" style="width: 33%"></div>
         </div>
         <div id="progress-message">Starting cloud scan...</div>
-        <div class="results-ready" id="results-ready" style="display: none;" onclick="scrollToResults()">
-            ✅ Scan Complete! Click to view results
+        <div class="results-ready" id="results-ready" style="display: none;" onclick="scrollToResults()">Scan Complete! Click to view results
         </div>
     </div>
 
@@ -1082,7 +1075,7 @@
 
         function stripSsoQueryParams() {
             const currentUrl = new URL(window.location.href);
-            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            ['token', 'from', 'service'].forEach((key) =>currentUrl.searchParams.delete(key));
             window.history.replaceState({}, document.title, currentUrl.toString());
         }
 
@@ -1154,7 +1147,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const cookieMatch = document.cookie
                 .split('; ')
-                .find((row) => row.startsWith('cloudguard_user_id='));
+                .find((row) =>row.startsWith('cloudguard_user_id='));
             let userId =
                 urlParams.get('user_id') ||
                 sessionStorage.getItem('cloudguard_user_id') ||
@@ -1215,7 +1208,7 @@ aws s3api put-bucket-encryption \\
                 priority: 'CRITICAL',
                 estimatedTime: '30 minutes',
                 steps: [
-                    '⚠️ IMMEDIATELY rotate compromised access keys',
+                    ' IMMEDIATELY rotate compromised access keys',
                     'Enable MFA for all IAM users',
                     'Implement least privilege access policies',
                     'Use AWS Secrets Manager for credentials',
@@ -1249,7 +1242,7 @@ aws secretsmanager create-secret \\
                 priority: 'CRITICAL',
                 estimatedTime: '10 minutes',
                 steps: [
-                    '🚨 IMMEDIATELY revoke the exposed credential',
+                    ' IMMEDIATELY revoke the exposed credential',
                     'Scan git history for secret exposure',
                     'Generate new credentials using secrets manager',
                     'Implement pre-commit hooks with Gitleaks',
@@ -1292,7 +1285,7 @@ chmod +x .git/hooks/pre-commit`,
                 code: (resourceName) => `# Python (Safety/pip)
 pip install --upgrade ${resourceName}==FIXED_VERSION
 safety check
-pip freeze > requirements.txt
+pip freeze >requirements.txt
 
 # Node.js (npm audit)
 npm install ${resourceName}@FIXED_VERSION
@@ -1481,7 +1474,7 @@ EOF`,
                     'Roll out the patched workload and verify the pod security context is enforced'
                 ],
                 code: (resourceName) => `# Harden the workload manifest for ${resourceName || 'WORKLOAD_NAME'}
-cat <<'EOF' > hardened-workload-snippet.yaml
+cat <<'EOF' >hardened-workload-snippet.yaml
 spec:
   template:
     spec:
@@ -1770,7 +1763,7 @@ kubectl patch storageclass ${resourceName || 'STORAGECLASS_NAME'} \\
 kubectl taint nodes ${resourceName || 'CONTROL_PLANE_NODE'} node-role.kubernetes.io/control-plane=:NoSchedule --overwrite
 
 # Remove a broad toleration or hard node pinning from the workload manifest
-kubectl get deployment APP_DEPLOYMENT -o yaml > deployment.yaml
+kubectl get deployment APP_DEPLOYMENT -o yaml >deployment.yaml
 # Edit tolerations / nodeSelector / nodeName in deployment.yaml, then apply
 kubectl apply -f deployment.yaml`,
                 validation: 'kubectl get nodes -o wide && kubectl get pods -A -o wide',
@@ -1789,7 +1782,7 @@ kubectl apply -f deployment.yaml`,
                 vuln.cloud || ''
             ].join(' ').toLowerCase();
 
-            const matchesAny = (patterns) => patterns.some((pattern) => text.includes(pattern));
+            const matchesAny = (patterns) =>patterns.some((pattern) =>text.includes(pattern));
 
             if (matchesAny([
                 'cluster admin binding',
@@ -1941,7 +1934,7 @@ kubectl apply -f deployment.yaml`,
 
             const button = document.getElementById('grc-button');
             if (button) {
-                button.textContent = '🔗 GRC';
+                button.textContent = ' GRC';
             }
 
             try {
@@ -1951,11 +1944,11 @@ kubectl apply -f deployment.yaml`,
 
                 if (button) {
                     if (data.server_sync_available) {
-                        button.textContent = '🔗 GRC Synced';
+                        button.textContent = ' GRC Synced';
                     } else if (data.browser_bridge_available) {
-                        button.textContent = '🔗 Open GRC';
+                        button.textContent = ' Open GRC';
                     } else {
-                        button.textContent = '🔗 GRC';
+                        button.textContent = ' GRC';
                     }
                 }
             } catch (error) {
@@ -2001,10 +1994,10 @@ kubectl apply -f deployment.yaml`,
 
                 if (scanIds) {
                     sessionStorage.setItem('last_scan_ids', scanIds);
-                    console.log('💾 Saving scanIds to session:', scanIds);
+                    console.log(' Saving scanIds to session:', scanIds);
                 } else {
                     scanIds = sessionStorage.getItem('last_scan_ids');
-                    if (scanIds) console.log('📂 Retrieved scanIds from session fallback:', scanIds);
+                    if (scanIds) console.log(' Retrieved scanIds from session fallback:', scanIds);
                 }
 
                 const filter = scanIds ? `?scan_ids=${scanIds}` : '';
@@ -2027,9 +2020,9 @@ kubectl apply -f deployment.yaml`,
                 const findingsRes = await fetch(`/api/latest-findings${filter}${scanIds ? '&' : '?'}limit=${findingsLimit}`);
                 const findings = await findingsRes.json();
 
-                console.log('📊 Dashboard Summary:', summary);
-                console.log('☁️ Providers Breakdown:', providers);
-                console.log('🔍 Latest Findings:', findings);
+                console.log(' Dashboard Summary:', summary);
+                console.log(' Providers Breakdown:', providers);
+                console.log(' Latest Findings:', findings);
 
                 document.getElementById('total-resources').textContent =
                     summary.total_resources || 0;
@@ -2146,7 +2139,7 @@ kubectl apply -f deployment.yaml`,
                 });
             });
 
-            const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+            const entries = Object.entries(counts).sort((a, b) =>b[1] - a[1]).slice(0, 4);
             container.innerHTML = entries.map(([tool, count]) => `
                 <div class="tool-summary-card">
                     <div class="tool-summary-title">${tool}</div>
@@ -2196,10 +2189,10 @@ kubectl apply -f deployment.yaml`,
             const expanded = element.closest('.vulnerability-card').querySelector('.expanded-content');
             if (expanded.classList.contains('show')) {
                 expanded.classList.remove('show');
-                element.innerHTML = '⚡ View Complete Remediation Plan';
+                element.innerHTML = ' View Complete Remediation Plan';
             } else {
                 expanded.classList.add('show');
-                element.innerHTML = '⚡ Show Less';
+                element.innerHTML = ' Show Less';
             }
         }
 
@@ -2233,7 +2226,7 @@ kubectl apply -f deployment.yaml`,
                         datasets: [
                             {
                                 label: 'Vulnerabilities',
-                                data: chartData.map(d => d.findings || 0),
+                                data: chartData.map(d =>d.findings || 0),
                                 borderColor: '#f97316',
                                 backgroundColor: 'rgba(249, 115, 22, 0.1)',
                                 tension: 0.4,
@@ -2244,7 +2237,7 @@ kubectl apply -f deployment.yaml`,
                             },
                             {
                                 label: 'Critical Issues',
-                                data: chartData.map(d => d.critical || 0),
+                                data: chartData.map(d =>d.critical || 0),
                                 borderColor: '#ef4444',
                                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
                                 tension: 0.4,
@@ -2324,9 +2317,9 @@ kubectl apply -f deployment.yaml`,
                 return;
             }
 
-            const labels = providers.map(p => p.provider?.toUpperCase() || 'Unknown');
-            const resources = providers.map(p => p.resources || 0);
-            const findings = providers.map(p => p.findings || 0);
+            const labels = providers.map(p =>p.provider?.toUpperCase() || 'Unknown');
+            const resources = providers.map(p =>p.resources || 0);
+            const findings = providers.map(p =>p.findings || 0);
 
             const colors = {
                 'AWS': 'rgba(255, 153, 0, 0.8)',
@@ -2336,7 +2329,7 @@ kubectl apply -f deployment.yaml`,
                 'UNKNOWN': 'rgba(176, 228, 204, 0.8)'
             };
 
-            const backgroundColors = labels.map(label => colors[label] || colors.UNKNOWN);
+            const backgroundColors = labels.map(label =>colors[label] || colors.UNKNOWN);
 
             cloudChart = new Chart(ctx, {
                 type: 'bar',
@@ -2353,7 +2346,7 @@ kubectl apply -f deployment.yaml`,
                         {
                             label: 'Vulnerabilities',
                             data: findings,
-                            backgroundColor: backgroundColors.map(c => c.replace('0.8', '0.4')),
+                            backgroundColor: backgroundColors.map(c =>c.replace('0.8', '0.4')),
                             borderRadius: 6,
                             borderSkipped: false
                         }
@@ -2413,7 +2406,7 @@ kubectl apply -f deployment.yaml`,
             if (!providers || providers.length === 0) {
                 container.innerHTML = `
                     <div class="no-data">
-                        <div class="no-data-icon">☁️</div>
+                        <div class="no-data-icon">CLD</div>
                         <h3>No cloud providers scanned yet</h3>
                         <p>Run a scan to see your cloud security posture</p>
                     </div>`;
@@ -2421,18 +2414,18 @@ kubectl apply -f deployment.yaml`,
             }
 
             const cloudIcons = {
-                'aws': { icon: '☁️', class: 'aws-icon', color: '#ff9900' },
-                'gcp': { icon: '📊', class: 'gcp-icon', color: '#4285f4' },
-                'kubernetes': { icon: '⎈', class: 'kubernetes-icon', color: '#326ce5' },
-                'iac': { icon: '🧱', class: 'openai-icon', color: '#f472b6' },
-                'container': { icon: '🐳', class: 'azure-icon', color: '#38bdf8' },
-                'azure': { icon: '🔷', class: 'azure-icon', color: '#0078d4' },
-                'openai': { icon: '🤖', class: 'openai-icon', color: '#10a37f' }
+                'aws': { icon: 'AWS', class: 'aws-icon', color: '#ff9900' },
+                'gcp': { icon: 'GCP', class: 'gcp-icon', color: '#4285f4' },
+                'kubernetes': { icon: 'K8S', class: 'kubernetes-icon', color: '#326ce5' },
+                'iac': { icon: 'IaC', class: 'openai-icon', color: '#f472b6' },
+                'container': { icon: 'CTR', class: 'azure-icon', color: '#38bdf8' },
+                'azure': { icon: 'AZ', class: 'azure-icon', color: '#0078d4' },
+                'openai': { icon: 'AI', class: 'openai-icon', color: '#10a37f' }
             };
 
             container.innerHTML = providers.map(provider => {
                 const cloud = provider.provider?.toLowerCase() || 'unknown';
-                const cloudInfo = cloudIcons[cloud] || { icon: '☁️', class: 'aws-icon', color: '#B0E4CC' };
+                const cloudInfo = cloudIcons[cloud] || { icon: 'CLD', class: 'aws-icon', color: '#B0E4CC' };
 
                 return `
                     <div class="cloud-card">
@@ -2454,7 +2447,7 @@ kubectl apply -f deployment.yaml`,
                                 <div class="metric-label">Resources</div>
                             </div>
                             <div class="metric">
-                                <div class="metric-value" style="color: ${provider.findings > 0 ? '#ef4444' : '#10b981'}">
+                                <div class="metric-value" style="color: ${provider.findings >0 ? '#ef4444' : '#10b981'}">
                                     ${provider.findings || 0}
                                 </div>
                                 <div class="metric-label">Vulnerabilities</div>
@@ -2484,7 +2477,7 @@ kubectl apply -f deployment.yaml`,
             if (!findings || findings.length === 0) {
                 container.innerHTML = `
                     <div class="no-data">
-                        <div class="no-data-icon">🎉</div>
+                        <div class="no-data-icon">SAFE</div>
                         <h3>No vulnerabilities found</h3>
                         <p>Your cloud environment is secure!</p>
                     </div>`;
@@ -2502,12 +2495,12 @@ kubectl apply -f deployment.yaml`,
                 const displayedCount = vulns.length;
                 const headingText = isFullScanResults
                     ? `${displayedCount} vulnerabilities found`
-                    : `${displayedCount} recent vulnerabilities shown${totalFindings > displayedCount ? ` of ${totalFindings}` : ''}`;
+                    : `${displayedCount} recent vulnerabilities shown${totalFindings >displayedCount ? ` of ${totalFindings}` : ''}`;
 
                 return `
                     <div style="margin-bottom: 30px;">
                         <h3 style="margin-bottom: 16px; color: #B0E4CC; font-size: 1.1rem;">
-                            ☁️ ${cloud} Cloud
+                             ${cloud} Cloud
                             <span style="color: #B0E4CC; font-size: 0.9rem; margin-left: 12px;">
                                 ${headingText}
                             </span>
@@ -2525,7 +2518,7 @@ kubectl apply -f deployment.yaml`,
                                     <div class="vuln-header">
                                         <div class="vuln-title">
                                             ${v.description?.substring(0, 100) || 'Unknown vulnerability'}
-                                            ${v.description?.length > 100 ? '...' : ''}
+                                            ${v.description?.length >100 ? '...' : ''}
                                         </div>
                                         <div class="severity-badge ${severity}">
                                             ${v.severity || 'MEDIUM'}
@@ -2543,7 +2536,7 @@ kubectl apply -f deployment.yaml`,
                                         <div class="info-item">
                                             <span class="info-label">Detected by:</span>
                                             <span class="tool-badge">
-                                                🔧 ${v.tool || 'Unknown Tool'}
+                                                 ${v.tool || 'Unknown Tool'}
                                             </span>
                                         </div>
                                     </div>
@@ -2554,8 +2547,7 @@ kubectl apply -f deployment.yaml`,
                                     
                                     <!-- AI Remediation Section -->
                                     <div class="ai-remediation">
-                                        <div class="ai-header">
-                                            ⚡ AI-Powered Remediation: ${remediation.title}
+                                        <div class="ai-header">AI-Powered Remediation: ${remediation.title}
                                         </div>
                                         
                                         <div class="ai-priority">
@@ -2597,8 +2589,7 @@ kubectl apply -f deployment.yaml`,
                                             </div>
                                         </div>
                                         
-                                        <button class="toggle-btn" onclick="toggleRemediation(this)">
-                                            ⚡ View Complete Remediation Plan
+                                        <button class="toggle-btn" onclick="toggleRemediation(this)">View Complete Remediation Plan
                                         </button>
                                     </div>
                                 </div>
@@ -2642,7 +2633,7 @@ kubectl apply -f deployment.yaml`,
 
             const interval = setInterval(() => {
                 progressPercent += Math.random() * 10;
-                if (progressPercent > 100) progressPercent = 100;
+                if (progressPercent >100) progressPercent = 100;
                 progressFill.style.width = progressPercent + '%';
 
                 if (progressPercent >= 33) {
@@ -2718,12 +2709,12 @@ kubectl apply -f deployment.yaml`,
                 gap: 12px;
             `;
             errorDiv.innerHTML = `
-                <span>⚠️</span>
+                <span></span>
                 <span>${message}</span>
             `;
             container.insertBefore(errorDiv, container.firstChild);
 
-            setTimeout(() => errorDiv.remove(), 5000);
+            setTimeout(() =>errorDiv.remove(), 5000);
         }
 
         function showNoData(canvas, message) {
@@ -2734,7 +2725,7 @@ kubectl apply -f deployment.yaml`,
 
             container.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #408A71;">
-                    <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">📊</div>
+                    <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">DATA</div>
                     <div style="font-size: 0.9rem; text-align: center;">${message}</div>
                 </div>
             `;

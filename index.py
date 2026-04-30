@@ -31,12 +31,6 @@ LIGHTWEIGHT_PATHS = {
     "/api/auth/sso/exchange",
     "/api/grc/status",
     "/api/grc/sync",
-    "/api/billing/plans",
-    "/api/billing/subscription",
-    "/api/billing/entitlements",
-    "/api/billing/subscribe",
-    "/api/billing/webhook",
-    "/api/billing/verify",
     "/api/uploads/iac-folder",
     "/api/credentials/providers/status",
     "/api/provider-breakdown",
@@ -260,30 +254,6 @@ def _credential_manager():
     from backend.credentials.manager import credential_manager
 
     return credential_manager
-
-
-def _billing_helpers():
-    from backend.billing import (
-        billing_enabled,
-        billing_enforcement_enabled,
-        create_subscription_request,
-        get_billing_dashboard,
-        get_provider_access_decision,
-        list_plans,
-        process_razorpay_webhook,
-        verify_product_access,
-    )
-
-    return {
-        "billing_enabled": billing_enabled,
-        "billing_enforcement_enabled": billing_enforcement_enabled,
-        "create_subscription_request": create_subscription_request,
-        "get_billing_dashboard": get_billing_dashboard,
-        "get_provider_access_decision": get_provider_access_decision,
-        "list_plans": list_plans,
-        "process_razorpay_webhook": process_razorpay_webhook,
-        "verify_product_access": verify_product_access,
-    }
 
 
 def _cloud_credential_cls():
@@ -726,80 +696,6 @@ async def lightweight_grc_sync():
     return await trigger_grc_sync()
 
 
-@lightweight_app.get("/api/billing/plans")
-async def lightweight_billing_plans():
-    billing = _billing_helpers()
-    return {
-        "billing_enabled": billing["billing_enabled"](),
-        "plans": billing["list_plans"](),
-    }
-
-
-@lightweight_app.get("/api/billing/subscription")
-async def lightweight_billing_subscription(request: Request):
-    billing = _billing_helpers()
-    return billing["get_billing_dashboard"](_standalone_user_id(request))
-
-
-@lightweight_app.get("/api/billing/entitlements")
-async def lightweight_billing_entitlements(request: Request):
-    billing = _billing_helpers()
-    snapshot = billing["get_billing_dashboard"](_standalone_user_id(request))
-    return {
-        "role": snapshot["role"],
-        "entitled_providers": snapshot["entitled_providers"],
-        "current_subscription": snapshot["current_subscription"],
-        "billing_enforcement": snapshot["billing_enforcement"],
-    }
-
-
-@lightweight_app.post("/api/billing/subscribe")
-async def lightweight_billing_subscribe(request: Request):
-    billing = _billing_helpers()
-    payload = await request.json()
-    try:
-        return billing["create_subscription_request"](
-            user_id=_standalone_user_id(request),
-            plan_id=str(payload.get("plan_id") or "").strip(),
-            email=(payload.get("email") or "").strip() or None,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-@lightweight_app.post("/api/billing/webhook")
-async def lightweight_billing_webhook(
-    request: Request,
-):
-    billing = _billing_helpers()
-    signature = request.headers.get("X-Razorpay-Signature")
-    event_id = request.headers.get("X-Razorpay-Event-Id")
-
-    try:
-        raw_body = await request.body()
-        return billing["process_razorpay_webhook"](
-            raw_body=raw_body,
-            signature=signature,
-            provided_event_id=event_id,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-@lightweight_app.get("/api/billing/verify")
-async def lightweight_billing_verify(request: Request):
-    billing = _billing_helpers()
-    email = (request.query_params.get("email") or "").strip()
-    product = (request.query_params.get("product") or "").strip()
-    api_key = (request.headers.get("X-API-Key") or "").strip()
-    try:
-        return billing["verify_product_access"](email=email, product_id=product, api_key=api_key)
-    except PermissionError as exc:
-        raise HTTPException(status_code=401, detail=str(exc))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
 @lightweight_app.post("/api/uploads/iac-folder")
 async def lightweight_upload_iac_folder(
     req: Request,
@@ -1129,19 +1025,6 @@ async def lightweight_start_scan(request: Request):
         payload = {}
 
     payload.setdefault("user_id", _standalone_user_id(request))
-
-    billing = _billing_helpers()
-    if billing["billing_enforcement_enabled"]():
-        access = billing["get_provider_access_decision"](payload["user_id"], payload.get("providers") or [])
-        if not access["allowed"]:
-            return JSONResponse(
-                status_code=402,
-                content={
-                    "status": "subscription_required",
-                    "detail": "An active CloudGuard subscription is required for one or more selected scanners.",
-                    "billing": access,
-                },
-            )
 
     try:
         import httpx

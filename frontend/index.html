@@ -125,11 +125,6 @@
             gap: 8px;
         }
 
-        .subscription-inline {
-            font-size: 0.85rem;
-            color: rgba(176, 228, 204, 0.88);
-        }
-
         .credentials-actions {
             display: flex;
             gap: 12px;
@@ -724,17 +719,6 @@
             box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
         }
 
-        .btn-subscription {
-            background: linear-gradient(135deg, #091413, #285A48);
-            color: #B0E4CC;
-            border: 1px solid rgba(176, 228, 204, 0.22);
-        }
-
-        .btn-subscription:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(9, 20, 19, 0.35);
-        }
-
         /* Features Panel */
         .features-panel {
             display: flex;
@@ -1082,10 +1066,9 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="logo">🛡️</div>
+            <div class="logo">CG</div>
             <h1 class="title">CloudGuard Security Scanner</h1>
-            <p class="subtitle">
-                AI-powered multi-cloud security scanning with real-time vulnerability detection.
+            <p class="subtitle">AI-powered multi-cloud security scanning with real-time vulnerability detection.
                 Protect your AWS, GCP and Azure environments.
             </p>
         </div>
@@ -1094,9 +1077,8 @@
         <div class="content-grid">
             <!-- Left Panel: Scan Configuration -->
             <div class="scan-panel">
-                <h2 class="panel-title">⚙️ Configure Your Scan</h2>
-                <p class="panel-subtitle">
-                    Select cloud providers, configure scan options, and schedule your security assessment.
+                <h2 class="panel-title">Configure Your Scan</h2>
+                <p class="panel-subtitle">Select cloud providers, configure scan options, and schedule your security assessment.
                 </p>
 
                 <!-- Credentials Banner -->
@@ -1105,15 +1087,10 @@
                         <div class="status-dot" id="credentialsStatus"></div>
                         <div class="credentials-stack">
                             <span id="credentialsMessage">Checking credentials...</span>
-                            <span class="subscription-inline" id="subscriptionInlineStatus">Loading subscription status...</span>
                         </div>
                     </div>
                     <div class="credentials-actions">
-                        <button class="btn btn-credentials" onclick="openCredentialsModal()">
-                            🔐 Manage Credentials
-                        </button>
-                        <button class="btn btn-subscription" onclick="openSubscriptionModal()">
-                            💳 Subscription
+                        <button class="btn btn-credentials" onclick="openCredentialsModal()">Manage Credentials
                         </button>
                     </div>
                 </div>
@@ -1122,12 +1099,10 @@
                     <div class="input-label-row">
                         <div class="input-label">Select Scan Types</div>
                         <button class="btn btn-text btn-sm" onclick="clearSelection()"
-                            style="padding: 2px 8px; font-size: 12px; color: var(--accent-blue); background: none; border: 1px solid var(--accent-blue); border-radius: 4px; cursor: pointer;">
-                            🧹 Clear Selection
+                            style="padding: 2px 8px; font-size: 12px; color: var(--accent-blue); background: none; border: 1px solid var(--accent-blue); border-radius: 4px; cursor: pointer;">Clear Selection
                         </button>
                     </div>
-                    <div class="scan-target-hint" style="margin-bottom: 14px;">
-                        Choose from the 5 available scans here. AWS, GCP, and Kubernetes use saved credentials. IaC and Container scans only need local target details.
+                    <div class="scan-target-hint" style="margin-bottom: 14px;">Choose from the 5 available scans here. AWS, GCP, and Kubernetes use saved credentials. IaC and Container scans only need local target details.
                     </div>
                     <div class="providers-grid" id="providersGrid">
                         <!-- Dynamically populated -->
@@ -1137,21 +1112,18 @@
                 <!-- Scan Schedule Section -->
                 <div class="scan-schedule">
                     <div class="schedule-tabs">
-                        <button class="schedule-tab active" onclick="switchScheduleTab('immediate')">
-                            🚀 Immediate Scan
+                        <button class="schedule-tab active" onclick="switchScheduleTab('immediate')">Immediate Scan
                         </button>
-                        <button class="schedule-tab" onclick="switchScheduleTab('scheduled')">
-                            📅 Schedule Scan
+                        <button class="schedule-tab" onclick="switchScheduleTab('scheduled')">Schedule Scan
                         </button>
-                        <button class="schedule-tab" onclick="switchScheduleTab('recurring')">
-                            🔄 Recurring Scan
+                        <button class="schedule-tab" onclick="switchScheduleTab('recurring')">Recurring Scan
                         </button>
                     </div>
 
                     <!-- Immediate Scan Tab -->
                     <div id="immediateTab" class="schedule-content active">
                         <div class="immediate-scan-info">
-                            <h4>⚡ Run Scan Now</h4>
+                            <h4>Run Scan Now</h4>
                             <p>Start a comprehensive security scan immediately across all selected cloud providers.</p>
                         </div>
                     </div>
@@ -1161,16 +1133,16 @@
                         <div class="schedule-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">📅 Scan Date</label>
+                                    <label class="form-label">Scan Date</label>
                                     <input type="date" class="form-input" id="scheduleDate">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">⏰ Scan Time</label>
+                                    <label class="form-label">Scan Time</label>
                                     <input type="time" class="form-input" id="scheduleTime">
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">🌍 Timezone</label>
+                                <label class="form-label">Timezone</label>
                                 <select class="form-select" id="scheduleTimezone">
                                     <option value="UTC">UTC</option>
                                     <option value="America/New_York">Eastern Time (ET)</option>
@@ -1182,7 +1154,7 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">📝 Scan Name (Optional)</label>
+                                <label class="form-label">Scan Name (Optional)</label>
                                 <input type="text" class="form-input" id="scheduleName"
                                     placeholder="e.g., Weekly Security Audit">
                             </div>
@@ -1193,14 +1165,13 @@
                     <div id="recurringTab" class="schedule-content">
                         <div class="schedule-form">
                             <div class="form-group">
-                                <label class="form-label">📝 Schedule Name</label>
+                                <label class="form-label">Schedule Name</label>
                                 <input type="text" class="form-input" id="recurringName"
                                     placeholder="e.g., Daily Security Check">
                             </div>
 
                             <div class="recurring-options">
-                                <div class="recurring-header">
-                                    🔄 Scan Frequency
+                                <div class="recurring-header">Scan Frequency
                                 </div>
                                 <div class="frequency-selector">
                                     <button class="frequency-btn" data-frequency="10m">10 Mins</button>
@@ -1216,11 +1187,11 @@
 
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">⏰ Start Time</label>
+                                    <label class="form-label">Start Time</label>
                                     <input type="time" class="form-input" id="recurringTime" value="02:00">
                                 </div>
                                 <div class="form-group">
-                                    <label class="form-label">🌍 Timezone</label>
+                                    <label class="form-label">Timezone</label>
                                     <select class="form-select" id="recurringTimezone">
                                         <option value="UTC">UTC</option>
                                         <option value="America/New_York">Eastern Time (ET)</option>
@@ -1237,31 +1208,27 @@
                 <!-- Credential Selection -->
                 <div class="credential-selector" id="awsCredentialSelector" style="margin-bottom: 20px; display: none;">
                     <label for="scanCredentialSelect"
-                        style="display: block; margin-bottom: 8px; font-weight: 600; color: #B0E4CC;">
-                        Select AWS Credential
+                        style="display: block; margin-bottom: 8px; font-weight: 600; color: #B0E4CC;">Select AWS Credential
                     </label>
                     <select id="scanCredentialSelect"
                         style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #408A71; background: #285A48; color: #B0E4CC; font-size: 14px;">
                         <option value="">Use Default Credential</option>
                         <!-- Populated dynamically -->
                     </select>
-                    <span style="font-size: 12px; color: #B0E4CC; margin-top: 4px; display: block;">
-                        Choose which AWS credential to use for this scan
+                    <span style="font-size: 12px; color: #B0E4CC; margin-top: 4px; display: block;">Choose which AWS credential to use for this scan
                     </span>
                 </div>
 
                 <div class="scan-targets hidden" id="specializedScanConfig">
                     <div class="scan-targets-header">
                         <div class="input-label">Configure Selected Local Scans</div>
-                        <div class="scan-targets-note">
-                            Container scan options appear here only when you select Container above.
+                        <div class="scan-targets-note">Container scan options appear here only when you select Container above.
                         </div>
                     </div>
 
                     <div class="scan-target-card hidden" id="containerTargetCard">
                         <div class="scan-target-title">Container Security</div>
-                        <div class="scan-target-hint">
-                            Provide a Docker image reference for CVE and SBOM scanning, or a local extracted image/filesystem path. The scanner can use Trivy, Grype, Snyk, Syft, and Hadolint when available.
+                        <div class="scan-target-hint">Provide a Docker image reference for CVE and SBOM scanning, or a local extracted image/filesystem path. The scanner can use Trivy, Grype, Snyk, Syft, and Hadolint when available.
                         </div>
                         <div class="form-row">
                             <div class="form-group">
@@ -1276,12 +1243,12 @@
                             </div>
                         </div>
                         <div class="tool-grid">
-                            <label class="tool-toggle"><input type="checkbox" id="containerToolTrivy" checked> Trivy</label>
-                            <label class="tool-toggle"><input type="checkbox" id="containerToolGrype" checked> Grype</label>
-                            <label class="tool-toggle"><input type="checkbox" id="containerToolSnyk"> Snyk</label>
-                            <label class="tool-toggle"><input type="checkbox" id="containerToolHadolint" checked> Hadolint</label>
-                            <label class="tool-toggle"><input type="checkbox" id="containerSbomTrivy" checked> SBOM via Trivy</label>
-                            <label class="tool-toggle"><input type="checkbox" id="containerSbomSyft" checked> SBOM via Syft</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolTrivy" checked>Trivy</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolGrype" checked>Grype</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolSnyk">Snyk</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerToolHadolint" checked>Hadolint</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerSbomTrivy" checked>SBOM via Trivy</label>
+                            <label class="tool-toggle"><input type="checkbox" id="containerSbomSyft" checked>SBOM via Syft</label>
                         </div>
                     </div>
                 </div>
@@ -1292,10 +1259,8 @@
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="deepScan" class="checkbox" checked>
                         </div>
-                        <label for="deepScan" class="option-label">
-                            Deep Vulnerability Scan
-                            <span class="option-hint">
-                                Use advanced vulnerability scanners (Trivy, Grype, Safety, etc.) for in-depth analysis
+                        <label for="deepScan" class="option-label">Deep Vulnerability Scan
+                            <span class="option-hint">Use advanced vulnerability scanners (Trivy, Grype, Safety, etc.) for in-depth analysis
                             </span>
                         </label>
                     </div>
@@ -1304,10 +1269,8 @@
                         <div class="checkbox-wrapper">
                             <input type="checkbox" id="aiAnalysis" class="checkbox" checked>
                         </div>
-                        <label for="aiAnalysis" class="option-label">
-                            AI-Powered Analysis
-                            <span class="option-hint">
-                                Get AI recommendations and remediation plans from GPT-4
+                        <label for="aiAnalysis" class="option-label">AI-Powered Analysis
+                            <span class="option-hint">Get AI recommendations and remediation plans from GPT-4
                             </span>
                         </label>
                     </div>
@@ -1318,10 +1281,8 @@
                                 <input type="checkbox" id="emailNotification" class="checkbox"
                                     onchange="toggleEmailInput()">
                             </div>
-                            <label for="emailNotification" class="option-label">
-                                Email Notification
-                                <span class="option-hint">
-                                    Receive scan results and critical alerts via email
+                            <label for="emailNotification" class="option-label">Email Notification
+                                <span class="option-hint">Receive scan results and critical alerts via email
                                 </span>
                             </label>
                         </div>
@@ -1336,11 +1297,10 @@
 
                 <!-- Action Buttons -->
                 <div class="buttons-group">
-                    <button class="btn btn-secondary" onclick="goToDashboard()">
-                        📊 View Dashboard
+                    <button class="btn btn-secondary" onclick="goToDashboard()">View Dashboard
                     </button>
                     <button class="btn btn-primary" onclick="startScan()">
-                        <span id="scanButtonText">🚀 Start Security Scan</span>
+                        <span id="scanButtonText">Start Security Scan</span>
                     </button>
                 </div>
             </div>
@@ -1349,30 +1309,27 @@
             <div class="features-panel">
                 <!-- Feature 1 -->
                 <div class="feature-card">
-                    <div class="feature-icon">🔐</div>
+                    <div class="feature-icon">SEC</div>
                     <h3 class="feature-title">Secure Credential Management</h3>
-                    <p class="feature-description">
-                        Store your cloud credentials securely with encryption. Use your own AWS,GCP and Azure
+                    <p class="feature-description">Store your cloud credentials securely with encryption. Use your own AWS,GCP and Azure
                         credentials for scanning instead of environment variables.
                     </p>
                 </div>
 
                 <!-- Feature 2 -->
                 <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
+                    <div class="feature-icon">AI</div>
                     <h3 class="feature-title">AI-Powered Analysis</h3>
-                    <p class="feature-description">
-                        Our GPT-4 powered AI analyzes scan results, provides risk assessments,
+                    <p class="feature-description">Our GPT-4 powered AI analyzes scan results, provides risk assessments,
                         and generates actionable remediation plans with priority levels.
                     </p>
                 </div>
 
                 <!-- Feature 3 -->
                 <div class="feature-card">
-                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-icon">VULN</div>
                     <h3 class="feature-title">Vulnerability Detection</h3>
-                    <p class="feature-description">
-                        Integrated with industry-standard vulnerability scanners including
+                    <p class="feature-description">Integrated with industry-standard vulnerability scanners including
                         Trivy, Grype, Safety, and OWASP tools for comprehensive security coverage.
                     </p>
                 </div>
@@ -1390,10 +1347,9 @@
         <!-- Scan Progress Modal -->
         <div class="scan-modal" id="scanModal">
             <div class="modal-content">
-                <div class="modal-icon">🔄</div>
+                <div class="modal-icon">SCAN</div>
                 <h2 class="modal-title">Security Scan in Progress</h2>
-                <p class="modal-message" id="scanStatusMessage">
-                    Initializing cloud security scan...
+                <p class="modal-message" id="scanStatusMessage">Initializing cloud security scan...
                 </p>
 
                 <div class="progress-bar">
@@ -1404,8 +1360,7 @@
                     <div style="color: #B0E4CC; font-size: 0.9rem; margin-bottom: 8px;">
                         <span id="currentStep">Connecting to cloud APIs...</span>
                     </div>
-                    <div style="color: #408A71; font-size: 0.85rem;">
-                        Estimated time: <span id="estimatedTime">2-3 minutes</span>
+                    <div style="color: #408A71; font-size: 0.85rem;">Estimated time: <span id="estimatedTime">2-3 minutes</span>
                     </div>
                 </div>
             </div>
@@ -1414,16 +1369,15 @@
         <!-- Footer -->
         <div class="footer">
             <div class="nav-links">
-                <a href="/dashboard" class="nav-link" style="display: none;">📊 Dashboard</a>
-                <a href="/frontend/history.html" class="nav-link">📜 Scan History</a>
-                <a href="/system-status" class="nav-link" style="display: none;">🔍 System Status</a>
-                <a href="#" class="nav-link" onclick="openCredentialsModal()">🔐 Credentials</a>
-                <a href="/api/info" class="nav-link">🔧 API Info</a>
-                <a href="/health" class="nav-link">❤️ Health</a>
+                <a href="/dashboard" class="nav-link" style="display: none;">Dashboard</a>
+                <a href="/frontend/history.html" class="nav-link">Scan History</a>
+                <a href="/system-status" class="nav-link" style="display: none;">System Status</a>
+                <a href="#" class="nav-link" onclick="openCredentialsModal()">Credentials</a>
+                <a href="/api/info" class="nav-link">API Info</a>
+                <a href="/health" class="nav-link">Health</a>
             </div>
             <p>CloudGuard Security Scanner v3.1 • Multi-Cloud CSPM with AI & Credential Management</p>
-            <p style="margin-top: 8px; font-size: 0.8rem; color: #408A71;">
-                Securing AWS, GCP, Kubernetes and Azure environments with user credentials
+            <p style="margin-top: 8px; font-size: 0.8rem; color: #408A71;">Securing AWS, GCP, Kubernetes and Azure environments with user credentials
             </p>
         </div>
     </div>
@@ -1445,14 +1399,7 @@
         };
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
-        let allCredentialsMap = {}; // Global map ID -> detail
-        let billingSnapshot = {
-            role: 'free',
-            email: '',
-            mode: 'skeleton',
-            current_subscription: null,
-            entitled_providers: []
-        };
+        let allCredentialsMap = {}; // Global map ID ->detail
         let authContext = {
             authenticated: false,
             auth_mode: 'standalone',
@@ -1464,16 +1411,16 @@
             fileCount: 0
         };
         const scanProviders = [
-            { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon', requiresCredentials: true, autoSelect: true },
-            { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon', requiresCredentials: true, autoSelect: true },
-            { id: 'kubernetes', name: 'Kubernetes', icon: '⎈', iconClass: 'kubernetes-icon', requiresCredentials: true, autoSelect: true },
-            { id: 'iac', name: 'IaC', icon: '🧱', iconClass: 'iac-icon', requiresCredentials: false, autoSelect: false },
-            { id: 'container', name: 'Container', icon: '🐳', iconClass: 'container-icon', requiresCredentials: false, autoSelect: false }
+            { id: 'aws', name: 'AWS', icon: 'AWS', iconClass: 'aws-icon', requiresCredentials: true, autoSelect: true },
+            { id: 'gcp', name: 'GCP', icon: 'GCP', iconClass: 'gcp-icon', requiresCredentials: true, autoSelect: true },
+            { id: 'kubernetes', name: 'Kubernetes', icon: 'K8S', iconClass: 'kubernetes-icon', requiresCredentials: true, autoSelect: true },
+            { id: 'iac', name: 'IaC', icon: 'IaC', iconClass: 'iac-icon', requiresCredentials: false, autoSelect: false },
+            { id: 'container', name: 'Container', icon: 'CTR', iconClass: 'container-icon', requiresCredentials: false, autoSelect: false }
         ];
 
         function stripSsoQueryParams() {
             const currentUrl = new URL(window.location.href);
-            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            ['token', 'from', 'service'].forEach((key) =>currentUrl.searchParams.delete(key));
             window.history.replaceState({}, document.title, currentUrl.toString());
         }
 
@@ -1550,16 +1497,13 @@
 
             // Set user ID
             const userId = getUserId();
-            console.log('👤 User ID:', userId);
+            console.log(' User ID:', userId);
 
             // Load recent scans
             await loadRecentScans();
 
             // Check credentials status
             await checkCredentialsStatus();
-
-            // Load subscription summary
-            await loadBillingStatus();
 
             // Load providers with credential status
             await loadProviders();
@@ -1624,7 +1568,7 @@
         function setupFrequencySelector() {
             document.querySelectorAll('.frequency-btn').forEach(btn => {
                 btn.addEventListener('click', function () {
-                    document.querySelectorAll('.frequency-btn').forEach(b => b.classList.remove('selected'));
+                    document.querySelectorAll('.frequency-btn').forEach(b =>b.classList.remove('selected'));
                     this.classList.add('selected');
                     selectedFrequency = this.dataset.frequency;
                 });
@@ -1656,7 +1600,7 @@
                 select.innerHTML = '<option value="">Use Default Credential</option>';
 
                 // Add AWS credentials
-                const awsCredentials = credentials.filter(c => c.cloud_provider === 'aws');
+                const awsCredentials = credentials.filter(c =>c.cloud_provider === 'aws');
 
                 // Clear map and populate
                 allCredentialsMap = {};
@@ -1678,7 +1622,7 @@
                     select.appendChild(option);
                 });
 
-                console.log(`✅ Loaded ${awsCredentials.length} AWS credentials for selector`);
+                console.log(` Loaded ${awsCredentials.length} AWS credentials for selector`);
                 renderProviderOptions();
             } catch (error) {
                 console.error('Failed to load credentials for selector:', error);
@@ -1712,13 +1656,13 @@
 
             switch (currentScheduleTab) {
                 case 'immediate':
-                    buttonText.textContent = '🚀 Start Security Scan';
+                    buttonText.textContent = ' Start Security Scan';
                     break;
                 case 'scheduled':
-                    buttonText.textContent = '📅 Schedule Scan';
+                    buttonText.textContent = ' Schedule Scan';
                     break;
                 case 'recurring':
-                    buttonText.textContent = '🔄 Create Recurring Scan';
+                    buttonText.textContent = ' Create Recurring Scan';
                     break;
             }
         }
@@ -1734,11 +1678,11 @@
                     const statusDot = document.getElementById('credentialsStatus');
                     const message = document.getElementById('credentialsMessage');
 
-                    const configuredProviders = Object.values(data).filter(p => p.configured).length;
-                    const readyProviders = Object.values(data).filter(p => p.selectable ?? p.valid).length;
-                    const validatedProviders = Object.values(data).filter(p => p.valid).length;
+                    const configuredProviders = Object.values(data).filter(p =>p.configured).length;
+                    const readyProviders = Object.values(data).filter(p =>p.selectable ?? p.valid).length;
+                    const validatedProviders = Object.values(data).filter(p =>p.valid).length;
 
-                    if (readyProviders > 0) {
+                    if (readyProviders >0) {
                         statusDot.className = 'status-dot';
                         if (validatedProviders === readyProviders) {
                             message.textContent = `${readyProviders} cloud provider(s) ready`;
@@ -1747,7 +1691,7 @@
                         }
                         banner.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(13, 148, 136, 0.1))';
                         banner.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-                    } else if (configuredProviders > 0) {
+                    } else if (configuredProviders >0) {
                         statusDot.className = 'status-dot warning';
                         message.textContent = `${configuredProviders} provider(s) saved, but none are validated yet`;
                         banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))';
@@ -1880,21 +1824,21 @@
 
                     // Identify providers that actually have credentials (STRICT check)
                     const configuredProviders = scanProviders
-                        .filter(p => p.autoSelect && availableProviders[p.id])
-                        .map(p => p.id);
+                        .filter(p =>p.autoSelect && availableProviders[p.id])
+                        .map(p =>p.id);
 
                     // Additive Selection: if credentials for a provider are newly found AND 
                     // this is the first load or the provider was just added, select it.
                     // But never un-select what the user has.
                     configuredProviders.forEach(p => {
                         if (!currentSelected.has(p)) {
-                            console.log(`✨ Auto-selecting newly configured provider: ${p}`);
+                            console.log(` Auto-selecting newly configured provider: ${p}`);
                             selectedProviders.push(p);
                         }
                     });
 
-                    console.log('📊 Provider Status:', availableProviders);
-                    console.log('✅ Current Selection:', selectedProviders);
+                    console.log(' Provider Status:', availableProviders);
+                    console.log(' Current Selection:', selectedProviders);
                     renderProviderOptions();
                 }
             } catch (error) {
@@ -1924,7 +1868,7 @@
         function clearSelection() {
             selectedProviders = [];
             renderProviderOptions();
-            console.log('🧹 Selection cleared');
+            console.log(' Selection cleared');
         }
 
         // Provider selection
@@ -1958,7 +1902,7 @@
 
                 container.innerHTML = todayScans.map(scan => `
                     <div class="scan-item">
-                        <div class="scan-status ${scan.findings > 0 ? 'completed' : 'completed'}"></div>
+                        <div class="scan-status ${scan.findings >0 ? 'completed' : 'completed'}"></div>
                         <div class="scan-details">
                             <div class="scan-provider">Security Scan</div>
                             <div class="scan-time">
@@ -1989,7 +1933,7 @@
 
             // Get user ID
             const userId = getUserId();
-            console.log('🚀 Starting scan for user:', userId);
+            console.log(' Starting scan for user:', userId);
 
             const scanTargets = getConfiguredScanTargets();
             const targetValidationErrors = [];
@@ -2008,7 +1952,7 @@
             if (selectedProviders.includes('container') && scanTargets.container.sbom_tools.length === 0) {
                 targetValidationErrors.push('Select at least one SBOM generator for container scanning.');
             }
-            if (targetValidationErrors.length > 0) {
+            if (targetValidationErrors.length >0) {
                 alert(targetValidationErrors.join('\n'));
                 return;
             }
@@ -2020,10 +1964,10 @@
 
             // Check if we have credentials for selected providers
             const missingCredentials = selectedProviders.filter(p => {
-                const provider = scanProviders.find(item => item.id === p);
+                const provider = scanProviders.find(item =>item.id === p);
                 return provider?.requiresCredentials && !availableProviders[p];
             });
-            if (missingCredentials.length > 0) {
+            if (missingCredentials.length >0) {
                 const confirmScan = confirm(
                     `No credentials configured for: ${missingCredentials.join(', ')}. ` +
                     `The scan will use environment variables if available. Continue?`
@@ -2045,10 +1989,10 @@
                 scan_targets: scanTargets,
                 notify_email: document.getElementById('emailNotification').checked,
                 email_address: document.getElementById('notificationEmail').value || null,
-                test_permissions: true // 🛡️ NEW: Check permissions before scheduling
+                test_permissions: true //  NEW: Check permissions before scheduling
             };
 
-            console.log('📤 Sending scan request:', scanRequest)
+            console.log(' Sending scan request:', scanRequest)
 
             // Handle different schedule types
             if (currentScheduleTab === 'scheduled') {
@@ -2073,13 +2017,13 @@
                 const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
                 const now = new Date();
                 if (scheduledDateTime <= now) {
-                    alert('⚠️ Scheduled time must be in the future!\n\nPlease select a date and time that hasn\'t passed yet.');
+                    alert(' Scheduled time must be in the future!\n\nPlease select a date and time that hasn\'t passed yet.');
                     return;
                 }
 
                 // Send schedule request directly
                 try {
-                    console.log('📅 Scheduling one-time scan:', scanRequest);
+                    console.log(' Scheduling one-time scan:', scanRequest);
                     const resp = await fetch('/scan/schedule', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2089,7 +2033,7 @@
                     console.log('Response status:', resp.status, resp.statusText);
                     const result = await resp.json();
 
-                    // 🛡️ HANDLE PERMISSION REQUIRED FOR SCHEDULE
+                    //  HANDLE PERMISSION REQUIRED FOR SCHEDULE
                     if (result.status === 'permission_required') {
                         // Ensure we pass the credential_id
                         const errData = result.permission_error;
@@ -2098,16 +2042,10 @@
                         return;
                     }
 
-                    if (result.status === 'subscription_required') {
-                        alert('A subscription is required for one or more selected CloudGuard scanners.');
-                        openSubscriptionModal();
-                        return;
-                    }
-
                     if (resp.ok) {
                         const nextRunLocal = new Date(result.next_run_at).toLocaleString();
-                        alert(`✅ Scan scheduled successfully!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
-                        console.log('✅ Schedule created:', result);
+                        alert(` Scan scheduled successfully!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
+                        console.log(' Schedule created:', result);
                         closeScanModal(); // Fixed: was closeScanModal
                         loadRecentScans();
                     } else {
@@ -2137,7 +2075,7 @@
 
                 // Send recurring schedule request directly
                 try {
-                    console.log('🔄 Scheduling recurring scan:', scanRequest);
+                    console.log(' Scheduling recurring scan:', scanRequest);
                     const resp = await fetch('/scan/schedule', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -2146,7 +2084,7 @@
 
                     const result = await resp.json();
 
-                    // 🛡️ HANDLE PERMISSION REQUIRED FOR RECURRING
+                    //  HANDLE PERMISSION REQUIRED FOR RECURRING
                     if (result.status === 'permission_required') {
                         // Ensure we pass the credential_id
                         const errData = result.permission_error;
@@ -2155,14 +2093,8 @@
                         return;
                     }
 
-                    if (result.status === 'subscription_required') {
-                        alert('A subscription is required for one or more selected CloudGuard scanners.');
-                        openSubscriptionModal();
-                        return;
-                    }
-
                     if (resp.ok) {
-                        alert(`✅ Recurring scan '${scanRequest.schedule.name}' scheduled!\n\nFrequency: ${scanRequest.schedule.frequency}\nNext run: ${new Date(result.next_run_at).toLocaleString()}`);
+                        alert(` Recurring scan '${scanRequest.schedule.name}' scheduled!\n\nFrequency: ${scanRequest.schedule.frequency}\nNext run: ${new Date(result.next_run_at).toLocaleString()}`);
                         closeScanModal();
                         loadRecentScans();
                     } else {
@@ -2215,7 +2147,7 @@
 
             // Actually send the request to backend
             try {
-                console.log('📡 Sending scan request:', scanRequest);
+                console.log(' Sending scan request:', scanRequest);
 
                 const response = await fetch('/scan/multi-cloud', {
                     method: 'POST',
@@ -2226,9 +2158,9 @@
                 });
 
                 const result = await response.json();
-                console.log('🔍 [DEBUG] Scan API Result:', result);
+                console.log(' [DEBUG] Scan API Result:', result);
 
-                // 🔥 HANDLE PERMISSION REQUIRED
+                //  HANDLE PERMISSION REQUIRED
                 if (result.status === 'permission_required') {
                     handlePermissionError(result.permission_error);
 
@@ -2240,19 +2172,8 @@
                     return;
                 }
 
-                if (result.status === 'subscription_required') {
-                    updateScanStatus('Subscription required for the selected CloudGuard modules.', 100);
-                    setTimeout(() => {
-                        modal.classList.remove('active');
-                        scanInProgress = false;
-                        enableControls();
-                        openSubscriptionModal();
-                    }, 1200);
-                    return;
-                }
-
                 if (response.ok) {
-                    console.log('✅ Scan completed:', result);
+                    console.log(' Scan completed:', result);
 
                     if (result.status === 'started') {
                         updateScanStatus('Scan started on worker. Redirecting to scan history...', 100);
@@ -2284,7 +2205,7 @@
                 }
 
             } catch (error) {
-                console.error('❌ Scan error:', error);
+                console.error(' Scan error:', error);
                 updateScanStatus(`Error: ${error.message}`, 100);
 
                 setTimeout(() => {
@@ -2305,7 +2226,7 @@
         }
 
         function handlePermissionError(error) {
-            console.warn('🛡️ Permission Required:', error);
+            console.warn(' Permission Required:', error);
 
             pendingPermissionRequest = {
                 user_id: getUserId(),
@@ -2329,7 +2250,7 @@
             const adminSelect = document.getElementById('adminCredentialSelect');
             adminSelect.innerHTML = '<option value="">-- Choose Admin Credential (Optional) --</option>';
 
-            if (typeof userCredentials !== 'undefined' && userCredentials.length > 1) {
+            if (typeof userCredentials !== 'undefined' && userCredentials.length >1) {
                 userCredentials.forEach(cred => {
                     if (cred.cloud_provider === 'aws' && cred.id !== pendingPermissionRequest.credential_id) {
                         const opt = document.createElement('option');
@@ -2338,7 +2259,7 @@
                         adminSelect.appendChild(opt);
                     }
                 });
-                if (adminSelect.options.length > 1) {
+                if (adminSelect.options.length >1) {
                     document.getElementById('adminSelectionArea').style.display = 'block';
                 }
             }
@@ -2391,7 +2312,7 @@
 
             const btn = document.querySelector('#permissionModal .btn-primary');
             const oldText = btn.textContent;
-            btn.textContent = '⏳ Granting...';
+            btn.textContent = ' Granting...';
             btn.disabled = true;
 
             try {
@@ -2409,7 +2330,7 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('✅ Permission granted successfully! Retrying your scan setup now...');
+                    alert(' Permission granted successfully! Retrying your scan setup now...');
                     document.getElementById('permissionModal').style.display = 'none';
                     // Retry the scan setup automatically
                     startScan();
@@ -2431,17 +2352,17 @@
                     document.getElementById('trustPolicyJSON').textContent = result.trust_policy_json;
                 }
             } catch (error) {
-                alert('❌ Error granting permission: ' + error.message);
+                alert(' Error granting permission: ' + error.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '✅ Grant & Retry Scan';
+                btn.textContent = ' Grant & Retry Scan';
             }
         }
 
         function copyToClipboard(elementId) {
             const content = document.getElementById(elementId).textContent;
             navigator.clipboard.writeText(content).then(() => {
-                alert('📋 Copied to clipboard!');
+                alert(' Copied to clipboard!');
             });
         }
 
@@ -2457,7 +2378,7 @@
 
         // Simulate progress
         function simulateProgress(duration) {
-            return new Promise(resolve => setTimeout(resolve, duration));
+            return new Promise(resolve =>setTimeout(resolve, duration));
         }
 
         // Update scan status
@@ -2501,8 +2422,8 @@
             ].forEach(id => {
                 const element = document.getElementById(id);
                 if (element) {
-                    element.addEventListener('input', () => renderProviderOptions());
-                    element.addEventListener('change', () => renderProviderOptions());
+                    element.addEventListener('input', () =>renderProviderOptions());
+                    element.addEventListener('change', () =>renderProviderOptions());
                 }
             });
 
@@ -2523,205 +2444,6 @@
                 .replace(/'/g, '&#39;');
         }
 
-        function formatPlanPrice(amountPaise, billingCycle) {
-            const amount = Number(amountPaise || 0) / 100;
-            const formatted = amount.toLocaleString('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-                maximumFractionDigits: 0
-            });
-            return `${formatted} / ${billingCycle === 'yearly' ? 'year' : 'month'}`;
-        }
-
-        function setSubscriptionMessage(message, tone = 'neutral') {
-            const node = document.getElementById('subscriptionActionStatus');
-            if (!node) return;
-            node.textContent = message;
-            node.className = `form-description ${tone === 'neutral' ? '' : `alert alert-${tone}`}`.trim();
-        }
-
-        function renderBillingSummary() {
-            const inlineStatus = document.getElementById('subscriptionInlineStatus');
-            const roleLabel = (billingSnapshot.role || 'free').toUpperCase();
-            const currentPlan = billingSnapshot.current_subscription;
-            const summaryBits = [roleLabel];
-
-            if (currentPlan?.product_name) {
-                summaryBits.push(currentPlan.product_name);
-            } else {
-                summaryBits.push('No active paid plan');
-            }
-            summaryBits.push(`Mode: ${billingSnapshot.mode || 'skeleton'}`);
-
-            if (inlineStatus) {
-                inlineStatus.textContent = summaryBits.join(' • ');
-            }
-
-            const summaryCard = document.getElementById('subscriptionSummaryCard');
-            if (!summaryCard) return;
-
-            const entitledProviders = billingSnapshot.entitled_providers || [];
-            summaryCard.innerHTML = `
-                <div class="subscription-summary-card">
-                    <div>
-                        <div class="subscription-summary-title">Current Access</div>
-                        <div class="subscription-summary-subtitle">
-                            ${escapeHtml(currentPlan?.product_name || 'No active paid plan yet')}
-                        </div>
-                    </div>
-                    <div class="subscription-badges">
-                        <span class="billing-chip">${escapeHtml(roleLabel)}</span>
-                        <span class="billing-chip">${escapeHtml((billingSnapshot.mode || 'skeleton').toUpperCase())}</span>
-                    </div>
-                </div>
-                <div class="credential-details" style="margin-top: 16px;">
-                    <div class="credential-detail">
-                        <span class="detail-label">Billing Email:</span>
-                        <span class="detail-value">${escapeHtml(billingSnapshot.email || 'Not set')}</span>
-                    </div>
-                    <div class="credential-detail">
-                        <span class="detail-label">Enabled Scanners:</span>
-                        <span class="detail-value">${escapeHtml(entitledProviders.length ? entitledProviders.join(', ') : 'None yet')}</span>
-                    </div>
-                </div>
-            `;
-
-            const billingEmail = document.getElementById('billingEmail');
-            if (billingEmail && !billingEmail.value && billingSnapshot.email) {
-                billingEmail.value = billingSnapshot.email;
-            }
-        }
-
-        async function loadBillingStatus() {
-            try {
-                const response = await fetch('/api/billing/subscription');
-                if (!response.ok) {
-                    throw new Error('Failed to load subscription status');
-                }
-
-                billingSnapshot = await response.json();
-                renderBillingSummary();
-                return billingSnapshot;
-            } catch (error) {
-                console.error('Failed to load billing status:', error);
-                const inlineStatus = document.getElementById('subscriptionInlineStatus');
-                if (inlineStatus) {
-                    inlineStatus.textContent = 'Subscription status unavailable right now';
-                }
-                return null;
-            }
-        }
-
-        function renderBillingPlans(plans) {
-            const container = document.getElementById('billingPlansList');
-            if (!container) return;
-
-            if (!plans || plans.length === 0) {
-                container.innerHTML = '<div class="loading">No billing plans configured yet.</div>';
-                return;
-            }
-
-            container.innerHTML = plans.map((plan) => {
-                const features = (plan.features || [])
-                    .map((feature) => `<li>${escapeHtml(feature)}</li>`)
-                    .join('');
-                const currentPlanId = billingSnapshot.current_subscription?.plan_id;
-                const isCurrent = currentPlanId === plan.id;
-                const actionLabel = isCurrent ? 'Current Plan' : 'Choose Plan';
-                const disabledAttr = isCurrent ? 'disabled' : '';
-
-                return `
-                    <div class="billing-plan-card ${isCurrent ? 'current' : ''}">
-                        <div class="billing-plan-header">
-                            <div>
-                                <div class="billing-plan-name">${escapeHtml(plan.product_name)}</div>
-                                <div class="billing-plan-cycle">${escapeHtml(plan.billing_cycle)}</div>
-                            </div>
-                            <span class="billing-chip">${escapeHtml((plan.role || 'member').toUpperCase())}</span>
-                        </div>
-                        <div class="billing-plan-price">${escapeHtml(formatPlanPrice(plan.amount_paise, plan.billing_cycle))}</div>
-                        <ul class="billing-plan-features">
-                            ${features || '<li>CloudGuard subscription module</li>'}
-                        </ul>
-                        <div class="billing-plan-footer">
-                            <span class="billing-plan-mode">${plan.configured ? 'Razorpay plan ID configured' : 'Catalog ready, gateway pending'}</span>
-                            <button class="btn ${isCurrent ? 'btn-secondary' : 'btn-primary'}" ${disabledAttr} onclick="subscribeToPlan('${escapeHtml(plan.id)}')">
-                                ${escapeHtml(actionLabel)}
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        async function loadBillingPlans() {
-            const container = document.getElementById('billingPlansList');
-            if (container) {
-                container.innerHTML = '<div class="loading">Loading CloudGuard plans...</div>';
-            }
-
-            try {
-                const response = await fetch('/api/billing/plans');
-                if (!response.ok) {
-                    throw new Error('Failed to load billing plans');
-                }
-
-                const payload = await response.json();
-                renderBillingPlans(payload.plans || []);
-                return payload;
-            } catch (error) {
-                console.error('Failed to load billing plans:', error);
-                if (container) {
-                    container.innerHTML = `<div class="loading" style="color:#fca5a5;">${escapeHtml(error.message)}</div>`;
-                }
-                return null;
-            }
-        }
-
-        async function openSubscriptionModal() {
-            document.getElementById('subscriptionModal').style.display = 'flex';
-            setSubscriptionMessage('Pick a plan to connect CloudGuard billing with your scanners.');
-            await Promise.all([loadBillingStatus(), loadBillingPlans()]);
-        }
-
-        function closeSubscriptionModal() {
-            document.getElementById('subscriptionModal').style.display = 'none';
-        }
-
-        async function subscribeToPlan(planId) {
-            const billingEmail = document.getElementById('billingEmail')?.value?.trim();
-            if (!billingEmail) {
-                setSubscriptionMessage('Enter a billing email before choosing a plan.', 'error');
-                return;
-            }
-
-            setSubscriptionMessage('Creating subscription request...', 'warning');
-
-            try {
-                const response = await fetch('/api/billing/subscribe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        plan_id: planId,
-                        email: billingEmail
-                    })
-                });
-
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(payload.detail || 'Failed to create subscription');
-                }
-
-                const modeLabel = payload.mode === 'live' ? 'Razorpay-ready' : 'skeleton';
-                setSubscriptionMessage(`${payload.message} (${modeLabel} mode)`, 'success');
-                await loadBillingStatus();
-                await loadBillingPlans();
-            } catch (error) {
-                console.error('Failed to subscribe to plan:', error);
-                setSubscriptionMessage(error.message, 'error');
-            }
-        }
-
         // Credentials Modal Functions (embedded from credentials_modal.html)
         function openCredentialsModal() {
             document.getElementById('credentialsModal').style.display = 'flex';
@@ -2731,7 +2453,7 @@
         function openCredentialsModalForTab(tabName) {
             openCredentialsModal();
             const tabButton = Array.from(document.querySelectorAll('.tab-btn'))
-                .find((btn) => btn.textContent.trim().toLowerCase() === tabName.toLowerCase());
+                .find((btn) =>btn.textContent.trim().toLowerCase() === tabName.toLowerCase());
             if (tabButton) {
                 switchCredentialTab(tabName, tabButton);
             }
@@ -2763,7 +2485,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const cookieMatch = document.cookie
                 .split('; ')
-                .find((row) => row.startsWith('cloudguard_user_id='));
+                .find((row) =>row.startsWith('cloudguard_user_id='));
             let userId =
                 urlParams.get('user_id') ||
                 sessionStorage.getItem('cloudguard_user_id') ||
@@ -2894,8 +2616,8 @@
 
         function readCheckedTools(fieldMap) {
             return Object.entries(fieldMap)
-                .filter(([, inputId]) => document.getElementById(inputId)?.checked)
-                .map(([tool]) => tool);
+                .filter(([, inputId]) =>document.getElementById(inputId)?.checked)
+                .map(([tool]) =>tool);
         }
 
         function setCheckedTools(fieldMap, selectedTools = []) {
@@ -2959,9 +2681,8 @@
         }
 
         function applySavedSpecializedTargets(credentials) {
-            const defaultOrFirst = (provider) =>
-                credentials.find((cred) => cred.cloud_provider === provider && cred.is_default)
-                || credentials.find((cred) => cred.cloud_provider === provider);
+            const defaultOrFirst = (provider) =>credentials.find((cred) =>cred.cloud_provider === provider && cred.is_default)
+                || credentials.find((cred) =>cred.cloud_provider === provider);
 
             applyIacCredentialToForms(defaultOrFirst('iac'));
             applyContainerCredentialToForms(defaultOrFirst('container'));
@@ -3274,7 +2995,7 @@
                 return;
             }
 
-            showAlert('IaC upload profile looks ready to save. Upload the folder in Manage Credentials -> IaC before starting an immediate scan.', 'success');
+            showAlert('IaC upload profile looks ready to save. Upload the folder in Manage Credentials ->IaC before starting an immediate scan.', 'success');
         }
 
         async function testContainerCredentials() {
@@ -3314,7 +3035,7 @@
                 if (credentials.length === 0) {
                     container.innerHTML = `
                         <div style="text-align: center; padding: 40px; color: #408A71;">
-                            <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">🔐</div>
+                            <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">CFG</div>
                             <h3>No credentials saved yet</h3>
                             <p>Add credentials or scan profiles to start scanning</p>
                         </div>
@@ -3326,7 +3047,7 @@
                     const providerClass = `provider-${cred.cloud_provider}`;
                     const providerName = getProviderDisplayName(cred.cloud_provider);
                     const isDefault = cred.is_default ? 'default' : '';
-                    const isValid = cred.is_valid ? '✅' : '❌';
+                    const isValid = cred.is_valid ? '' : '';
                     const summary = buildCredentialSummary(cred);
 
                     return `
@@ -3369,11 +3090,9 @@
                             </div>
                             
                             <div class="credential-actions">
-                                <button class="btn btn-secondary" onclick="validateCredential(${cred.id})">
-                                    🔍 Validate
+                                <button class="btn btn-secondary" onclick="validateCredential(${cred.id})">Validate
                                 </button>
-                                <button class="btn btn-danger" onclick="deleteCredential(${cred.id})">
-                                    🗑️ Delete
+                                <button class="btn btn-danger" onclick="deleteCredential(${cred.id})">Delete
                                 </button>
                             </div>
                         </div>
@@ -3429,12 +3148,12 @@
             const modal = document.getElementById('credentialsModal');
             if (!modal) return;
 
-            document.querySelectorAll('.alert').forEach(alert => alert.remove());
+            document.querySelectorAll('.alert').forEach(alert =>alert.remove());
 
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
             alertDiv.innerHTML = `
-                <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span>
+                <span>${type === 'success' ? '' : type === 'error' ? '' : ''}</span>
                 <span>${message}</span>
             `;
 
@@ -3453,7 +3172,7 @@
         // CloudFormation Stack Deployment Functions
         async function launchCloudFormationStack() {
             try {
-                showAlert('🚀 Generating CloudFormation stack URL...', 'warning');
+                showAlert(' Generating CloudFormation stack URL...', 'warning');
                 const region = document.getElementById('awsRegion')?.value || 'ap-south-1';
 
                 // Call backend to get CloudFormation URL
@@ -3469,13 +3188,13 @@
                 const cfnWindow = window.open(data.cloudformation_url, '_blank');
 
                 if (!cfnWindow) {
-                    showAlert('❌ Popup blocked! Please allow popups for this site and try again.', 'error');
+                    showAlert(' Popup blocked! Please allow popups for this site and try again.', 'error');
                     return;
                 }
 
                 // Show success message with instructions
                 showAlert(
-                    `✅ CloudFormation console opened! Stack name: ${data.stack_name}. ` +
+                    ` CloudFormation console opened! Stack name: ${data.stack_name}. ` +
                     `Follow the steps in the console, then return here to complete setup.`,
                     'success'
                 );
@@ -3485,13 +3204,13 @@
 
             } catch (error) {
                 console.error('CloudFormation launch error:', error);
-                showAlert(`❌ Error: ${error.message}`, 'error');
+                showAlert(` Error: ${error.message}`, 'error');
             }
         }
 
         async function downloadCloudFormationTemplate() {
             try {
-                showAlert('📥 Downloading CloudFormation template...', 'warning');
+                showAlert(' Downloading CloudFormation template...', 'warning');
 
                 // Fetch the template
                 const response = await fetch('/api/credentials/aws/cloudformation-template');
@@ -3513,11 +3232,11 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
 
-                showAlert('✅ Template downloaded! Deploy it using AWS CLI or console.', 'success');
+                showAlert(' Template downloaded! Deploy it using AWS CLI or console.', 'success');
 
             } catch (error) {
                 console.error('Template download error:', error);
-                showAlert(`❌ Error: ${error.message}`, 'error');
+                showAlert(` Error: ${error.message}`, 'error');
             }
         }
 
@@ -3526,9 +3245,6 @@
         window.toggleProvider = toggleProvider;
         window.startScan = startScan;
         window.goToDashboard = goToDashboard;
-        window.openSubscriptionModal = openSubscriptionModal;
-        window.closeSubscriptionModal = closeSubscriptionModal;
-        window.subscribeToPlan = subscribeToPlan;
         window.openCredentialsModal = openCredentialsModal;
         window.openCredentialsModalForTab = openCredentialsModalForTab;
         window.closeCredentialsModal = closeCredentialsModal;
@@ -3552,46 +3268,11 @@
         window.downloadCloudFormationTemplate = downloadCloudFormationTemplate;
     </script>
 
-    <!-- Subscription Modal -->
-    <div id="subscriptionModal" class="modal-overlay" style="display: none;">
-        <div class="credentials-modal-content subscription-modal-content">
-            <div class="modal-header">
-                <h2>💳 CloudGuard Subscription</h2>
-                <button class="close-btn" onclick="closeSubscriptionModal()">×</button>
-            </div>
-
-            <div id="subscriptionSummaryCard" class="form-section">
-                <div class="loading">Loading subscription details...</div>
-            </div>
-
-            <div class="form-section" style="margin-top: 20px;">
-                <h3>Choose a Plan</h3>
-                <p class="form-description">
-                    This billing layer comes from the new payment module and is now integrated directly into CloudGuard.
-                    Plans map to the 5 scanners individually, plus a complete suite plan for the full platform.
-                </p>
-
-                <div class="form-group">
-                    <label for="billingEmail">Billing Email</label>
-                    <input type="email" id="billingEmail" placeholder="you@company.com">
-                </div>
-
-                <div id="subscriptionActionStatus" class="form-description">
-                    Pick a plan to connect CloudGuard billing with your scanners.
-                </div>
-
-                <div id="billingPlansList" class="billing-plans-grid">
-                    <div class="loading">Loading CloudGuard plans...</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Credentials Modal (embedded) -->
     <div id="credentialsModal" class="modal-overlay" style="display: none;">
         <div class="credentials-modal-content">
             <div class="modal-header">
-                <h2>🔐 Manage Credentials</h2>
+                <h2>Manage Credentials</h2>
                 <button class="close-btn" onclick="closeCredentialsModal()">×</button>
             </div>
 
@@ -3606,13 +3287,12 @@
 
             <!-- AWS Tab -->
             <div id="awsTab" class="tab-content active">
-                <!-- 🚀 ONE-CLICK CLOUDFORMATION SETUP -->
+                <!--  ONE-CLICK CLOUDFORMATION SETUP -->
                 <div class="form-section cloudformation-setup">
-                    <h3>🚀 Quick Setup - Automated Role Creation</h3>
-                    <p class="form-description">
-                        Deploy a CloudFormation stack to automatically create a read-only IAM role with all necessary
+                    <h3>Quick Setup - Automated Role Creation</h3>
+                    <p class="form-description">Deploy a CloudFormation stack to automatically create a read-only IAM role with all necessary
                         permissions.
-                        This is the <strong>recommended</strong> and <strong>safest</strong> way to set up CloudGuard
+                        This is the <strong>recommended</strong>and <strong>safest</strong>way to set up CloudGuard
                         scanning.
                     </p>
 
@@ -3629,7 +3309,7 @@
                             <div class="step-number">2</div>
                             <div class="step-content">
                                 <strong>Review & Create</strong>
-                                <p>Ensure <b>ScannerAccountId</b> matches your ID, check the IAM acknowledgment box, and
+                                <p>Ensure <b>ScannerAccountId</b>matches your ID, check the IAM acknowledgment box, and
                                     create the stack</p>
                             </div>
                         </div>
@@ -3650,17 +3330,15 @@
                     </div>
 
                     <div class="cloudformation-actions">
-                        <button class="btn btn-primary btn-large" onclick="launchCloudFormationStack()">
-                            🚀 Launch CloudFormation Stack
+                        <button class="btn btn-primary btn-large" onclick="launchCloudFormationStack()">Launch CloudFormation Stack
                         </button>
-                        <button class="btn btn-secondary" onclick="downloadCloudFormationTemplate()">
-                            📥 Download Template
+                        <button class="btn btn-secondary" onclick="downloadCloudFormationTemplate()">Download Template
                         </button>
                     </div>
 
                     <div class="permissions-info">
                         <details>
-                            <summary>📋 View Permissions Included (20 Security Checks)</summary>
+                            <summary>View Permissions Included (20 Security Checks)</summary>
                             <div class="permissions-table">
                                 <table>
                                     <thead>
@@ -3733,7 +3411,7 @@
                     </div>
 
                     <div class="alert alert-info" style="margin-top: 20px;">
-                        <strong>🔒 Security Note:</strong> The CloudFormation stack creates a read-only role with
+                        <strong>Security Note:</strong>The CloudFormation stack creates a read-only role with
                         SecurityAudit policy.
                         It cannot make any changes to your AWS account - only read configurations for security scanning.
                     </div>
@@ -3746,8 +3424,7 @@
                 <!-- MANUAL CREDENTIALS ENTRY -->
                 <div class="form-section">
                     <h3>Manual AWS Credentials Entry</h3>
-                    <p class="form-description">
-                        Enter your AWS IAM user credentials with appropriate permissions.
+                    <p class="form-description">Enter your AWS IAM user credentials with appropriate permissions.
                     </p>
 
                     <div class="form-group">
@@ -3785,8 +3462,7 @@
                         <label>Role ARN (Optional - from CloudFormation)</label>
                         <input type="text" id="awsRoleArn"
                             placeholder="arn:aws:iam::123456789012:role/CloudGuardReadOnlyRole-xxx">
-                        <small style="color: #B0E4CC; display: block; margin-top: 4px;">
-                            If you created a stack above, paste the Role ARN from the Outputs tab
+                        <small style="color: #B0E4CC; display: block; margin-top: 4px;">If you created a stack above, paste the Role ARN from the Outputs tab
                         </small>
                     </div>
 
@@ -3801,11 +3477,9 @@
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testAWSCredentials()">
-                            🔍 Test Connection
+                        <button class="btn btn-secondary" onclick="testAWSCredentials()">Test Connection
                         </button>
-                        <button class="btn btn-primary" onclick="saveAWSCredentials()">
-                            💾 Save Credentials
+                        <button class="btn btn-primary" onclick="saveAWSCredentials()">Save Credentials
                         </button>
                     </div>
                 </div>
@@ -3815,8 +3489,7 @@
             <!-- <div id="openaiTab" class="tab-content">
                 <div class="form-section">
                     <h3>OpenAI Credentials</h3>
-                    <p class="form-description">
-                        Enter your OpenAI API key to scan for AI model security risks.
+                    <p class="form-description">Enter your OpenAI API key to scan for AI model security risks.
                     </p>
 
                     <div class="form-group">
@@ -3840,11 +3513,9 @@
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testOpenAICredentials()">
-                            🔍 Test Connection
+                        <button class="btn btn-secondary" onclick="testOpenAICredentials()">Test Connection
                         </button>
-                        <button class="btn btn-primary" onclick="saveOpenAICredentials()">
-                            💾 Save Credentials
+                        <button class="btn btn-primary" onclick="saveOpenAICredentials()">Save Credentials
                         </button>
                     </div>
                 </div>
@@ -3854,8 +3525,7 @@
             <div id="gcpTab" class="tab-content">
                 <div class="form-section">
                     <h3>Google Cloud Credentials</h3>
-                    <p class="form-description">
-                        Paste your GCP service account JSON key file contents.
+                    <p class="form-description">Paste your GCP service account JSON key file contents.
                     </p>
 
                     <div class="form-group">
@@ -3880,11 +3550,9 @@
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testGCPCredentials()">
-                            🔍 Test Connection
+                        <button class="btn btn-secondary" onclick="testGCPCredentials()">Test Connection
                         </button>
-                        <button class="btn btn-primary" onclick="saveGCPCredentials()">
-                            💾 Save Credentials
+                        <button class="btn btn-primary" onclick="saveGCPCredentials()">Save Credentials
                         </button>
                     </div>
                 </div>
@@ -3893,8 +3561,7 @@
             <div id="kubernetesTab" class="tab-content">
                 <div class="form-section">
                     <h3>Kubernetes Cluster Credentials</h3>
-                    <p class="form-description">
-                        Paste a kubeconfig with read access to the cluster resources you want to scan. For local clusters, use <code>kubectl config view --raw --minify --flatten</code> so certs and keys are embedded and the config is portable.
+                    <p class="form-description">Paste a kubeconfig with read access to the cluster resources you want to scan. For local clusters, use <code>kubectl config view --raw --minify --flatten</code>so certs and keys are embedded and the config is portable.
                     </p>
 
                     <div class="form-group">
@@ -3934,11 +3601,9 @@ kind: Config'></textarea>
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testKubernetesCredentials()">
-                            🔍 Test Connection
+                        <button class="btn btn-secondary" onclick="testKubernetesCredentials()">Test Connection
                         </button>
-                        <button class="btn btn-primary" onclick="saveKubernetesCredentials()">
-                            💾 Save Credentials
+                        <button class="btn btn-primary" onclick="saveKubernetesCredentials()">Save Credentials
                         </button>
                     </div>
                 </div>
@@ -3947,8 +3612,7 @@ kind: Config'></textarea>
             <div id="iacTab" class="tab-content">
                 <div class="form-section">
                     <h3>IaC Scan Profile</h3>
-                    <p class="form-description">
-                        Save a reusable Infrastructure-as-Code tool set for website uploads. Add a worker-local target path only if you want scheduled scans or a path-based self-hosted flow.
+                    <p class="form-description">Save a reusable Infrastructure-as-Code tool set for website uploads. Add a worker-local target path only if you want scheduled scans or a path-based self-hosted flow.
                     </p>
 
                     <div class="form-group">
@@ -3968,8 +3632,7 @@ kind: Config'></textarea>
                     <div class="form-group">
                         <label>Worker-Local Target Path (Optional)</label>
                         <input type="text" id="iacCredentialTargetPath" placeholder="/home/ubuntu/Cloud_Vulnerabilities/infra or /workspace/terraform">
-                        <small style="color: #B0E4CC; display: block; margin-top: 4px;">
-                            Leave this blank for normal website uploads. Fill it only when the IaC files already exist on the scan worker and you want to save that server-side path.
+                        <small style="color: #B0E4CC; display: block; margin-top: 4px;">Leave this blank for normal website uploads. Fill it only when the IaC files already exist on the scan worker and you want to save that server-side path.
                         </small>
                     </div>
 
@@ -3990,11 +3653,9 @@ kind: Config'></textarea>
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testIACCredentials()">
-                            🔍 Validate Config
+                        <button class="btn btn-secondary" onclick="testIACCredentials()">Validate Config
                         </button>
-                        <button class="btn btn-primary" onclick="saveIACCredentials()">
-                            💾 Save Profile
+                        <button class="btn btn-primary" onclick="saveIACCredentials()">Save Profile
                         </button>
                     </div>
                 </div>
@@ -4003,8 +3664,7 @@ kind: Config'></textarea>
             <div id="containerTab" class="tab-content">
                 <div class="form-section">
                     <h3>Container Scan Profile</h3>
-                    <p class="form-description">
-                        Save a reusable Docker image or local image filesystem target, plus the scanner and SBOM tools you want to run.
+                    <p class="form-description">Save a reusable Docker image or local image filesystem target, plus the scanner and SBOM tools you want to run.
                     </p>
 
                     <div class="form-group">
@@ -4046,11 +3706,9 @@ kind: Config'></textarea>
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testContainerCredentials()">
-                            🔍 Validate Config
+                        <button class="btn btn-secondary" onclick="testContainerCredentials()">Validate Config
                         </button>
-                        <button class="btn btn-primary" onclick="saveContainerCredentials()">
-                            💾 Save Profile
+                        <button class="btn btn-primary" onclick="saveContainerCredentials()">Save Profile
                         </button>
                     </div>
                 </div>
@@ -4060,8 +3718,7 @@ kind: Config'></textarea>
             <div id="savedTab" class="tab-content">
                 <div class="form-section">
                     <h3>Your Saved Credentials</h3>
-                    <p class="form-description">
-                        Manage your saved cloud credentials and scan profiles.
+                    <p class="form-description">Manage your saved cloud credentials and scan profiles.
                     </p>
 
                     <div id="savedCredentialsList" class="credentials-list">
@@ -4069,8 +3726,7 @@ kind: Config'></textarea>
                     </div>
 
                     <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="refreshCredentials()">
-                            🔄 Refresh
+                        <button class="btn btn-secondary" onclick="refreshCredentials()">Refresh
                         </button>
                     </div>
                 </div>
@@ -4090,10 +3746,6 @@ kind: Config'></textarea>
             overflow-y: auto;
             border: 1px solid rgba(176, 228, 204, 0.22);
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-        }
-
-        .subscription-modal-content {
-            max-width: 980px;
         }
 
         .form-section {
@@ -4313,111 +3965,6 @@ kind: Config'></textarea>
             margin-top: 12px;
         }
 
-        .subscription-summary-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
-        .subscription-summary-title {
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: white;
-        }
-
-        .subscription-summary-subtitle {
-            color: #B0E4CC;
-            margin-top: 4px;
-        }
-
-        .subscription-badges {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .billing-chip {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 12px;
-            border-radius: 999px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #B0E4CC;
-            border: 1px solid rgba(176, 228, 204, 0.18);
-            background: rgba(176, 228, 204, 0.08);
-        }
-
-        .billing-plans-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
-        }
-
-        .billing-plan-card {
-            background: rgba(176, 228, 204, 0.06);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(176, 228, 204, 0.14);
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .billing-plan-card.current {
-            border-color: rgba(64, 138, 113, 0.5);
-            box-shadow: 0 0 0 1px rgba(64, 138, 113, 0.22);
-        }
-
-        .billing-plan-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: flex-start;
-        }
-
-        .billing-plan-name {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: white;
-        }
-
-        .billing-plan-cycle {
-            color: #B0E4CC;
-            font-size: 0.9rem;
-            text-transform: capitalize;
-        }
-
-        .billing-plan-price {
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: #B0E4CC;
-        }
-
-        .billing-plan-features {
-            margin: 0;
-            padding-left: 18px;
-            color: #B0E4CC;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            font-size: 0.9rem;
-        }
-
-        .billing-plan-footer {
-            margin-top: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .billing-plan-mode {
-            color: rgba(176, 228, 204, 0.82);
-            font-size: 0.82rem;
-        }
-
         .credential-detail {
             display: flex;
             align-items: center;
@@ -4587,7 +4134,7 @@ kind: Config'></textarea>
                 <h2>Permission Required</h2>
             </div>
             <div id="permissionDetails" class="permission-info">
-                <p>Your IAM user <code id="permIamUser"></code> needs permission to <strong>assume</strong> the required
+                <p>Your IAM user <code id="permIamUser"></code>needs permission to <strong>assume</strong>the required
                     security role to complete the scan.</p>
 
                 <div id="adminSelectionArea" style="margin-top: 15px; display: none;">
@@ -4609,7 +4156,7 @@ kind: Config'></textarea>
             <!-- Manual Fix Container -->
             <div id="manualFixContainer" class="permission-info"
                 style="display: none; border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
-                <p style="color: #fca5a5; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i> Manual Fix
+                <p style="color: #fca5a5; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i>Manual Fix
                     Required</p>
                 <p id="manualFixError" style="font-size: 0.85rem; color: #fca5a5; margin-bottom: 15px;"></p>
 
@@ -4626,20 +4173,20 @@ kind: Config'></textarea>
                     </p>
 
                     <!-- Step 1: Identity Policy -->
-                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 1:</strong> Grant
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 1:</strong>Grant
                         User Permission to Assume Role</p>
                     <pre id="manualFixCommand"
                         style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-bottom: 5px;"></pre>
                     <button class="btn-cancel" style="width: 100%; margin-bottom: 15px;"
-                        onclick="copyToClipboard('manualFixCommand')">📋 Copy Step 1 Command</button>
+                        onclick="copyToClipboard('manualFixCommand')">Copy Step 1 Command</button>
 
                     <!-- Step 2: Trust Relationship -->
-                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 2:</strong> Update
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 2:</strong>Update
                         Role Trust Relationship</p>
                     <pre id="trustRelationshipCommand"
                         style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; margin-bottom: 5px;"></pre>
                     <button class="btn-cancel" style="width: 100%; margin-bottom: 10px;"
-                        onclick="copyToClipboard('trustRelationshipCommand')">📋 Copy Step 2 Command</button>
+                        onclick="copyToClipboard('trustRelationshipCommand')">Copy Step 2 Command</button>
                 </div>
 
                 <div id="manualTabJSON" style="display: none;">
@@ -4648,14 +4195,14 @@ kind: Config'></textarea>
                     <pre id="identityPolicyJSON"
                         style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; margin-bottom: 10px;"></pre>
                     <button class="btn-cancel" style="width: 100%; margin-bottom: 15px;"
-                        onclick="copyToClipboard('identityPolicyJSON')">📋 Copy Identity JSON</button>
+                        onclick="copyToClipboard('identityPolicyJSON')">Copy Identity JSON</button>
 
                     <p style="font-size: 0.8rem; color: #B0E4CC; margin-bottom: 5px;"><strong>Step 2: Trust
                             Relationship</strong> (Edit trust relationship on Role <code>CloudGuardReadOnlyRole</code>)
                     </p>
                     <pre id="trustPolicyJSON"
                         style="background: #000; color: #10b981; padding: 10px; border-radius: 4px; font-size: 0.75rem; white-space: pre-wrap; margin-bottom: 10px;"></pre>
-                    <button class="btn-cancel" style="width: 100%;" onclick="copyToClipboard('trustPolicyJSON')">📋 Copy
+                    <button class="btn-cancel" style="width: 100%;" onclick="copyToClipboard('trustPolicyJSON')">Copy
                         Trust JSON</button>
                 </div>
             </div>
@@ -4663,16 +4210,16 @@ kind: Config'></textarea>
             <div class="permission-actions">
                 <button class="btn-cancel"
                     onclick="document.getElementById('permissionModal').style.display='none'">Cancel</button>
-                <button id="btnGrantPerm" class="btn-grant" onclick="grantPermissionAndScan()">✅ Grant & Retry
+                <button id="btnGrantPerm" class="btn-grant" onclick="grantPermissionAndScan()">Grant & Retry
                     Scan</button>
             </div>
         </div>
     </div>
-    <!-- ⚠️ IAM Permissions Instructions Modal -->
+    <!--  IAM Permissions Instructions Modal -->
     <div id="iamCommandsModal" class="modal-overlay" style="display: none;">
         <div class="modal-container" style="max-width: 800px;">
             <div class="modal-header">
-                <h2>⚠️ AWS IAM Permissions Required</h2>
+                <h2>AWS IAM Permissions Required</h2>
                 <button class="modal-close" onclick="closeIamCommandsModal()">&times;</button>
             </div>
             <div class="modal-body" style="padding: 32px;">
@@ -4683,7 +4230,7 @@ kind: Config'></textarea>
                     <h3>1. Grant AssumeRole Permission to User</h3>
                     <div class="code-block-container">
                         <pre id="iamPolicyCommand"></pre>
-                        <button class="copy-btn" onclick="copyToClipboard('iamPolicyCommand')">📋 Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('iamPolicyCommand')">Copy</button>
                     </div>
                 </div>
 
@@ -4691,17 +4238,17 @@ kind: Config'></textarea>
                     <h3>2. Update Role Trust Relationship</h3>
                     <div class="code-block-container">
                         <pre id="iamTrustCommand"></pre>
-                        <button class="copy-btn" onclick="copyToClipboard('iamTrustCommand')">📋 Copy</button>
+                        <button class="copy-btn" onclick="copyToClipboard('iamTrustCommand')">Copy</button>
                     </div>
                 </div>
 
                 <div class="alert alert-info"
                     style="margin-top: 32px; background: rgba(64, 138, 113, 0.08); border: 1px solid rgba(64, 138, 113, 0.2); padding: 20px; border-radius: 12px; display: flex; align-items: flex-start; gap: 12px;">
-                    <span style="font-size: 1.5rem;">ℹ️</span>
+                    <span style="font-size: 1.5rem;"></span>
                     <div>
                         <strong style="color: #B0E4CC; display: block; margin-bottom: 4px;">Important Note</strong>
                         <span style="font-size: 0.95rem; color: #B0E4CC;">These commands only need to be run once.
-                            Replace <code>YOUR_IAM_USER</code> with the AWS user whose access keys you provided.</span>
+                            Replace <code>YOUR_IAM_USER</code>with the AWS user whose access keys you provided.</span>
                     </div>
                 </div>
             </div>
@@ -4709,7 +4256,7 @@ kind: Config'></textarea>
                 style="padding: 24px 32px; background: rgba(9, 20, 19, 0.52); border-top: 1px solid rgba(176, 228, 204, 0.14);">
                 <button class="btn btn-secondary" onclick="closeIamCommandsModal()">Cancel</button>
                 <button class="btn btn-primary" id="confirmIamCommandsBtn"
-                    style="background: linear-gradient(135deg, #408A71, #B0E4CC);">✅ I have run these commands</button>
+                    style="background: linear-gradient(135deg, #408A71, #B0E4CC);">I have run these commands</button>
             </div>
         </div>
     </div>

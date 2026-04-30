@@ -1,0 +1,325 @@
+{
+  "id": "cis-controls-v8",
+  "name": "CIS Controls v8",
+  "version": "8.0",
+  "description": "The CIS Critical Security Controls are a prioritized set of actions that collectively form a defense-in-depth set of best practices that mitigate the most common attacks against systems and networks.",
+  "source": "Center for Internet Security",
+  "category": "security",
+  "requirements": [
+    {
+      "reference": "CIS-01",
+      "title": "Inventory and Control of Enterprise Assets",
+      "description": "Actively manage (inventory, track, and correct) all enterprise assets connected to the infrastructure physically, virtually, remotely, and those within cloud environments.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1.1", "title": "Establish and Maintain Detailed Enterprise Asset Inventory", "description": "Establish and maintain an accurate, detailed, and up-to-date inventory of all enterprise assets with the potential to store or process data.", "level": 1, "isCategory": false},
+        {"reference": "1.2", "title": "Address Unauthorized Assets", "description": "Ensure that a process exists to address unauthorized assets on a weekly basis.", "level": 1, "isCategory": false},
+        {"reference": "1.3", "title": "Utilize an Active Discovery Tool", "description": "Utilize an active discovery tool to identify assets connected to the enterprise's network.", "level": 1, "isCategory": false},
+        {"reference": "1.4", "title": "Use Dynamic Host Configuration Protocol (DHCP) Logging", "description": "Use DHCP logging on all DHCP servers or Internet Protocol (IP) address management tools to update the enterprise's asset inventory.", "level": 1, "isCategory": false},
+        {"reference": "1.5", "title": "Use a Passive Asset Discovery Tool", "description": "Use a passive discovery tool to identify assets connected to the enterprise's network.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-02",
+      "title": "Inventory and Control of Software Assets",
+      "description": "Actively manage (inventory, track, and correct) all software on the network so that only authorized software is installed and can execute.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "2.1", "title": "Establish and Maintain a Software Inventory", "description": "Establish and maintain a detailed inventory of all licensed software installed on enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "2.2", "title": "Ensure Authorized Software is Currently Supported", "description": "Ensure that only currently supported software is designated as authorized in the software inventory.", "level": 1, "isCategory": false},
+        {"reference": "2.3", "title": "Address Unauthorized Software", "description": "Ensure that unauthorized software is either removed or the inventory is updated in a timely manner.", "level": 1, "isCategory": false},
+        {"reference": "2.4", "title": "Utilize Automated Software Inventory Tools", "description": "Utilize software inventory tools, when possible, throughout the enterprise to automate the discovery and documentation of installed software.", "level": 1, "isCategory": false},
+        {"reference": "2.5", "title": "Allowlist Authorized Software", "description": "Use technical controls, such as application allowlisting, to ensure that only authorized software can execute or be accessed.", "level": 1, "isCategory": false},
+        {"reference": "2.6", "title": "Allowlist Authorized Libraries", "description": "Use technical controls to ensure that only authorized software libraries can load into a system process.", "level": 1, "isCategory": false},
+        {"reference": "2.7", "title": "Allowlist Authorized Scripts", "description": "Use technical controls, such as digital signatures and version control, to ensure that only authorized scripts can execute.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-03",
+      "title": "Data Protection",
+      "description": "Develop processes and technical controls to identify, classify, securely handle, retain, and dispose of data.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "3.1", "title": "Establish and Maintain a Data Management Process", "description": "Establish and maintain a data management process that addresses data sensitivity, data owner, handling of data, data retention limits, and disposal requirements.", "level": 1, "isCategory": false},
+        {"reference": "3.2", "title": "Establish and Maintain a Data Inventory", "description": "Establish and maintain a data inventory, based on the enterprise's data management process.", "level": 1, "isCategory": false},
+        {"reference": "3.3", "title": "Configure Data Access Control Lists", "description": "Configure data access control lists based on a user's need to know.", "level": 1, "isCategory": false},
+        {"reference": "3.4", "title": "Enforce Data Retention", "description": "Retain data according to the enterprise's data management process.", "level": 1, "isCategory": false},
+        {"reference": "3.5", "title": "Securely Dispose of Data", "description": "Securely dispose of data as outlined in the enterprise's data management process.", "level": 1, "isCategory": false},
+        {"reference": "3.6", "title": "Encrypt Data on End-User Devices", "description": "Encrypt data on end-user devices containing sensitive data.", "level": 1, "isCategory": false},
+        {"reference": "3.7", "title": "Establish and Maintain a Data Classification Scheme", "description": "Establish and maintain an overall data classification scheme for the enterprise.", "level": 1, "isCategory": false},
+        {"reference": "3.8", "title": "Document Data Flows", "description": "Document data flows that include service provider data flows and maintain documentation.", "level": 1, "isCategory": false},
+        {"reference": "3.9", "title": "Encrypt Data on Removable Media", "description": "Encrypt data on removable media.", "level": 1, "isCategory": false},
+        {"reference": "3.10", "title": "Encrypt Sensitive Data in Transit", "description": "Encrypt sensitive data in transit.", "level": 1, "isCategory": false},
+        {"reference": "3.11", "title": "Encrypt Sensitive Data at Rest", "description": "Encrypt sensitive data at rest on servers, applications, and databases containing sensitive data.", "level": 1, "isCategory": false},
+        {"reference": "3.12", "title": "Segment Data Processing and Storage Based on Sensitivity", "description": "Segment data processing and storage based on the sensitivity of the data.", "level": 1, "isCategory": false},
+        {"reference": "3.13", "title": "Deploy a Data Loss Prevention Solution", "description": "Implement an automated tool, such as a host-based Data Loss Prevention (DLP) tool to identify all sensitive data.", "level": 1, "isCategory": false},
+        {"reference": "3.14", "title": "Log Sensitive Data Access", "description": "Log sensitive data access, including modification and disposal.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-04",
+      "title": "Secure Configuration of Enterprise Assets and Software",
+      "description": "Establish and maintain the secure configuration of enterprise assets and software.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "4.1", "title": "Establish and Maintain a Secure Configuration Process", "description": "Establish and maintain a secure configuration process for enterprise assets and software.", "level": 1, "isCategory": false},
+        {"reference": "4.2", "title": "Establish and Maintain a Secure Configuration Process for Network Infrastructure", "description": "Establish and maintain a secure configuration process for network devices.", "level": 1, "isCategory": false},
+        {"reference": "4.3", "title": "Configure Automatic Session Locking on Enterprise Assets", "description": "Configure automatic session locking on enterprise assets after a defined period of inactivity.", "level": 1, "isCategory": false},
+        {"reference": "4.4", "title": "Implement and Manage a Firewall on Servers", "description": "Implement and manage a firewall on servers, where supported.", "level": 1, "isCategory": false},
+        {"reference": "4.5", "title": "Implement and Manage a Firewall on End-User Devices", "description": "Implement and manage a host-based firewall or port-filtering tool on end-user devices.", "level": 1, "isCategory": false},
+        {"reference": "4.6", "title": "Securely Manage Enterprise Assets and Software", "description": "Securely manage enterprise assets and software through a secure network.", "level": 1, "isCategory": false},
+        {"reference": "4.7", "title": "Manage Default Accounts on Enterprise Assets and Software", "description": "Manage default accounts on enterprise assets and software.", "level": 1, "isCategory": false},
+        {"reference": "4.8", "title": "Uninstall or Disable Unnecessary Services on Enterprise Assets and Software", "description": "Uninstall or disable unnecessary services on enterprise assets and software.", "level": 1, "isCategory": false},
+        {"reference": "4.9", "title": "Configure Trusted DNS Servers on Enterprise Assets", "description": "Configure trusted DNS servers on enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "4.10", "title": "Enforce Automatic Device Lockout on Portable End-User Devices", "description": "Enforce automatic device lockout following a predetermined threshold of local failed authentication attempts.", "level": 1, "isCategory": false},
+        {"reference": "4.11", "title": "Enforce Remote Wipe Capability on Portable End-User Devices", "description": "Remotely wipe enterprise data from enterprise-owned portable end-user devices when deemed appropriate.", "level": 1, "isCategory": false},
+        {"reference": "4.12", "title": "Separate Enterprise Workspaces on Mobile End-User Devices", "description": "Ensure separate enterprise workspaces are used on mobile end-user devices, where supported.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-05",
+      "title": "Account Management",
+      "description": "Use processes and tools to assign and manage authorization to credentials for user accounts.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "5.1", "title": "Establish and Maintain an Inventory of Accounts", "description": "Establish and maintain an inventory of all accounts managed in the enterprise.", "level": 1, "isCategory": false},
+        {"reference": "5.2", "title": "Use Unique Passwords", "description": "Use unique passwords for all enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "5.3", "title": "Disable Dormant Accounts", "description": "Delete or disable any dormant accounts after a period of 45 days of inactivity.", "level": 1, "isCategory": false},
+        {"reference": "5.4", "title": "Restrict Administrator Privileges to Dedicated Administrator Accounts", "description": "Restrict administrator privileges to dedicated administrator accounts on enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "5.5", "title": "Establish and Maintain an Inventory of Service Accounts", "description": "Establish and maintain an inventory of service accounts.", "level": 1, "isCategory": false},
+        {"reference": "5.6", "title": "Centralize Account Management", "description": "Centralize account management through a directory or identity service.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-06",
+      "title": "Access Control Management",
+      "description": "Use processes and tools to create, assign, manage, and revoke access credentials and privileges for user, administrator, and service accounts.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "6.1", "title": "Establish an Access Granting Process", "description": "Establish and follow a process, preferably automated, for granting access to enterprise assets upon new hire, rights grant, or role change.", "level": 1, "isCategory": false},
+        {"reference": "6.2", "title": "Establish an Access Revoking Process", "description": "Establish and follow a process, preferably automated, for revoking access to enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "6.3", "title": "Require MFA for Externally-Exposed Applications", "description": "Require all externally-exposed enterprise or third-party applications to enforce MFA.", "level": 1, "isCategory": false},
+        {"reference": "6.4", "title": "Require MFA for Remote Network Access", "description": "Require MFA for remote network access.", "level": 1, "isCategory": false},
+        {"reference": "6.5", "title": "Require MFA for Administrative Access", "description": "Require MFA for all administrative access accounts.", "level": 1, "isCategory": false},
+        {"reference": "6.6", "title": "Establish and Maintain an Inventory of Authentication and Authorization Systems", "description": "Establish and maintain an inventory of the enterprise's authentication and authorization systems.", "level": 1, "isCategory": false},
+        {"reference": "6.7", "title": "Centralize Access Control", "description": "Centralize access control for all enterprise assets through a directory service or SSO provider.", "level": 1, "isCategory": false},
+        {"reference": "6.8", "title": "Define and Maintain Role-Based Access Control", "description": "Define and maintain role-based access control, through determining and documenting the access rights necessary for each role.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-07",
+      "title": "Continuous Vulnerability Management",
+      "description": "Develop a plan to continuously assess and track vulnerabilities on all enterprise assets.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "7.1", "title": "Establish and Maintain a Vulnerability Management Process", "description": "Establish and maintain a documented vulnerability management process for enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "7.2", "title": "Establish and Maintain a Remediation Process", "description": "Establish and maintain a risk-based remediation strategy documented in a remediation process.", "level": 1, "isCategory": false},
+        {"reference": "7.3", "title": "Perform Automated Operating System Patch Management", "description": "Perform operating system updates on enterprise assets through automated patch management on a monthly, or more frequent, basis.", "level": 1, "isCategory": false},
+        {"reference": "7.4", "title": "Perform Automated Application Patch Management", "description": "Perform application updates on enterprise assets through automated patch management on a monthly, or more frequent, basis.", "level": 1, "isCategory": false},
+        {"reference": "7.5", "title": "Perform Automated Vulnerability Scans of Internal Enterprise Assets", "description": "Perform automated vulnerability scans of internal enterprise assets on a quarterly, or more frequent, basis.", "level": 1, "isCategory": false},
+        {"reference": "7.6", "title": "Perform Automated Vulnerability Scans of Externally-Exposed Enterprise Assets", "description": "Perform automated vulnerability scans of externally-exposed enterprise assets using a SCAP-compliant vulnerability scanning tool.", "level": 1, "isCategory": false},
+        {"reference": "7.7", "title": "Remediate Detected Vulnerabilities", "description": "Remediate detected vulnerabilities in software through processes and tooling on a monthly, or more frequent, basis.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-08",
+      "title": "Audit Log Management",
+      "description": "Collect, alert, review, and retain audit logs of events that could help detect, understand, or recover from an attack.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "8.1", "title": "Establish and Maintain an Audit Log Management Process", "description": "Establish and maintain an audit log management process that defines the enterprise's logging requirements.", "level": 1, "isCategory": false},
+        {"reference": "8.2", "title": "Collect Audit Logs", "description": "Collect audit logs. Ensure that logging, per the enterprise's audit log management process, has been enabled across enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "8.3", "title": "Ensure Adequate Audit Log Storage", "description": "Ensure that logging destinations maintain adequate storage to comply with the enterprise's audit log management process.", "level": 1, "isCategory": false},
+        {"reference": "8.4", "title": "Standardize Time Synchronization", "description": "Standardize time synchronization. Configure at least two synchronized time sources across enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "8.5", "title": "Collect Detailed Audit Logs", "description": "Configure detailed audit logging for enterprise assets containing sensitive data.", "level": 1, "isCategory": false},
+        {"reference": "8.6", "title": "Collect DNS Query Audit Logs", "description": "Collect DNS query audit logs on enterprise assets, where appropriate and supported.", "level": 1, "isCategory": false},
+        {"reference": "8.7", "title": "Collect URL Request Audit Logs", "description": "Collect URL request audit logs on enterprise assets, where appropriate and supported.", "level": 1, "isCategory": false},
+        {"reference": "8.8", "title": "Collect Command-Line Audit Logs", "description": "Collect command-line audit logs. Example implementations include collecting audit logs from PowerShell, BASH, and remote administrative terminals.", "level": 1, "isCategory": false},
+        {"reference": "8.9", "title": "Centralize Audit Logs", "description": "Centralize, to the extent possible, audit log collection and retention across enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "8.10", "title": "Retain Audit Logs", "description": "Retain audit logs across enterprise assets for a minimum of 90 days.", "level": 1, "isCategory": false},
+        {"reference": "8.11", "title": "Conduct Audit Log Reviews", "description": "Conduct reviews of audit logs to detect anomalies or abnormal events that could indicate a potential threat.", "level": 1, "isCategory": false},
+        {"reference": "8.12", "title": "Collect Service Provider Logs", "description": "Collect service provider logs, where supported. Example implementations include collecting authentication and authorization events.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-09",
+      "title": "Email and Web Browser Protections",
+      "description": "Improve protections and detections of threats from email and web vectors.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "9.1", "title": "Ensure Use of Only Fully Supported Browsers and Email Clients", "description": "Ensure only fully supported browsers and email clients are allowed to execute in the enterprise.", "level": 1, "isCategory": false},
+        {"reference": "9.2", "title": "Use DNS Filtering Services", "description": "Use DNS filtering services on all enterprise assets to block access to known malicious domains.", "level": 1, "isCategory": false},
+        {"reference": "9.3", "title": "Maintain and Enforce Network-Based URL Filters", "description": "Enforce and update network-based URL filters to limit an enterprise asset from connecting to potentially malicious or unapproved websites.", "level": 1, "isCategory": false},
+        {"reference": "9.4", "title": "Restrict Unnecessary or Unauthorized Browser and Email Client Extensions", "description": "Restrict, either through uninstalling or disabling, any unauthorized or unnecessary browser or email client plugins, extensions, and add-on applications.", "level": 1, "isCategory": false},
+        {"reference": "9.5", "title": "Implement DMARC", "description": "To lower the chance of spoofed or modified emails from valid domains, implement DMARC policy and verification.", "level": 1, "isCategory": false},
+        {"reference": "9.6", "title": "Block Unnecessary File Types", "description": "Block unnecessary file types attempting to enter the enterprise's email gateway.", "level": 1, "isCategory": false},
+        {"reference": "9.7", "title": "Deploy and Maintain Email Server Anti-Malware Protections", "description": "Deploy and maintain email server anti-malware protections, such as attachment scanning and/or sandboxing.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-10",
+      "title": "Malware Defenses",
+      "description": "Prevent or control the installation, spread, and execution of malicious applications, code, or scripts on enterprise assets.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "10.1", "title": "Deploy and Maintain Anti-Malware Software", "description": "Deploy and maintain anti-malware software on all enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "10.2", "title": "Configure Automatic Anti-Malware Signature Updates", "description": "Configure automatic updates for anti-malware signature files on all enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "10.3", "title": "Disable Autorun and Autoplay for Removable Media", "description": "Disable autorun and autoplay auto-execute functionality for removable media.", "level": 1, "isCategory": false},
+        {"reference": "10.4", "title": "Configure Automatic Anti-Malware Scanning of Removable Media", "description": "Configure anti-malware software to automatically scan removable media.", "level": 1, "isCategory": false},
+        {"reference": "10.5", "title": "Enable Anti-Exploitation Features", "description": "Enable anti-exploitation features on enterprise assets and software, where possible.", "level": 1, "isCategory": false},
+        {"reference": "10.6", "title": "Centrally Manage Anti-Malware Software", "description": "Centrally manage anti-malware software.", "level": 1, "isCategory": false},
+        {"reference": "10.7", "title": "Use Behavior-Based Anti-Malware Software", "description": "Use behavior-based anti-malware software.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-11",
+      "title": "Data Recovery",
+      "description": "Establish and maintain data recovery practices sufficient to restore in-scope enterprise assets to a pre-incident and trusted state.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "11.1", "title": "Establish and Maintain a Data Recovery Process", "description": "Establish and maintain a data recovery process. In the process, address the scope of data recovery activities, recovery prioritization, and the security of backup data.", "level": 1, "isCategory": false},
+        {"reference": "11.2", "title": "Perform Automated Backups", "description": "Perform automated backups of in-scope enterprise assets.", "level": 1, "isCategory": false},
+        {"reference": "11.3", "title": "Protect Recovery Data", "description": "Protect recovery data with equivalent controls to the original data.", "level": 1, "isCategory": false},
+        {"reference": "11.4", "title": "Establish and Maintain an Isolated Instance of Recovery Data", "description": "Establish and maintain an isolated instance of recovery data using offline, cloud, or off-site systems or services.", "level": 1, "isCategory": false},
+        {"reference": "11.5", "title": "Test Data Recovery", "description": "Test backup recovery quarterly, or more frequently, for a sampling of in-scope enterprise assets.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-12",
+      "title": "Network Infrastructure Management",
+      "description": "Establish and maintain the secure configuration of network devices.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "12.1", "title": "Ensure Network Infrastructure is Up-to-Date", "description": "Ensure network infrastructure is kept up-to-date.", "level": 1, "isCategory": false},
+        {"reference": "12.2", "title": "Establish and Maintain a Secure Network Architecture", "description": "Establish and maintain a secure network architecture.", "level": 1, "isCategory": false},
+        {"reference": "12.3", "title": "Securely Manage Network Infrastructure", "description": "Securely manage network infrastructure.", "level": 1, "isCategory": false},
+        {"reference": "12.4", "title": "Establish and Maintain Architecture Diagram(s)", "description": "Establish and maintain architecture diagram(s) and/or other network system documentation.", "level": 1, "isCategory": false},
+        {"reference": "12.5", "title": "Centralize Network Authentication, Authorization, and Auditing (AAA)", "description": "Centralize network AAA.", "level": 1, "isCategory": false},
+        {"reference": "12.6", "title": "Use of Secure Network Management and Communication Protocols", "description": "Use secure network management and communication protocols.", "level": 1, "isCategory": false},
+        {"reference": "12.7", "title": "Ensure Remote Devices Utilize a VPN and are Connecting to an Enterprise's AAA Infrastructure", "description": "Require users to authenticate to enterprise-managed VPN and authentication infrastructure prior to accessing enterprise resources on end-user devices.", "level": 1, "isCategory": false},
+        {"reference": "12.8", "title": "Establish and Maintain Dedicated Computing Resources for All Administrative Work", "description": "Establish and maintain dedicated computing resources, either physically or logically separated, for all administrative tasks or tasks requiring administrative access.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-13",
+      "title": "Network Monitoring and Defense",
+      "description": "Operate processes and tooling to establish and maintain comprehensive network monitoring and defense against security threats.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "13.1", "title": "Centralize Security Event Alerting", "description": "Centralize security event alerting across enterprise assets for log correlation and analysis.", "level": 1, "isCategory": false},
+        {"reference": "13.2", "title": "Deploy a Host-Based Intrusion Detection Solution", "description": "Deploy a host-based intrusion detection solution on enterprise assets, where appropriate and/or supported.", "level": 1, "isCategory": false},
+        {"reference": "13.3", "title": "Deploy a Network Intrusion Detection Solution", "description": "Deploy a network intrusion detection solution on enterprise assets, where appropriate.", "level": 1, "isCategory": false},
+        {"reference": "13.4", "title": "Perform Traffic Filtering Between Network Segments", "description": "Perform traffic filtering between network segments, where appropriate.", "level": 1, "isCategory": false},
+        {"reference": "13.5", "title": "Manage Access Control for Remote Assets", "description": "Manage access control for assets remotely connecting to enterprise resources based upon their security posture.", "level": 1, "isCategory": false},
+        {"reference": "13.6", "title": "Collect Network Traffic Flow Logs", "description": "Collect network traffic flow logs and/or network traffic to review and alert upon from network devices.", "level": 1, "isCategory": false},
+        {"reference": "13.7", "title": "Deploy a Host-Based Intrusion Prevention Solution", "description": "Deploy a host-based intrusion prevention solution on enterprise assets, where appropriate and/or supported.", "level": 1, "isCategory": false},
+        {"reference": "13.8", "title": "Deploy a Network Intrusion Prevention Solution", "description": "Deploy a network intrusion prevention solution, where appropriate.", "level": 1, "isCategory": false},
+        {"reference": "13.9", "title": "Deploy Port-Level Access Control", "description": "Deploy port-level access control. Port-level access control utilizes 802.1x, or similar network access control protocols and functions.", "level": 1, "isCategory": false},
+        {"reference": "13.10", "title": "Perform Application Layer Filtering", "description": "Perform application layer filtering. Example implementations include a filtering proxy, application layer firewall, or gateway.", "level": 1, "isCategory": false},
+        {"reference": "13.11", "title": "Tune Security Event Alerting Thresholds", "description": "Tune security event alerting thresholds monthly, or more frequently.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-14",
+      "title": "Security Awareness and Skills Training",
+      "description": "Establish and maintain a security awareness program to influence behavior among the workforce to be security conscious.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "14.1", "title": "Establish and Maintain a Security Awareness Program", "description": "Establish and maintain a security awareness program.", "level": 1, "isCategory": false},
+        {"reference": "14.2", "title": "Train Workforce Members to Recognize Social Engineering Attacks", "description": "Train workforce members to recognize social engineering attacks, such as phishing, pre-texting, and tailgating.", "level": 1, "isCategory": false},
+        {"reference": "14.3", "title": "Train Workforce Members on Authentication Best Practices", "description": "Train workforce members on authentication best practices.", "level": 1, "isCategory": false},
+        {"reference": "14.4", "title": "Train Workforce on Data Handling Best Practices", "description": "Train workforce members on how to identify and properly store, transfer, archive, and destroy sensitive data.", "level": 1, "isCategory": false},
+        {"reference": "14.5", "title": "Train Workforce Members on Causes of Unintentional Data Exposure", "description": "Train workforce members to be aware of causes for unintentional data exposure.", "level": 1, "isCategory": false},
+        {"reference": "14.6", "title": "Train Workforce Members on Recognizing and Reporting Security Incidents", "description": "Train workforce members to be able to recognize a potential incident and be able to report such an incident.", "level": 1, "isCategory": false},
+        {"reference": "14.7", "title": "Train Workforce on How to Identify and Report if Their Enterprise Assets are Missing Security Updates", "description": "Train workforce to understand how to verify and report out-of-date software patches or any failures in automated processes and tools.", "level": 1, "isCategory": false},
+        {"reference": "14.8", "title": "Train Workforce on the Dangers of Connecting to and Transmitting Enterprise Data Over Insecure Networks", "description": "Train workforce members on the dangers of connecting to, and transmitting data over, insecure networks for enterprise activities.", "level": 1, "isCategory": false},
+        {"reference": "14.9", "title": "Conduct Role-Specific Security Awareness and Skills Training", "description": "Conduct role-specific security awareness and skills training.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-15",
+      "title": "Service Provider Management",
+      "description": "Develop a process to evaluate service providers who hold sensitive data, or are responsible for an enterprise's critical IT platforms or processes.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "15.1", "title": "Establish and Maintain an Inventory of Service Providers", "description": "Establish and maintain an inventory of service providers.", "level": 1, "isCategory": false},
+        {"reference": "15.2", "title": "Establish and Maintain a Service Provider Management Policy", "description": "Establish and maintain a service provider management policy.", "level": 1, "isCategory": false},
+        {"reference": "15.3", "title": "Classify Service Providers", "description": "Classify service providers. Classification consideration may include one or more characteristics.", "level": 1, "isCategory": false},
+        {"reference": "15.4", "title": "Ensure Service Provider Contracts Include Security Requirements", "description": "Ensure service provider contracts include security requirements.", "level": 1, "isCategory": false},
+        {"reference": "15.5", "title": "Assess Service Providers", "description": "Assess service providers consistent with the enterprise's service provider management policy.", "level": 1, "isCategory": false},
+        {"reference": "15.6", "title": "Monitor Service Providers", "description": "Monitor service providers consistent with the enterprise's service provider management policy.", "level": 1, "isCategory": false},
+        {"reference": "15.7", "title": "Securely Decommission Service Providers", "description": "Securely decommission service providers.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-16",
+      "title": "Application Software Security",
+      "description": "Manage the security life cycle of in-house developed, hosted, or acquired software.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "16.1", "title": "Establish and Maintain a Secure Application Development Process", "description": "Establish and maintain a secure application development process.", "level": 1, "isCategory": false},
+        {"reference": "16.2", "title": "Establish and Maintain a Process to Accept and Address Software Vulnerabilities", "description": "Establish and maintain a process to accept and address reports of software vulnerabilities.", "level": 1, "isCategory": false},
+        {"reference": "16.3", "title": "Perform Root Cause Analysis on Security Vulnerabilities", "description": "Perform root cause analysis on security vulnerabilities.", "level": 1, "isCategory": false},
+        {"reference": "16.4", "title": "Establish and Manage an Inventory of Third-Party Software Components", "description": "Establish and manage an updated inventory of third-party components used in development.", "level": 1, "isCategory": false},
+        {"reference": "16.5", "title": "Use Up-to-Date and Trusted Third-Party Software Components", "description": "Use up-to-date and trusted third-party software components.", "level": 1, "isCategory": false},
+        {"reference": "16.6", "title": "Establish and Maintain a Severity Rating System and Process for Application Vulnerabilities", "description": "Establish and maintain a severity rating system and process for application vulnerabilities.", "level": 1, "isCategory": false},
+        {"reference": "16.7", "title": "Use Standard Hardening Configuration Templates for Application Infrastructure", "description": "Use standard, industry-recommended hardening configuration templates for application infrastructure components.", "level": 1, "isCategory": false},
+        {"reference": "16.8", "title": "Separate Production and Non-Production Systems", "description": "Maintain separate environments for production and non-production systems.", "level": 1, "isCategory": false},
+        {"reference": "16.9", "title": "Train Developers in Application Security Concepts and Secure Coding", "description": "Ensure that all software development personnel receive training in writing secure code for their specific development environment and responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "16.10", "title": "Apply Secure Design Principles in Application Architectures", "description": "Apply secure design principles in application architectures.", "level": 1, "isCategory": false},
+        {"reference": "16.11", "title": "Leverage Vetted Modules or Services for Application Security Components", "description": "Leverage vetted modules or services for application security components.", "level": 1, "isCategory": false},
+        {"reference": "16.12", "title": "Implement Code-Level Security Checks", "description": "Apply static and dynamic analysis tools within the application life cycle to verify that secure coding practices are being followed.", "level": 1, "isCategory": false},
+        {"reference": "16.13", "title": "Conduct Application Penetration Testing", "description": "Conduct application penetration testing.", "level": 1, "isCategory": false},
+        {"reference": "16.14", "title": "Conduct Threat Modeling", "description": "Conduct threat modeling.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-17",
+      "title": "Incident Response Management",
+      "description": "Establish a program to develop and maintain an incident response capability.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "17.1", "title": "Designate Personnel to Manage Incident Handling", "description": "Designate one key person, and at least one backup, who will manage the enterprise's incident handling process.", "level": 1, "isCategory": false},
+        {"reference": "17.2", "title": "Establish and Maintain Contact Information for Reporting Security Incidents", "description": "Establish and maintain contact information for parties that need to be informed of security incidents.", "level": 1, "isCategory": false},
+        {"reference": "17.3", "title": "Establish and Maintain an Enterprise Process for Reporting Incidents", "description": "Establish and maintain an enterprise process for the workforce to report security incidents.", "level": 1, "isCategory": false},
+        {"reference": "17.4", "title": "Establish and Maintain an Incident Response Process", "description": "Establish and maintain an incident response process that addresses roles and responsibilities, compliance requirements, and a communication plan.", "level": 1, "isCategory": false},
+        {"reference": "17.5", "title": "Assign Key Roles and Responsibilities", "description": "Assign key roles and responsibilities for incident response.", "level": 1, "isCategory": false},
+        {"reference": "17.6", "title": "Define Mechanisms for Communicating During Incident Response", "description": "Determine which primary and secondary mechanisms will be used to communicate and report during a security incident.", "level": 1, "isCategory": false},
+        {"reference": "17.7", "title": "Conduct Routine Incident Response Exercises", "description": "Plan and conduct routine incident response exercises and scenarios for key personnel involved in the incident response process.", "level": 1, "isCategory": false},
+        {"reference": "17.8", "title": "Conduct Post-Incident Reviews", "description": "Conduct post-incident reviews.", "level": 1, "isCategory": false},
+        {"reference": "17.9", "title": "Establish and Maintain Security Incident Thresholds", "description": "Establish and maintain security incident thresholds, including, at a minimum, differentiating between an incident and an event.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CIS-18",
+      "title": "Penetration Testing",
+      "description": "Test the effectiveness and resiliency of enterprise assets through identifying and exploiting weaknesses in controls and simulating the objectives and actions of an attacker.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "18.1", "title": "Establish and Maintain a Penetration Testing Program", "description": "Establish and maintain a penetration testing program appropriate to the size, complexity, and maturity of the enterprise.", "level": 1, "isCategory": false},
+        {"reference": "18.2", "title": "Perform Periodic External Penetration Tests", "description": "Perform periodic external penetration tests based on program requirements, no less than annually.", "level": 1, "isCategory": false},
+        {"reference": "18.3", "title": "Remediate Penetration Test Findings", "description": "Remediate penetration test findings based on the enterprise's policy for remediation scope and prioritization.", "level": 1, "isCategory": false},
+        {"reference": "18.4", "title": "Validate Security Measures", "description": "Validate security measures after each penetration test.", "level": 1, "isCategory": false},
+        {"reference": "18.5", "title": "Perform Periodic Internal Penetration Tests", "description": "Perform periodic internal penetration tests based on program requirements, no less than annually.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+{
+  "id": "hipaa",
+  "name": "HIPAA",
+  "version": "2013",
+  "description": "Health Insurance Portability and Accountability Act - Privacy Rule and Security Rule requirements for protecting Protected Health Information (PHI) and Electronic Protected Health Information (ePHI).",
+  "source": "U.S. Department of Health and Human Services (HHS)",
+  "category": "privacy",
+  "requirements": [
+    {
+      "reference": "164.308",
+      "title": "Administrative Safeguards",
+      "description": "Administrative actions, policies, and procedures to manage the selection, development, implementation, and maintenance of security measures to protect ePHI.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.308(a)(1)(i)", "title": "Security Management Process", "description": "Implement policies and procedures to prevent, detect, contain, and correct security violations.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(1)(ii)(A)", "title": "Risk Analysis", "description": "Conduct an accurate and thorough assessment of the potential risks and vulnerabilities to the confidentiality, integrity, and availability of ePHI.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(1)(ii)(B)", "title": "Risk Management", "description": "Implement security measures sufficient to reduce risks and vulnerabilities to a reasonable and appropriate level.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(1)(ii)(C)", "title": "Sanction Policy", "description": "Apply appropriate sanctions against workforce members who fail to comply with security policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(1)(ii)(D)", "title": "Information System Activity Review", "description": "Implement procedures to regularly review records of information system activity, such as audit logs, access reports, and security incident tracking reports.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(2)", "title": "Assigned Security Responsibility", "description": "Identify the security official who is responsible for the development and implementation of the policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(3)(i)", "title": "Workforce Security", "description": "Implement policies and procedures to ensure that all members of its workforce have appropriate access to ePHI and to prevent unauthorized access.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(3)(ii)(A)", "title": "Authorization and/or Supervision", "description": "Implement procedures for the authorization and/or supervision of workforce members who work with ePHI.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(3)(ii)(B)", "title": "Workforce Clearance Procedure", "description": "Implement procedures to determine that the access of a workforce member to ePHI is appropriate.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(3)(ii)(C)", "title": "Termination Procedures", "description": "Implement procedures for terminating access to ePHI when the employment of a workforce member ends.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(4)(i)", "title": "Information Access Management", "description": "Implement policies and procedures for authorizing access to ePHI that are consistent with the applicable requirements.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(4)(ii)(A)", "title": "Isolating Healthcare Clearinghouse Functions", "description": "If a healthcare clearinghouse is part of a larger organization, the clearinghouse must implement policies and procedures that protect ePHI from unauthorized access by the larger organization.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(4)(ii)(B)", "title": "Access Authorization", "description": "Implement policies and procedures for granting access to ePHI, for example, through access to a workstation, transaction, program, process, or other mechanism.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(4)(ii)(C)", "title": "Access Establishment and Modification", "description": "Implement policies and procedures that, based upon the entity's access authorization policies, establish, document, review, and modify a user's right of access to a workstation, transaction, program, or process.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(5)(i)", "title": "Security Awareness and Training", "description": "Implement a security awareness and training program for all members of its workforce.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(5)(ii)(A)", "title": "Security Reminders", "description": "Periodic security updates.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(5)(ii)(B)", "title": "Protection from Malicious Software", "description": "Procedures for guarding against, detecting, and reporting malicious software.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(5)(ii)(C)", "title": "Log-in Monitoring", "description": "Procedures for monitoring log-in attempts and reporting discrepancies.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(5)(ii)(D)", "title": "Password Management", "description": "Procedures for creating, changing, and safeguarding passwords.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(6)(i)", "title": "Security Incident Procedures", "description": "Implement policies and procedures to address security incidents.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(6)(ii)", "title": "Response and Reporting", "description": "Identify and respond to suspected or known security incidents; mitigate, to the extent practicable, harmful effects of security incidents that are known to the covered entity; and document security incidents and their outcomes.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(7)(i)", "title": "Contingency Plan", "description": "Establish policies and procedures for responding to an emergency or other occurrence that damages systems that contain ePHI.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(7)(ii)(A)", "title": "Data Backup Plan", "description": "Establish and implement procedures to create and maintain retrievable exact copies of ePHI.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(7)(ii)(B)", "title": "Disaster Recovery Plan", "description": "Establish and implement procedures to restore any loss of data.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(7)(ii)(C)", "title": "Emergency Mode Operation Plan", "description": "Establish and implement procedures to enable continuation of critical business processes for protection of ePHI while operating in emergency mode.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(7)(ii)(D)", "title": "Testing and Revision Procedures", "description": "Implement procedures for periodic testing and revision of contingency plans.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(7)(ii)(E)", "title": "Applications and Data Criticality Analysis", "description": "Assess the relative criticality of specific applications and data in support of other contingency plan components.", "level": 1, "isCategory": false},
+        {"reference": "164.308(a)(8)", "title": "Evaluation", "description": "Perform a periodic technical and nontechnical evaluation that establishes the extent to which an entity's security policies and procedures meet the requirements.", "level": 1, "isCategory": false},
+        {"reference": "164.308(b)(1)", "title": "Business Associate Contracts", "description": "A covered entity may permit a business associate to create, receive, maintain, or transmit ePHI on the covered entity's behalf only if the covered entity obtains satisfactory assurances.", "level": 1, "isCategory": false},
+        {"reference": "164.308(b)(4)", "title": "Written Contract or Other Arrangement", "description": "Document the satisfactory assurances required by the business associate contracts standard through a written contract or other arrangement.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.310",
+      "title": "Physical Safeguards",
+      "description": "Physical measures, policies, and procedures to protect electronic information systems and related buildings and equipment from natural and environmental hazards and unauthorized intrusion.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.310(a)(1)", "title": "Facility Access Controls", "description": "Implement policies and procedures to limit physical access to its electronic information systems and the facility or facilities in which they are housed.", "level": 1, "isCategory": false},
+        {"reference": "164.310(a)(2)(i)", "title": "Contingency Operations", "description": "Establish and implement procedures that allow facility access in support of restoration of lost data under the disaster recovery plan and emergency mode operations plan.", "level": 1, "isCategory": false},
+        {"reference": "164.310(a)(2)(ii)", "title": "Facility Security Plan", "description": "Implement policies and procedures to safeguard the facility and the equipment therein from unauthorized physical access, tampering, and theft.", "level": 1, "isCategory": false},
+        {"reference": "164.310(a)(2)(iii)", "title": "Access Control and Validation Procedures", "description": "Implement procedures to control and validate a person's access to facilities based on their role or function.", "level": 1, "isCategory": false},
+        {"reference": "164.310(a)(2)(iv)", "title": "Maintenance Records", "description": "Implement policies and procedures to document repairs and modifications to the physical components of a facility which are related to security.", "level": 1, "isCategory": false},
+        {"reference": "164.310(b)", "title": "Workstation Use", "description": "Implement policies and procedures that specify the proper functions to be performed, the manner in which those functions are to be performed, and the physical attributes of the surroundings of a specific workstation.", "level": 1, "isCategory": false},
+        {"reference": "164.310(c)", "title": "Workstation Security", "description": "Implement physical safeguards for all workstations that access ePHI, to restrict access to authorized users.", "level": 1, "isCategory": false},
+        {"reference": "164.310(d)(1)", "title": "Device and Media Controls", "description": "Implement policies and procedures that govern the receipt and removal of hardware and electronic media that contain ePHI into and out of a facility.", "level": 1, "isCategory": false},
+        {"reference": "164.310(d)(2)(i)", "title": "Disposal", "description": "Implement policies and procedures to address the final disposition of ePHI and/or the hardware or electronic media on which it is stored.", "level": 1, "isCategory": false},
+        {"reference": "164.310(d)(2)(ii)", "title": "Media Re-use", "description": "Implement procedures for removal of ePHI from electronic media before the media are made available for re-use.", "level": 1, "isCategory": false},
+        {"reference": "164.310(d)(2)(iii)", "title": "Accountability", "description": "Maintain a record of the movements of hardware and electronic media and any person responsible therefore.", "level": 1, "isCategory": false},
+        {"reference": "164.310(d)(2)(iv)", "title": "Data Backup and Storage", "description": "Create a retrievable, exact copy of ePHI, when needed, before movement of equipment.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.312",
+      "title": "Technical Safeguards",
+      "description": "The technology and the policy and procedures for its use that protect ePHI and control access to it.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.312(a)(1)", "title": "Access Control", "description": "Implement technical policies and procedures for electronic information systems that maintain ePHI to allow access only to those persons or software programs that have been granted access rights.", "level": 1, "isCategory": false},
+        {"reference": "164.312(a)(2)(i)", "title": "Unique User Identification", "description": "Assign a unique name and/or number for identifying and tracking user identity.", "level": 1, "isCategory": false},
+        {"reference": "164.312(a)(2)(ii)", "title": "Emergency Access Procedure", "description": "Establish and implement procedures for obtaining necessary ePHI during an emergency.", "level": 1, "isCategory": false},
+        {"reference": "164.312(a)(2)(iii)", "title": "Automatic Logoff", "description": "Implement electronic procedures that terminate an electronic session after a predetermined time of inactivity.", "level": 1, "isCategory": false},
+        {"reference": "164.312(a)(2)(iv)", "title": "Encryption and Decryption", "description": "Implement a mechanism to encrypt and decrypt ePHI.", "level": 1, "isCategory": false},
+        {"reference": "164.312(b)", "title": "Audit Controls", "description": "Implement hardware, software, and/or procedural mechanisms that record and examine activity in information systems that contain or use ePHI.", "level": 1, "isCategory": false},
+        {"reference": "164.312(c)(1)", "title": "Integrity", "description": "Implement policies and procedures to protect ePHI from improper alteration or destruction.", "level": 1, "isCategory": false},
+        {"reference": "164.312(c)(2)", "title": "Mechanism to Authenticate ePHI", "description": "Implement electronic mechanisms to corroborate that ePHI has not been altered or destroyed in an unauthorized manner.", "level": 1, "isCategory": false},
+        {"reference": "164.312(d)", "title": "Person or Entity Authentication", "description": "Implement procedures to verify that a person or entity seeking access to ePHI is the one claimed.", "level": 1, "isCategory": false},
+        {"reference": "164.312(e)(1)", "title": "Transmission Security", "description": "Implement technical security measures to guard against unauthorized access to ePHI that is being transmitted over an electronic communications network.", "level": 1, "isCategory": false},
+        {"reference": "164.312(e)(2)(i)", "title": "Integrity Controls", "description": "Implement security measures to ensure that electronically transmitted ePHI is not improperly modified without detection until disposed of.", "level": 1, "isCategory": false},
+        {"reference": "164.312(e)(2)(ii)", "title": "Encryption", "description": "Implement a mechanism to encrypt ePHI whenever deemed appropriate.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.314",
+      "title": "Organizational Requirements",
+      "description": "Requirements related to business associate contracts and other arrangements.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.314(a)(1)", "title": "Business Associate Contracts", "description": "The contract between a covered entity and a business associate must meet the requirements of the Security Rule.", "level": 1, "isCategory": false},
+        {"reference": "164.314(a)(2)(i)", "title": "Contract Requirements", "description": "The contract must require the business associate to comply with the applicable requirements of the Security Rule.", "level": 1, "isCategory": false},
+        {"reference": "164.314(a)(2)(ii)", "title": "Reporting Requirements", "description": "The contract must require the business associate to report security incidents to the covered entity.", "level": 1, "isCategory": false},
+        {"reference": "164.314(b)(1)", "title": "Requirements for Group Health Plans", "description": "A group health plan must ensure that its plan documents provide that the plan sponsor will reasonably and appropriately safeguard ePHI created, received, maintained, or transmitted.", "level": 1, "isCategory": false},
+        {"reference": "164.314(b)(2)", "title": "Implementation Specifications", "description": "The plan documents must incorporate provisions to require the plan sponsor to implement administrative, physical, and technical safeguards.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.316",
+      "title": "Policies and Procedures and Documentation Requirements",
+      "description": "Requirements for maintaining policies, procedures, and documentation.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.316(a)", "title": "Policies and Procedures", "description": "Implement reasonable and appropriate policies and procedures to comply with the standards, implementation specifications, or other requirements of the Security Rule.", "level": 1, "isCategory": false},
+        {"reference": "164.316(b)(1)", "title": "Documentation", "description": "Maintain the policies and procedures implemented to comply with the Security Rule in written form.", "level": 1, "isCategory": false},
+        {"reference": "164.316(b)(2)(i)", "title": "Time Limit", "description": "Retain the documentation required for 6 years from the date of its creation or the date when it last was in effect, whichever is later.", "level": 1, "isCategory": false},
+        {"reference": "164.316(b)(2)(ii)", "title": "Availability", "description": "Make documentation available to those persons responsible for implementing the procedures to which the documentation pertains.", "level": 1, "isCategory": false},
+        {"reference": "164.316(b)(2)(iii)", "title": "Updates", "description": "Review documentation periodically, and update as needed, in response to environmental or operational changes affecting the security of ePHI.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.530",
+      "title": "Privacy Rule Administrative Requirements",
+      "description": "Administrative requirements for the Privacy Rule.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.530(a)", "title": "Personnel Designations", "description": "A covered entity must designate a privacy official responsible for the development and implementation of the policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "164.530(b)", "title": "Training", "description": "A covered entity must train all members of its workforce on the policies and procedures with respect to PHI.", "level": 1, "isCategory": false},
+        {"reference": "164.530(c)", "title": "Safeguards", "description": "A covered entity must have in place appropriate administrative, technical, and physical safeguards to protect the privacy of PHI.", "level": 1, "isCategory": false},
+        {"reference": "164.530(d)", "title": "Complaints", "description": "A covered entity must provide a process for individuals to make complaints concerning the covered entity's policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "164.530(e)", "title": "Sanctions", "description": "A covered entity must have and apply appropriate sanctions against members of its workforce who fail to comply with the privacy policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "164.530(f)", "title": "Mitigation", "description": "A covered entity must mitigate, to the extent practicable, any harmful effect that is known to the covered entity of a use or disclosure of PHI in violation of its policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "164.530(g)", "title": "Refraining from Intimidating or Retaliatory Acts", "description": "A covered entity may not intimidate, threaten, coerce, discriminate against, or take other retaliatory action against any individual for exercising their rights under the Privacy Rule.", "level": 1, "isCategory": false},
+        {"reference": "164.530(h)", "title": "Waiver of Rights", "description": "A covered entity may not require individuals to waive their rights under the Privacy Rule as a condition of the provision of treatment, payment, enrollment in a health plan, or eligibility for benefits.", "level": 1, "isCategory": false},
+        {"reference": "164.530(i)", "title": "Policies and Procedures", "description": "A covered entity must implement policies and procedures with respect to PHI that are designed to comply with the Privacy Rule.", "level": 1, "isCategory": false},
+        {"reference": "164.530(j)", "title": "Documentation", "description": "A covered entity must maintain policies and procedures in written or electronic form and retain for six years.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.520",
+      "title": "Notice of Privacy Practices",
+      "description": "Requirements for notice of privacy practices for PHI.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.520(a)", "title": "Notice Required", "description": "A covered entity must provide a notice that is written in plain language and that includes required elements.", "level": 1, "isCategory": false},
+        {"reference": "164.520(b)", "title": "Content of Notice", "description": "The notice must contain a header, description of uses and disclosures, individual rights, covered entity duties, and contact information.", "level": 1, "isCategory": false},
+        {"reference": "164.520(c)", "title": "Provision of Notice", "description": "A covered entity must make the notice available to any person who asks for it and must prominently post and make available a copy.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.524",
+      "title": "Access of Individuals to PHI",
+      "description": "Individual's right to access their PHI.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.524(a)", "title": "Right of Access", "description": "An individual has a right of access to inspect and obtain a copy of PHI about the individual in a designated record set.", "level": 1, "isCategory": false},
+        {"reference": "164.524(b)", "title": "Request for Access", "description": "A covered entity must permit an individual to request access to inspect or obtain a copy of the PHI about the individual.", "level": 1, "isCategory": false},
+        {"reference": "164.524(c)", "title": "Provision of Access", "description": "A covered entity must provide the access requested by individuals, including the form and format requested.", "level": 1, "isCategory": false},
+        {"reference": "164.524(d)", "title": "Denial of Access", "description": "A covered entity may deny an individual access in certain circumstances and must provide a written denial.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.526",
+      "title": "Amendment of PHI",
+      "description": "Individual's right to have PHI amended.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.526(a)", "title": "Right to Amend", "description": "An individual has the right to have a covered entity amend PHI or a record about the individual in a designated record set.", "level": 1, "isCategory": false},
+        {"reference": "164.526(b)", "title": "Request for Amendment", "description": "A covered entity must permit an individual to request that the covered entity amend the PHI.", "level": 1, "isCategory": false},
+        {"reference": "164.526(c)", "title": "Accepting the Amendment", "description": "If a covered entity accepts the requested amendment, it must make the amendment to the PHI or record.", "level": 1, "isCategory": false},
+        {"reference": "164.526(d)", "title": "Denying the Amendment", "description": "A covered entity may deny a requested amendment if it determines the PHI or record was not created by the covered entity.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "164.528",
+      "title": "Accounting of Disclosures of PHI",
+      "description": "Individual's right to receive an accounting of disclosures of PHI.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "164.528(a)", "title": "Right to an Accounting", "description": "An individual has a right to receive an accounting of disclosures of PHI made by a covered entity in the six years prior to the date of the request.", "level": 1, "isCategory": false},
+        {"reference": "164.528(b)", "title": "Content of the Accounting", "description": "The accounting must include the date of disclosure, name of entity/person, brief description of PHI, and purpose of disclosure.", "level": 1, "isCategory": false},
+        {"reference": "164.528(c)", "title": "Provision of the Accounting", "description": "A covered entity must act on the individual's request for an accounting within 60 days.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}

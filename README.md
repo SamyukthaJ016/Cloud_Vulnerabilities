@@ -125,28 +125,10 @@ Notes:
 - **Queue**: Redis (Task management)
 - **Tools**: Trivy, Gitleaks, Nuclei, CloudFox, OWASP ZAP
 
-## 🔐 SSO Integration
+## 🔐 Authentication
 
-The active DeepTrustxAI SSO frontend now lives in:
-
-- [sso/new/deeptrustxai](/Users/anjali/Desktop/sum/Cloud_Vulnerabilities/sso/new/deeptrustxai)
-
-That app provides:
-
-- Google sign-in with NextAuth
-- signed SSO token handoff for CloudGuard
-- the **Cloud Penetration Testing** product tile that opens CloudGuard after login
-
-CloudGuard expects these companion SSO routes:
-
-- `/api/scan/redirect`
-- `/api/sso/verify`
-
-The older folder:
-
-- [sso/sso-login](/Users/anjali/Desktop/sum/Cloud_Vulnerabilities/sso/sso-login)
-
-is now a legacy implementation and should not be used as the primary SSO app for new deployments.
+CloudGuard now runs as a standalone scanner application by default.
+If authentication is expanded again in the future, it should be treated as an optional companion feature rather than a required part of the core scanning platform.
 
 ## 🛡️ Security Note
 

@@ -255,9 +255,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 Scan History</h1>
-            <button class="btn btn-secondary" onclick="goToDashboard()">
-                📊 View Dashboard
+            <h1>Scan History</h1>
+            <button class="btn btn-secondary" onclick="goToDashboard()">View Dashboard
             </button>
         </div>
 
@@ -326,8 +325,7 @@
         </div>
     </div>
 
-    <script>
-        let currentPage = 1;
+    <script>let currentPage = 1;
         const pageSize = 20;
         let totalScans = 0;
         let authContext = {
@@ -344,7 +342,7 @@
 
         function stripSsoQueryParams() {
             const currentUrl = new URL(window.location.href);
-            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            ['token', 'from', 'service'].forEach((key) =>currentUrl.searchParams.delete(key));
             window.history.replaceState({}, document.title, currentUrl.toString());
         }
 
@@ -416,7 +414,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const cookieMatch = document.cookie
                 .split('; ')
-                .find((row) => row.startsWith('cloudguard_user_id='));
+                .find((row) =>row.startsWith('cloudguard_user_id='));
             let userId =
                 urlParams.get('user_id') ||
                 sessionStorage.getItem('cloudguard_user_id') ||
@@ -442,7 +440,7 @@
                 const userId = getUserId();
                 const offset = (currentPage - 1) * pageSize;
 
-                let url = `/api/scans?user_id=${userId}&limit=${pageSize}&offset=${offset}&latest_only=true`;
+                let url = `/api/scans?user_id=${userId}&limit=${pageSize}&offset=${offset}`;
 
                 if (filters.provider) url += `&provider=${filters.provider}`;
                 if (filters.status) url += `&status=${filters.status}`;
@@ -509,7 +507,7 @@
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" class="empty-state">
-                        <h3>⚠️ ${message}</h3>
+                        <h3> ${message}</h3>
                     </td>
                 </tr>
             `;
@@ -523,7 +521,7 @@
         }
 
         function previousPage() {
-            if (currentPage > 1) {
+            if (currentPage >1) {
                 currentPage--;
                 loadScans();
             }

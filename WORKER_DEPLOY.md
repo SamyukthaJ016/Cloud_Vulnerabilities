@@ -59,6 +59,31 @@ Common optional variables:
 - `SMTP_USER`
 - `SMTP_PASSWORD`
 - `SMTP_FROM_EMAIL`
+- `ENABLE_PROWLER_AWS=true`
+
+## Installing Prowler on the worker
+
+CloudGuard can now use Prowler as the preferred AWS posture/compliance engine
+and fall back to the native AWS checks when Prowler is unavailable.
+
+Official installation guidance:
+
+- [Prowler CLI installation](https://docs.prowler.com/getting-started/installation/prowler-cli)
+
+This repo includes a helper for Ubuntu/Debian-style worker hosts:
+
+```bash
+./deploy/install-prowler-worker.sh
+```
+
+After installation, verify:
+
+```bash
+prowler -v
+```
+
+If you are using a systemd-managed worker service, restart it after rolling out
+the updated CloudGuard code so the AWS scan path can start using Prowler.
 
 ## EKS-based Kubernetes scanning
 

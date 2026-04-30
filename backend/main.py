@@ -54,8 +54,6 @@ from backend.ai.agentic_orchestrator import get_agentic_orchestrator
 from backend.ai.agentic_core import ToolRegistry
 
 # Credential Management
-from backend.billing import billing_enforcement_enabled, get_provider_access_decision
-from backend.billing_api import router as billing_router
 from backend.credentials.api import router as credentials_router
 from backend.credentials.manager import credential_manager, CloudCredential
 from backend.scan_api_helpers import permission_required_json_response
@@ -172,7 +170,6 @@ app.add_middleware(
 )
 
 app.include_router(credentials_router)
-app.include_router(billing_router)
 
 
 @app.middleware("http")
@@ -1337,18 +1334,6 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     user_id = get_user_id(req)
     request.user_id = user_id
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
-
-    if billing_enforcement_enabled():
-        access = get_provider_access_decision(user_id, request.providers)
-        if not access["allowed"]:
-            return JSONResponse(
-                status_code=402,
-                content={
-                    "status": "subscription_required",
-                    "detail": "An active CloudGuard subscription is required for one or more selected scanners.",
-                    "billing": access,
-                },
-            )
 
     if is_scan_worker_enabled():
         logger.info("Delegating multi-cloud scan to worker at %s", get_scan_worker_url())

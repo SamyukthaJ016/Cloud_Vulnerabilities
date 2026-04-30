@@ -1,0 +1,97 @@
+{
+  "name": "gigachad-grc",
+  "private": true,
+  "workspaces": [
+    "services/shared",
+    "services/controls",
+    "services/frameworks",
+    "services/policies",
+    "services/tprm",
+    "services/trust",
+    "services/audit",
+    "frontend"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present",
+    "validate:production": "./scripts/validate-production.sh",
+    "validate:production:strict": "./scripts/validate-production.sh --strict",
+    "backup": "./deploy/backup.sh",
+    "restore": "./deploy/restore.sh",
+    "ci:build:frontend": "npm --workspace frontend run build:typecheck",
+    "ci:analyze:frontend": "npm --workspace frontend run build:analyze",
+    "test:load": "./tests/load/run-load-tests.sh",
+    "test:load:smoke": "./tests/load/run-load-tests.sh smoke",
+    "test:load:load": "./tests/load/run-load-tests.sh load",
+    "test:load:stress": "./tests/load/run-load-tests.sh stress",
+    "test:load:spike": "./tests/load/run-load-tests.sh spike",
+    "test:load:soak": "./tests/load/run-load-tests.sh soak",
+    "test:load:all": "./tests/load/run-load-tests.sh all",
+    "test:load:quick": "./tests/load/run-load-tests.sh quick"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^14.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.4.0",
+    "prisma": "^5.22.0",
+    "typescript-eslint": "^8.57.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "overrides": {
+    "broadcast-channel": {
+      "@babel/runtime": "^7.26.10"
+    },
+    "minipass": "^7.1.2",
+    "@isaacs/brace-expansion": "^5.0.0",
+    "lodash": ">=4.18.0",
+    "fast-xml-parser": ">=5.5.7",
+    "axios": "^1.13.5",
+    "minimatch": "^10.2.3",
+    "rollup": "^4.59.0",
+    "@smithy/config-resolver": "^4.4.0",
+    "multer": ">=2.1.0",
+    "serialize-javascript": ">=7.0.3",
+    "file-type": ">=21.3.4",
+    "dompurify": "3.3.3",
+    "handlebars": ">=4.7.9",
+    "path-to-regexp": ">=8.4.0",
+    "picomatch": ">=2.3.2",
+    "@xmldom/xmldom": ">=0.8.12",
+    "nodemailer": ">=8.0.5",
+    "yaml": ">=2.8.3",
+    "@nestjs/cli": {
+      "@angular-devkit/core": {
+        "ajv": "8.18.0"
+      },
+      "@nestjs/schematics": {
+        "@angular-devkit/core": {
+          "ajv": "8.18.0"
+        }
+      }
+    }
+  }
+}

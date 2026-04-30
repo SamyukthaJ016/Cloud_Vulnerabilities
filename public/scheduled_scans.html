@@ -378,17 +378,14 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <div class="title">📅 Scheduled Scans</div>
-                <div style="color: #B0E4CC; margin-top: 8px;">
-                    Manage your automated security scans
+                <div class="title">Scheduled Scans</div>
+                <div style="color: #B0E4CC; margin-top: 8px;">Manage your automated security scans
                 </div>
             </div>
             <div style="display: flex; gap: 12px;">
-                <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">
-                    📊 Dashboard
+                <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">Dashboard
                 </button>
-                <button class="btn btn-primary" onclick="window.location.href='/'">
-                    ➕ Create Schedule
+                <button class="btn btn-primary" onclick="window.location.href='/'">Create Schedule
                 </button>
             </div>
         </div>
@@ -430,8 +427,7 @@
         </div>
     </div>
 
-    <script>
-        let currentFilter = 'all';
+    <script>let currentFilter = 'all';
         let allSchedules = [];
         let authContext = {
             authenticated: false,
@@ -441,7 +437,7 @@
 
         function stripSsoQueryParams() {
             const currentUrl = new URL(window.location.href);
-            ['token', 'from', 'service'].forEach((key) => currentUrl.searchParams.delete(key));
+            ['token', 'from', 'service'].forEach((key) =>currentUrl.searchParams.delete(key));
             window.history.replaceState({}, document.title, currentUrl.toString());
         }
 
@@ -528,14 +524,14 @@
                 // Update stats
                 document.getElementById('total-schedules').textContent = allSchedules.length;
                 document.getElementById('active-schedules').textContent =
-                    allSchedules.filter(s => s.status === 'scheduled').length;
+                    allSchedules.filter(s =>s.status === 'scheduled').length;
                 document.getElementById('completed-runs').textContent =
-                    allSchedules.filter(s => s.status === 'completed').length;
+                    allSchedules.filter(s =>s.status === 'completed').length;
 
                 // Calculate next scan
                 const nextScan = allSchedules
-                    .filter(s => s.status === 'scheduled' && s.next_run_at)
-                    .sort((a, b) => new Date(a.next_run_at) - new Date(b.next_run_at))[0];
+                    .filter(s =>s.status === 'scheduled' && s.next_run_at)
+                    .sort((a, b) =>new Date(a.next_run_at) - new Date(b.next_run_at))[0];
 
                 if (nextScan) {
                     const timeUntil = getTimeUntil(nextScan.next_run_at);
@@ -551,7 +547,7 @@
                 console.error('Failed to load schedules:', error);
                 document.getElementById('schedules-list').innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-icon">⚠️</div>
+                        <div class="empty-icon">ERR</div>
                         <h3>Failed to load schedules</h3>
                         <p>${error.message}</p>
                     </div>
@@ -564,17 +560,16 @@
 
             let filtered = allSchedules;
             if (currentFilter !== 'all') {
-                filtered = allSchedules.filter(s => s.status === currentFilter);
+                filtered = allSchedules.filter(s =>s.status === currentFilter);
             }
 
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-icon">📅</div>
+                        <div class="empty-icon">SCH</div>
                         <h3>No ${currentFilter === 'all' ? '' : currentFilter} schedules found</h3>
                         <p>Create a new schedule to automate your security scans</p>
-                        <button class="btn btn-primary" onclick="window.location.href='/'">
-                            ➕ Create Schedule
+                        <button class="btn btn-primary" onclick="window.location.href='/'">Create Schedule
                         </button>
                     </div>
                 `;
@@ -588,8 +583,7 @@
                             <div class="schedule-name">
                                 ${schedule.schedule?.name || `Schedule #${schedule.id}`}
                             </div>
-                            <div style="color: #B0E4CC; font-size: 0.9rem; margin-top: 4px;">
-                                Created ${formatDate(schedule.created_at)}
+                            <div style="color: #B0E4CC; font-size: 0.9rem; margin-top: 4px;">Created ${formatDate(schedule.created_at)}
                             </div>
                         </div>
                         <span class="status-badge status-${schedule.status}">
@@ -602,8 +596,8 @@
                             <div class="info-label">Type</div>
                             <div class="info-value">
                                 ${schedule.schedule?.type === 'recurring' ?
-                    `🔄 ${schedule.schedule.frequency || 'daily'}` :
-                    '⏰ One-time'}
+                    ` ${schedule.schedule.frequency || 'daily'}` :
+                    ' One-time'}
                             </div>
                         </div>
                         
@@ -619,7 +613,7 @@
                         <div class="info-item">
                             <div class="info-label">Deep Scan</div>
                             <div class="info-value">
-                                ${schedule.deep_scan ? '✅ Enabled' : '❌ Disabled'}
+                                ${schedule.deep_scan ? ' Enabled' : ' Disabled'}
                             </div>
                         </div>
                         
@@ -635,7 +629,7 @@
                     
                     ${schedule.status === 'completed' && schedule.schedule?.last_run_scan_ids ? `
                         <div class="scan-results">
-                            <div class="results-header">📊 Last Scan Results</div>
+                            <div class="results-header">Last Scan Results</div>
                             <div class="results-summary" id="results-${schedule.id}">
                                 <div class="loading" style="padding: 20px;">Loading results...</div>
                             </div>
@@ -644,7 +638,7 @@
                     
                     ${schedule.status === 'failed' && schedule.schedule?.last_error ? `
                         <div class="scan-results">
-                            <div class="results-header">❌ Error</div>
+                            <div class="results-header">Error</div>
                             <div style="color: #fca5a5; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
                                 ${schedule.schedule.last_error}
                             </div>
@@ -654,19 +648,16 @@
                     <div class="actions">
                         ${schedule.status === 'completed' && schedule.schedule?.last_run_scan_ids ? `
                             <button class="btn btn-secondary btn-small" 
-                                    onclick="viewScanResults(${schedule.schedule.last_run_scan_ids[0]})">
-                                📊 View Full Report
+                                    onclick="viewScanResults(${schedule.schedule.last_run_scan_ids[0]})">View Full Report
                             </button>
                         ` : ''}
                         
                         <button class="btn btn-secondary btn-small" 
-                                onclick="runScheduleNow(${schedule.id})">
-                            ▶️ Run Now
+                                onclick="runScheduleNow(${schedule.id})">Run Now
                         </button>
                         
                         <button class="btn btn-danger btn-small" 
-                                onclick="deleteSchedule(${schedule.id})">
-                            🗑️ Delete
+                                onclick="deleteSchedule(${schedule.id})">Delete
                         </button>
                     </div>
                 </div>
@@ -674,7 +665,7 @@
 
             // Load scan results for completed schedules
             filtered
-                .filter(s => s.status === 'completed' && s.schedule?.last_run_scan_ids)
+                .filter(s =>s.status === 'completed' && s.schedule?.last_run_scan_ids)
                 .forEach(schedule => {
                     loadScanResults(schedule.id, schedule.schedule.last_run_scan_ids);
                 });
@@ -687,13 +678,12 @@
             try {
                 // Fetch results for all scan IDs
                 const results = await Promise.all(
-                    scanIds.map(id => fetch(`/report/${id}`).then(r => r.json()))
+                    scanIds.map(id =>fetch(`/report/${id}`).then(r =>r.json()))
                 );
 
-                const totalResources = results.reduce((sum, r) => sum + r.total_resources, 0);
-                const totalFindings = results.reduce((sum, r) => sum + r.total_findings, 0);
-                const criticalFindings = results.reduce((sum, r) =>
-                    sum + r.findings.filter(f => f.severity === 'CRITICAL').length, 0);
+                const totalResources = results.reduce((sum, r) =>sum + r.total_resources, 0);
+                const totalFindings = results.reduce((sum, r) =>sum + r.total_findings, 0);
+                const criticalFindings = results.reduce((sum, r) =>sum + r.findings.filter(f =>f.severity === 'CRITICAL').length, 0);
 
                 container.innerHTML = `
                     <div class="result-metric">
@@ -702,13 +692,13 @@
                     </div>
                     <div class="result-metric">
                         <span class="metric-label">Findings:</span>
-                        <span class="metric-value" style="color: ${totalFindings > 0 ? '#fca5a5' : '#4ade80'}">
+                        <span class="metric-value" style="color: ${totalFindings >0 ? '#fca5a5' : '#4ade80'}">
                             ${totalFindings}
                         </span>
                     </div>
                     <div class="result-metric">
                         <span class="metric-label">Critical:</span>
-                        <span class="metric-value" style="color: ${criticalFindings > 0 ? '#ef4444' : '#4ade80'}">
+                        <span class="metric-value" style="color: ${criticalFindings >0 ? '#ef4444' : '#4ade80'}">
                             ${criticalFindings}
                         </span>
                     </div>
@@ -721,7 +711,7 @@
         function switchTab(filter) {
             currentFilter = filter;
 
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab =>tab.classList.remove('active'));
             event.target.classList.add('active');
 
             renderSchedules();
@@ -739,7 +729,7 @@
 
                 const result = await response.json();
 
-                // 🛡️ HANDLE PERMISSION REQUIRED
+                //  HANDLE PERMISSION REQUIRED
                 if (result.status === 'permission_required') {
                     handlePermissionError(result.permission_error, scheduleId);
                     return;
@@ -757,7 +747,7 @@
         }
 
         function handlePermissionError(error, scheduleId) {
-            console.warn('🛡️ Permission Required:', error);
+            console.warn(' Permission Required:', error);
 
             pendingPermissionRequest = {
                 user_id: getUserId(),
@@ -816,7 +806,7 @@
 
             const btn = document.getElementById('btnGrantPerm');
             const oldText = btn.textContent;
-            btn.textContent = '⏳ Granting...';
+            btn.textContent = ' Granting...';
             btn.disabled = true;
 
             try {
@@ -828,13 +818,13 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('✅ Permission granted successfully! Retrying the scan now...');
+                    alert(' Permission granted successfully! Retrying the scan now...');
                     document.getElementById('permissionModal').style.display = 'none';
                     if (pendingScheduleId) {
                         runScheduleNow(pendingScheduleId);
                     }
                 } else {
-                    alert('❌ Failed to grant permission automatically: ' + (result.error_details || result.message));
+                    alert(' Failed to grant permission automatically: ' + (result.error_details || result.message));
                     document.getElementById('manualFixContainer').style.display = 'block';
                     document.getElementById('permissionDetails').style.display = 'none';
                 }
@@ -850,7 +840,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const cookieMatch = document.cookie
                 .split('; ')
-                .find((row) => row.startsWith('cloudguard_user_id='));
+                .find((row) =>row.startsWith('cloudguard_user_id='));
             let userId =
                 urlParams.get('user_id') ||
                 sessionStorage.getItem('cloudguard_user_id') ||
@@ -875,7 +865,7 @@
 
         function copyToClipboard(elementId) {
             const content = document.getElementById(elementId).textContent;
-            navigator.clipboard.writeText(content).then(() => alert('📋 Copied!'));
+            navigator.clipboard.writeText(content).then(() =>alert(' Copied!'));
         }
 
         async function deleteSchedule(scheduleId) {
@@ -928,8 +918,8 @@
             const hours = Math.floor(minutes / 60);
             const days = Math.floor(hours / 24);
 
-            if (days > 0) return `${days}d ${hours % 24}h`;
-            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (days >0) return `${days}d ${hours % 24}h`;
+            if (hours >0) return `${hours}h ${minutes % 60}m`;
             return `${minutes}m`;
         }
     </script>
@@ -946,8 +936,7 @@
 
                 <p style="margin-top: 15px; font-size: 0.8rem;">
                     <a href="#"
-                        onclick="event.preventDefault(); document.getElementById('manualFixContainer').style.display='block'; document.getElementById('permissionDetails').style.display='none';">
-                        Fix manually using CLI or AWS Console instead
+                        onclick="event.preventDefault(); document.getElementById('manualFixContainer').style.display='block'; document.getElementById('permissionDetails').style.display='none';">Fix manually using CLI or AWS Console instead
                     </a>
                 </p>
             </div>
@@ -955,7 +944,7 @@
             <!-- Manual Fix Container -->
             <div id="manualFixContainer" class="permission-info"
                 style="display: none; border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
-                <p style="color: #fca5a5; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i> Manual Fix
+                <p style="color: #fca5a5; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i>Manual Fix
                     Required</p>
 
                 <div class="tabs"
@@ -971,17 +960,17 @@
                         <strong>administrator credentials</strong>:
                     </p>
 
-                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 1:</strong> Grant
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 1:</strong>Grant
                         User Permission</p>
                     <pre id="manualFixCommand"></pre>
                     <button class="btn btn-secondary btn-small" style="width: 100%; margin-bottom: 15px;"
-                        onclick="copyToClipboard('manualFixCommand')">📋 Copy Step 1</button>
+                        onclick="copyToClipboard('manualFixCommand')">Copy Step 1</button>
 
-                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 2:</strong> Update
+                    <p style="font-size: 0.8rem; color: #fbbf24; margin-bottom: 5px;"><strong>Step 2:</strong>Update
                         Trust Relationship</p>
                     <pre id="trustRelationshipCommand"></pre>
                     <button class="btn btn-secondary btn-small" style="width: 100%;"
-                        onclick="copyToClipboard('trustRelationshipCommand')">📋 Copy Step 2</button>
+                        onclick="copyToClipboard('trustRelationshipCommand')">Copy Step 2</button>
                 </div>
 
                 <div id="manualTabJSON" style="display: none;">
@@ -989,26 +978,25 @@
                             Policy</strong></p>
                     <pre id="identityPolicyJSON"></pre>
                     <button class="btn btn-secondary btn-small" style="width: 100%; margin-bottom: 15px;"
-                        onclick="copyToClipboard('identityPolicyJSON')">📋 Copy Identity JSON</button>
+                        onclick="copyToClipboard('identityPolicyJSON')">Copy Identity JSON</button>
 
                     <p style="font-size: 0.8rem; color: #B0E4CC; margin-bottom: 5px;"><strong>Step 2: Trust
                             Relationship</strong></p>
                     <pre id="trustPolicyJSON"></pre>
                     <button class="btn btn-secondary btn-small" style="width: 100%;"
-                        onclick="copyToClipboard('trustPolicyJSON')">📋 Copy Trust JSON</button>
+                        onclick="copyToClipboard('trustPolicyJSON')">Copy Trust JSON</button>
                 </div>
             </div>
 
             <div class="permission-actions">
                 <button class="btn btn-secondary"
                     onclick="document.getElementById('permissionModal').style.display='none'">Cancel</button>
-                <button id="btnGrantPerm" class="btn btn-primary" onclick="grantPermissionAndScan()">✅ Grant & Retry
+                <button id="btnGrantPerm" class="btn btn-primary" onclick="grantPermissionAndScan()">Grant & Retry
                     Scan</button>
             </div>
         </div>
     </div>
-    <script>
-        function switchManualTab(tab) {
+    <script>function switchManualTab(tab) {
             document.getElementById('manualTabCLI').style.display = tab === 'cli' ? 'block' : 'none';
             document.getElementById('manualTabJSON').style.display = tab === 'json' ? 'block' : 'none';
         }

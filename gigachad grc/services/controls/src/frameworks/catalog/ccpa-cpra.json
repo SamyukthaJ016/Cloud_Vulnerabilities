@@ -1,0 +1,224 @@
+{
+  "id": "ccpa-cpra",
+  "name": "CCPA/CPRA",
+  "version": "2023",
+  "description": "The California Consumer Privacy Act (CCPA) as amended by the California Privacy Rights Act (CPRA) provides California consumers with specific rights regarding their personal information and imposes obligations on businesses that collect, use, or sell personal information.",
+  "source": "State of California",
+  "category": "privacy",
+  "requirements": [
+    {
+      "reference": "1798.100",
+      "title": "Consumer Right to Know",
+      "description": "Consumer's right to know what personal information is being collected about them.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.100(a)", "title": "Right to Know Categories", "description": "Consumers have the right to know what categories of personal information a business collects about them.", "level": 1, "isCategory": false},
+        {"reference": "1798.100(b)", "title": "Right to Know Specific Pieces", "description": "Consumers have the right to request that a business disclose the specific pieces of personal information collected about them.", "level": 1, "isCategory": false},
+        {"reference": "1798.100(c)", "title": "Collection Limitation", "description": "A business shall not collect additional categories of personal information or use personal information for additional purposes without providing notice.", "level": 1, "isCategory": false},
+        {"reference": "1798.100(d)", "title": "Purpose Limitation", "description": "A business shall not collect personal information for purposes that are incompatible with the disclosed purpose for collection.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.105",
+      "title": "Consumer Right to Delete",
+      "description": "Consumer's right to request deletion of personal information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.105(a)", "title": "Right to Request Deletion", "description": "A consumer shall have the right to request that a business delete any personal information about the consumer which the business has collected.", "level": 1, "isCategory": false},
+        {"reference": "1798.105(b)", "title": "Business Deletion Obligation", "description": "A business that receives a verifiable consumer request shall delete the consumer's personal information from its records and direct service providers to delete.", "level": 1, "isCategory": false},
+        {"reference": "1798.105(c)", "title": "Service Provider Notification", "description": "A business that receives a request to delete shall notify all service providers and contractors to delete the consumer's personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.105(d)", "title": "Deletion Exceptions", "description": "A business is not required to comply with a deletion request if retention is necessary for specified purposes including completing transactions, security, legal compliance, and internal uses.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.106",
+      "title": "Consumer Right to Correct",
+      "description": "Consumer's right to request correction of inaccurate personal information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.106(a)", "title": "Right to Correction", "description": "A consumer shall have the right to request that a business that maintains inaccurate personal information about the consumer correct that inaccurate personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.106(b)", "title": "Correction Obligation", "description": "A business that receives a verifiable consumer request to correct inaccurate personal information shall use commercially reasonable efforts to correct the inaccurate personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.106(c)", "title": "Service Provider Correction", "description": "A business shall instruct all service providers and contractors that maintain the inaccurate personal information to make necessary corrections.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.110",
+      "title": "Consumer Right to Disclosure",
+      "description": "Consumer's right to request disclosure of personal information collected, sold, or shared.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.110(a)(1)", "title": "Categories Collected", "description": "A consumer has the right to request that a business disclose the categories of personal information it has collected about that consumer.", "level": 1, "isCategory": false},
+        {"reference": "1798.110(a)(2)", "title": "Categories of Sources", "description": "A consumer has the right to request the categories of sources from which the personal information is collected.", "level": 1, "isCategory": false},
+        {"reference": "1798.110(a)(3)", "title": "Business Purpose", "description": "A consumer has the right to request the business or commercial purpose for collecting, selling, or sharing personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.110(a)(4)", "title": "Categories of Third Parties", "description": "A consumer has the right to request the categories of third parties to whom the business discloses personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.110(a)(5)", "title": "Specific Pieces", "description": "A consumer has the right to request the specific pieces of personal information the business has collected about that consumer.", "level": 1, "isCategory": false},
+        {"reference": "1798.110(b)", "title": "Disclosure Obligation", "description": "A business that receives a verifiable consumer request shall disclose to the consumer the required information free of charge within 45 days.", "level": 1, "isCategory": false},
+        {"reference": "1798.110(c)", "title": "Disclosure Format", "description": "The disclosure shall be delivered through the consumer's account or by mail or electronically in a portable and readily useable format.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.115",
+      "title": "Consumer Right to Know About Selling or Sharing",
+      "description": "Consumer's right to know about personal information sold or shared.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.115(a)(1)", "title": "Categories Sold or Shared", "description": "A consumer has the right to request that a business disclose the categories of personal information about the consumer that the business has sold or shared.", "level": 1, "isCategory": false},
+        {"reference": "1798.115(a)(2)", "title": "Third Party Categories", "description": "A consumer has the right to request the categories of third parties to whom the personal information was sold or shared.", "level": 1, "isCategory": false},
+        {"reference": "1798.115(a)(3)", "title": "Categories Disclosed for Business Purpose", "description": "A consumer has the right to request the categories of personal information that the business disclosed about the consumer for a business purpose.", "level": 1, "isCategory": false},
+        {"reference": "1798.115(b)", "title": "Disclosure Obligation", "description": "A business that receives a verifiable consumer request shall disclose the required information free of charge within 45 days.", "level": 1, "isCategory": false},
+        {"reference": "1798.115(c)", "title": "No Personal Information Sold", "description": "If a business does not sell or share personal information, it shall disclose that fact in response to a consumer request.", "level": 1, "isCategory": false},
+        {"reference": "1798.115(d)", "title": "Third Party Disclosure", "description": "A third party shall not sell or share personal information about a consumer that has been sold to or shared with the third party unless the consumer has received explicit notice.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.120",
+      "title": "Consumer Right to Opt-Out of Sale or Sharing",
+      "description": "Consumer's right to opt-out of sale or sharing of personal information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.120(a)", "title": "Right to Opt-Out", "description": "A consumer shall have the right to direct a business that sells or shares personal information about the consumer to third parties not to sell or share the consumer's personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.120(b)", "title": "Respect Opt-Out", "description": "A business that has received direction from a consumer not to sell or share the consumer's personal information shall be prohibited from selling or sharing the consumer's personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.120(c)", "title": "Opt-Out Waiting Period", "description": "A business shall wait at least 12 months before requesting that a consumer who has opted out authorize the sale or sharing of personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.120(d)", "title": "Opt-Out Signal", "description": "A business shall allow consumers to opt-out through an opt-out preference signal sent via a platform, technology, or mechanism.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.121",
+      "title": "Consumer Right to Limit Use of Sensitive Personal Information",
+      "description": "Consumer's right to limit use and disclosure of sensitive personal information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.121(a)", "title": "Right to Limit", "description": "A consumer shall have the right to direct a business that collects sensitive personal information about the consumer to limit its use to that which is necessary to perform the services or provide the goods reasonably expected.", "level": 1, "isCategory": false},
+        {"reference": "1798.121(b)", "title": "Business Limitation Obligation", "description": "A business that uses or discloses sensitive personal information for purposes other than necessary shall limit its use to that which is necessary and comply with regulations.", "level": 1, "isCategory": false},
+        {"reference": "1798.121(c)", "title": "Link to Limit Use", "description": "A business shall provide a clear and conspicuous link on the homepage titled 'Limit the Use of My Sensitive Personal Information'.", "level": 1, "isCategory": false},
+        {"reference": "1798.121(d)", "title": "Alternative Opt-Out", "description": "A business may use a single link titled 'Your Privacy Choices' or similar if it allows the consumer to opt-out of sale/sharing and limit use of sensitive PI.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.125",
+      "title": "Non-Discrimination",
+      "description": "Prohibition against discrimination for exercising privacy rights.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.125(a)(1)", "title": "Non-Discrimination", "description": "A business shall not discriminate against a consumer because the consumer exercised any of the consumer's rights under this title.", "level": 1, "isCategory": false},
+        {"reference": "1798.125(a)(2)", "title": "Discrimination Examples", "description": "Discrimination includes denying goods or services, charging different prices or rates, providing a different level or quality of goods or services, or suggesting such treatment.", "level": 1, "isCategory": false},
+        {"reference": "1798.125(a)(3)", "title": "Retaliatory Actions", "description": "A business shall not retaliate against a consumer for exercising their rights including by requiring registration or creation of an account to submit a request.", "level": 1, "isCategory": false},
+        {"reference": "1798.125(b)(1)", "title": "Financial Incentives", "description": "A business may offer financial incentives for the collection, sale, sharing, or retention of personal information if the consumer provides prior opt-in consent.", "level": 1, "isCategory": false},
+        {"reference": "1798.125(b)(2)", "title": "Incentive Disclosure", "description": "A business shall notify consumers of financial incentive programs and how the consumer can opt-in.", "level": 1, "isCategory": false},
+        {"reference": "1798.125(b)(3)", "title": "Incentive Withdrawal", "description": "A business shall allow a consumer to revoke consent and opt out of a financial incentive program at any time.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.130",
+      "title": "Business Obligations",
+      "description": "General business obligations for handling consumer requests and notices.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.130(a)(1)", "title": "Request Submission Methods", "description": "A business shall make available to consumers two or more designated methods for submitting requests for information.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(a)(2)", "title": "Response Timing", "description": "A business shall respond to a verifiable consumer request within 45 days, with a possible 45-day extension.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(a)(3)", "title": "Privacy Policy", "description": "A business shall disclose and deliver required information to consumers free of charge within 45 days of receiving a verifiable request.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(a)(4)", "title": "Online Privacy Policy", "description": "A business that maintains an internet website shall make the privacy policy available on the website.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(a)(5)", "title": "Privacy Policy Updates", "description": "A business shall update its privacy policy at least every 12 months and upon collection of new categories of PI.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(a)(6)", "title": "Do Not Sell/Share Link", "description": "A business that sells or shares personal information shall provide a clear and conspicuous link on its homepage titled 'Do Not Sell or Share My Personal Information'.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(a)(7)", "title": "Identity Verification", "description": "A business shall establish methods for verifying that the person making a request is the consumer about whom information was collected.", "level": 1, "isCategory": false},
+        {"reference": "1798.130(b)", "title": "12-Month Lookback", "description": "A business shall disclose the required information for the 12-month period preceding the business's receipt of the verifiable consumer request.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.135",
+      "title": "Notice and Opt-Out Requirements",
+      "description": "Requirements for providing notice and opt-out mechanisms.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.135(a)", "title": "Do Not Sell/Share Link", "description": "A business that sells or shares consumers' personal information shall provide a clear and conspicuous link titled 'Do Not Sell or Share My Personal Information'.", "level": 1, "isCategory": false},
+        {"reference": "1798.135(b)(1)", "title": "Opt-Out Preference Signals", "description": "A business shall allow the consumer to opt-out through an opt-out preference signal sent with their consent by a platform, technology, or mechanism.", "level": 1, "isCategory": false},
+        {"reference": "1798.135(b)(2)", "title": "Signal Processing", "description": "A business shall process the opt-out preference signal as a valid request to opt-out of sale/sharing for that browser or device.", "level": 1, "isCategory": false},
+        {"reference": "1798.135(c)", "title": "Limit Sensitive PI Link", "description": "A business that uses or discloses sensitive personal information for secondary purposes shall provide a link titled 'Limit the Use of My Sensitive Personal Information'.", "level": 1, "isCategory": false},
+        {"reference": "1798.135(d)", "title": "Combined Link Option", "description": "A business may use a single, clearly-labeled link titled 'Your Privacy Choices' or similar if it allows both opt-out and limit sensitive PI functions.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.140",
+      "title": "Definitions - Key Terms",
+      "description": "Key definitions for understanding CCPA/CPRA requirements.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.140(b)", "title": "Business Definition", "description": "A sole proprietorship, partnership, LLC, corporation, or association that collects personal information, determines purposes and means of processing, does business in California, and meets revenue/volume thresholds.", "level": 1, "isCategory": false},
+        {"reference": "1798.140(c)", "title": "Business Purpose Definition", "description": "The use of personal information for the business's operational purposes including auditing, detecting security incidents, performing services, and undertaking internal research.", "level": 1, "isCategory": false},
+        {"reference": "1798.140(i)", "title": "Consumer Definition", "description": "A natural person who is a California resident as defined in Section 17014 of Title 18 of the California Code of Regulations.", "level": 1, "isCategory": false},
+        {"reference": "1798.140(v)", "title": "Personal Information Definition", "description": "Information that identifies, relates to, describes, is reasonably capable of being associated with, or could reasonably be linked with a particular consumer or household.", "level": 1, "isCategory": false},
+        {"reference": "1798.140(ae)", "title": "Sensitive Personal Information Definition", "description": "Personal information that reveals racial or ethnic origin, religious beliefs, mental or physical health, sex life or sexual orientation, citizenship, genetic data, biometric data, precise geolocation, social security numbers, or contents of communications.", "level": 1, "isCategory": false},
+        {"reference": "1798.140(ad)", "title": "Sell Definition", "description": "Selling, renting, releasing, disclosing, disseminating, making available, transferring, or otherwise communicating personal information for monetary or other valuable consideration.", "level": 1, "isCategory": false},
+        {"reference": "1798.140(ah)", "title": "Share Definition", "description": "Sharing, renting, releasing, disclosing, disseminating, making available, transferring, or otherwise communicating personal information for cross-context behavioral advertising.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.145",
+      "title": "Exemptions",
+      "description": "Exemptions from certain CCPA/CPRA requirements.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.145(a)", "title": "General Exemptions", "description": "Exemptions apply to personal information collected from job applicants, employees, contractors, owners, directors, officers, and for B2B transactions.", "level": 1, "isCategory": false},
+        {"reference": "1798.145(c)", "title": "HIPAA Exemption", "description": "This title does not apply to medical information governed by CMIA or protected health information collected by a covered entity under HIPAA.", "level": 1, "isCategory": false},
+        {"reference": "1798.145(d)", "title": "Clinical Trial Exemption", "description": "This title does not apply to personal information collected as part of a clinical trial subject to the Federal Policy for the Protection of Human Subjects.", "level": 1, "isCategory": false},
+        {"reference": "1798.145(e)", "title": "Sale of Business Exemption", "description": "This title does not apply to personal information that is collected, processed, sold, or disclosed as an asset as part of a merger, acquisition, bankruptcy, or other transaction.", "level": 1, "isCategory": false},
+        {"reference": "1798.145(f)", "title": "GLBA Exemption", "description": "This title does not apply to personal information collected, processed, sold, or disclosed subject to the Gramm-Leach-Bliley Act.", "level": 1, "isCategory": false},
+        {"reference": "1798.145(g)", "title": "DPPA Exemption", "description": "This title does not apply to personal information collected, processed, sold, or disclosed pursuant to the Driver's Privacy Protection Act.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.150",
+      "title": "Private Right of Action for Data Breaches",
+      "description": "Consumer's private right of action for data breaches involving nonencrypted or nonredacted personal information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.150(a)(1)", "title": "Right to Institute Civil Action", "description": "Any consumer whose nonencrypted and nonredacted personal information is subject to an unauthorized access and exfiltration, theft, or disclosure may institute a civil action.", "level": 1, "isCategory": false},
+        {"reference": "1798.150(a)(2)", "title": "Statutory Damages", "description": "Damages of not less than $100 and not greater than $750 per consumer per incident or actual damages, whichever is greater.", "level": 1, "isCategory": false},
+        {"reference": "1798.150(a)(3)", "title": "Injunctive or Declaratory Relief", "description": "Consumers may seek injunctive or declaratory relief as the court deems proper.", "level": 1, "isCategory": false},
+        {"reference": "1798.150(b)", "title": "Cure Period", "description": "Before initiating action, a consumer shall provide 30 days written notice to the business identifying the specific provisions that have been violated.", "level": 1, "isCategory": false},
+        {"reference": "1798.150(c)", "title": "Reasonable Security", "description": "The right to action applies only to businesses that fail to implement and maintain reasonable security procedures appropriate to the nature of the information.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.185",
+      "title": "Agency Regulations",
+      "description": "California Privacy Protection Agency regulatory authority.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.185(a)(1)", "title": "Opt-Out Methods", "description": "The Agency shall adopt regulations governing the methods for submitting requests to opt-out.", "level": 1, "isCategory": false},
+        {"reference": "1798.185(a)(4)", "title": "Opt-Out Preference Signals", "description": "The Agency shall adopt regulations establishing technical specifications for an opt-out preference signal.", "level": 1, "isCategory": false},
+        {"reference": "1798.185(a)(7)", "title": "Privacy Audits", "description": "The Agency shall adopt regulations requiring businesses whose processing presents significant risk to conduct annual cybersecurity and privacy audits.", "level": 1, "isCategory": false},
+        {"reference": "1798.185(a)(15)", "title": "Risk Assessments", "description": "The Agency shall adopt regulations requiring businesses to submit risk assessments regarding their processing of personal information.", "level": 1, "isCategory": false},
+        {"reference": "1798.185(a)(16)", "title": "Automated Decision-Making", "description": "The Agency shall adopt regulations governing access and opt-out rights with respect to automated decision-making technology.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "1798.199",
+      "title": "California Privacy Protection Agency",
+      "description": "Establishment and authority of the California Privacy Protection Agency.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "1798.199.10", "title": "Agency Establishment", "description": "There is hereby established in state government the California Privacy Protection Agency responsible for protecting consumer privacy.", "level": 1, "isCategory": false},
+        {"reference": "1798.199.40", "title": "Agency Authority", "description": "The Agency has full administrative power, authority, and jurisdiction to implement and enforce the CCPA.", "level": 1, "isCategory": false},
+        {"reference": "1798.199.45", "title": "Investigative Authority", "description": "The Agency may investigate possible violations of this title and take enforcement actions.", "level": 1, "isCategory": false},
+        {"reference": "1798.199.55", "title": "Civil Penalties", "description": "The Agency may seek civil penalties of up to $2,500 per violation or $7,500 for intentional violations or violations involving minors.", "level": 1, "isCategory": false},
+        {"reference": "1798.199.65", "title": "Subpoena Power", "description": "The Agency may issue subpoenas to compel attendance of witnesses and the production of documents and records.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "name": "@gigachad-grc/audit",
+  "version": "1.0.0",
+  "description": "Audit module for internal and external compliance audits",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "prisma:generate": "prisma generate --schema=../shared/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=../shared/prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema=../shared/prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=../shared/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@gigachad-grc/shared": "file:../shared",
+    "@nestjs/axios": "^4.0.0",
+    "@nestjs/common": "^11.1.17",
+    "@nestjs/config": "^4.0.3",
+    "@nestjs/core": "^11.1.18",
+    "@nestjs/platform-express": "^11.1.17",
+    "@nestjs/swagger": "^11.2.6",
+    "@nestjs/throttler": "^6.4.0",
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.14.0",
+    "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "helmet": "^7.2.0",
+    "reflect-metadata": "^0.1.13",
+    "helmet": "^7.2.0",
+    "rxjs": "^7.8.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.14",
+    "@nestjs/schematics": "^11.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^20.19.39",
+    "@types/uuid": "^9.0.8",
+    "prisma": "^5.22.0",
+    "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "fast-xml-parser": ">=5.5.7",
+    "path-to-regexp": ">=8.4.0",
+    "picomatch": ">=2.3.2",
+    "brace-expansion": ">=5.0.5",
+    "lodash": ">=4.18.0"
+  }
+}

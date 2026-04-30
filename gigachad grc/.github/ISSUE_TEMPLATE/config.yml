@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🛡️ Report a Security Vulnerability
+    url: https://github.com/grcengineering/gigachad-grc/security/advisories/new
+    about: Use GitHub Security Advisories for private vulnerability reporting. Do NOT open a public issue.
+  - name: 💬 Ask a Question
+    url: https://github.com/grcengineering/gigachad-grc/discussions
+    about: For general questions, help, and discussions.

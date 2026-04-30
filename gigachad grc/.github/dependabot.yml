@@ -1,0 +1,237 @@
+# Dependabot configuration for automated dependency updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# NOTE: This configuration is conservative to avoid PR floods.
+# Major version updates are ignored - they require manual review.
+
+version: 2
+updates:
+  # =============================================================================
+  # NPM (Root package.json and workspaces)
+  # =============================================================================
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'America/Los_Angeles'
+    # Limit open PRs to avoid overwhelming the team
+    open-pull-requests-limit: 5
+
+    # Group minor and patch updates to reduce PR noise
+    groups:
+      # Security updates get their own PRs for faster review
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - '*'
+
+      # Group non-critical dev dependencies
+      dev-dependencies:
+        applies-to: version-updates
+        dependency-type: 'development'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Group production patch updates
+      production-patch:
+        applies-to: version-updates
+        dependency-type: 'production'
+        patterns:
+          - '*'
+        update-types:
+          - 'patch'
+
+      # TypeScript ecosystem updates
+      typescript:
+        patterns:
+          - 'typescript'
+          - '@types/*'
+          - 'ts-*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Testing framework updates
+      testing:
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - 'jest'
+          - '@jest/*'
+          - '@testing-library/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # Linting and formatting
+      linting:
+        patterns:
+          - 'eslint'
+          - 'eslint-*'
+          - '@eslint/*'
+          - 'prettier'
+          - '@typescript-eslint/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # NestJS framework
+      nestjs:
+        patterns:
+          - '@nestjs/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+      # React ecosystem
+      react:
+        patterns:
+          - 'react'
+          - 'react-dom'
+          - 'react-router*'
+          - '@tanstack/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+    # Labels for easier triage
+    labels:
+      - 'dependencies'
+      - 'automated'
+
+    # Commit message customization
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+
+    # Reviewers for security updates
+    reviewers:
+      - 'grcengineering/security-team'
+
+    # Ignore specific packages that require manual updates
+    ignore:
+      # Major version updates require careful review
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+      # Prisma requires migration coordination
+      - dependency-name: '@prisma/client'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'prisma'
+        update-types: ['version-update:semver-major']
+
+  # =============================================================================
+  # Frontend workspace
+  # =============================================================================
+  - package-ecosystem: 'npm'
+    directory: '/frontend'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 3
+
+    groups:
+      ui-components:
+        patterns:
+          - '@radix-ui/*'
+          - 'lucide-react'
+          - 'recharts'
+          - 'class-variance-authority'
+          - 'clsx'
+          - 'tailwind*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+    # Ignore major version updates - React 18 to 19 etc require manual migration
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+    labels:
+      - 'dependencies'
+      - 'frontend'
+      - 'automated'
+
+    commit-message:
+      prefix: 'deps(frontend)'
+
+  # =============================================================================
+  # GitHub Actions
+  # =============================================================================
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '06:00'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 3
+
+    groups:
+      # Group all action updates
+      actions:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+
+    # Ignore major version updates - they require manual review
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+
+    labels:
+      - 'dependencies'
+      - 'ci'
+      - 'automated'
+
+    commit-message:
+      prefix: 'ci(deps)'
+
+  # =============================================================================
+  # Docker (base images)
+  # =============================================================================
+  # NOTE: Docker base image updates disabled to prevent invalid version suggestions.
+  # Node.js LTS versions should be updated manually (currently 20 or 22).
+  # Re-enable when Dependabot Docker support improves.
+  #
+  # - package-ecosystem: 'docker'
+  #   directory: '/frontend'
+  #   schedule:
+  #     interval: 'monthly'
+  #   open-pull-requests-limit: 2
+  #   ignore:
+  #     - dependency-name: 'node'
+  #       update-types: ['version-update:semver-major']
+
+  # =============================================================================
+  # Terraform providers
+  # =============================================================================
+  - package-ecosystem: 'terraform'
+    directory: '/terraform'
+    schedule:
+      interval: 'monthly'
+      time: '06:00'
+      timezone: 'America/Los_Angeles'
+    open-pull-requests-limit: 2
+    # Ignore major version updates - infrastructure changes need careful review
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
+    labels:
+      - 'dependencies'
+      - 'terraform'
+      - 'infrastructure'
+      - 'automated'
+    commit-message:
+      prefix: 'terraform(deps)'
+    reviewers:
+      - 'grcengineering/infrastructure-team'

@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Generated files
+prisma/client/
+*.generated.ts
+package-lock.json
+
+# Test outputs
+coverage/
+playwright-report/
+test-results/
+
+# Helm templates (Go template syntax)
+helm/templates/
+
+# Security tool configs (special syntax)
+.semgrep/
+.gitleaks.toml

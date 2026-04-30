@@ -20,6 +20,7 @@ from backend.mcp_servers.base_server import (
     ToolCategory
 )
 from backend.mcp.mcp_base import CloudResource, SecurityFinding, Severity
+from backend.prowler.aws_adapter import ProwlerAWSAdapter
 
 logger = logging.getLogger("aws_mcp_server")
 DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
@@ -646,6 +647,7 @@ class AWSMCPServer(BaseMCPServer):
             "cloudfox_included": include_cloudfox,
             "resources": {},
             "findings": [],
+            "prowler_findings": [],
             "cloudfox_findings": [],  # NEW: Separate CloudFox findings
             "summary": {}
         }
@@ -716,47 +718,67 @@ class AWSMCPServer(BaseMCPServer):
                 "config": {"account_id": account_id}
             }
             all_resources.append(account_resource)
-            
-            # --- NEW: Logging & Monitoring Checks ---
-            
-            # 6. Check CloudTrail
-            cloudtrail_findings = await self._check_cloudtrail()
-            for f in cloudtrail_findings:
-                f["resource"] = account_resource
-                f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
-            results["findings"].extend(cloudtrail_findings)
-            
-            # 7. Check GuardDuty
-            guardduty_findings = await self._check_guardduty()
-            for f in guardduty_findings:
-                f["resource"] = account_resource
-                f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
-            results["findings"].extend(guardduty_findings)
-            
-            # 8. Check VPC Flow Logs
-            vpc_findings = await self._check_vpc_flow_logs()
-            for f in vpc_findings:
-                # If finding specified a resource_name (vpc-id), try to match or use account
-                res_name = f.get("resource_name", "Account Level")
-                if res_name != "Account Level":
-                     # Create a temporary VPC resource for storage if not exists
-                     vpc_res = {
-                         "provider": "aws",
-                         "resource_type": "vpc",
-                         "name": res_name,
-                         "region": self.config.get("region", "us-east-1"),
-                         "config": {"vpc_id": res_name}
-                     }
-                     all_resources.append(vpc_res)
-                     f["resource"] = vpc_res
-                else:
+
+            # 6. Prefer Prowler for AWS posture/compliance. Fall back to the
+            # existing native checks if Prowler is not installed or fails.
+            prowler_adapter = ProwlerAWSAdapter(
+                self.session,
+                self.config.get("region", DEFAULT_AWS_REGION),
+                enabled=str(os.getenv("ENABLE_PROWLER_AWS", "true")).strip().lower() not in {"0", "false", "no", "off"},
+            )
+            prowler_result = await prowler_adapter.run(account_id)
+            results["prowler_summary"] = prowler_result.get("summary", {})
+            if prowler_result.get("error"):
+                results["prowler_error"] = prowler_result["error"]
+
+            if prowler_result.get("used"):
+                results["prowler_findings"] = prowler_result.get("findings", [])
+                results["findings"].extend(results["prowler_findings"])
+                all_resources = self._merge_resource_dicts(
+                    all_resources,
+                    prowler_result.get("resources", []),
+                )
+                logger.info(
+                    "[AWS] Prowler posture pass completed with %s findings",
+                    len(results["prowler_findings"]),
+                )
+            else:
+                logger.info("[AWS] Falling back to native AWS posture checks")
+
+                # --- Native logging & monitoring fallback checks ---
+                cloudtrail_findings = await self._check_cloudtrail()
+                for f in cloudtrail_findings:
                     f["resource"] = account_resource
-                f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
-            results["findings"].extend(vpc_findings)
+                    f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
+                results["findings"].extend(cloudtrail_findings)
+
+                guardduty_findings = await self._check_guardduty()
+                for f in guardduty_findings:
+                    f["resource"] = account_resource
+                    f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
+                results["findings"].extend(guardduty_findings)
+
+                vpc_findings = await self._check_vpc_flow_logs()
+                for f in vpc_findings:
+                    res_name = f.get("resource_name", "Account Level")
+                    if res_name != "Account Level":
+                        vpc_res = {
+                            "provider": "aws",
+                            "resource_type": "vpc",
+                            "name": res_name,
+                            "region": self.config.get("region", "us-east-1"),
+                            "config": {"vpc_id": res_name}
+                        }
+                        all_resources = self._merge_resource_dicts(all_resources, [vpc_res])
+                        f["resource"] = vpc_res
+                    else:
+                        f["resource"] = account_resource
+                    f["issue"] = f"[AWS-LOGGING-SCANNER] {f['issue']}"
+                results["findings"].extend(vpc_findings)
 
             results["resources"] = all_resources
 
-        # 9. RUN CLOUDFOX IF ENABLED
+        # 7. RUN CLOUDFOX IF ENABLED
             if include_cloudfox:
                 try:
                     cloudfox_results = await self._run_cloudfox_scan()
@@ -767,15 +789,21 @@ class AWSMCPServer(BaseMCPServer):
                     logger.error(f"[AWS] CloudFox scan failed: {e}")
                     results["cloudfox_error"] = str(e)
         
-        # 10. Combine all findings
+        # 8. Combine all findings
             all_findings = results["findings"] + results.get("cloudfox_findings", [])
-        
-        # 11. Summary
+
+        # 9. Summary
             results["summary"] = {
                 "total_resources": len(results["resources"]),
                 "total_findings": len(all_findings),
                 "aws_findings": len(results["findings"]),
+                "prowler_findings": len(results.get("prowler_findings", [])),
                 "cloudfox_findings": len(results.get("cloudfox_findings", [])),
+                "posture_engine": (
+                    "prowler"
+                    if prowler_result.get("used")
+                    else "native"
+                ),
                 "critical": len([f for f in all_findings if f.get("severity") == "CRITICAL"]),
                 "high": len([f for f in all_findings if f.get("severity") == "HIGH"]),
                 "medium": len([f for f in all_findings if f.get("severity") == "MEDIUM"]),
@@ -854,6 +882,37 @@ class AWSMCPServer(BaseMCPServer):
         except Exception as e:
             logger.error(f"[AWS] CloudFox scan failed: {e}")
         return {"findings": [], "summary": {}, "error": str(e)}
+
+    def _merge_resource_dicts(
+        self,
+        existing: List[Dict[str, Any]],
+        additions: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        merged: List[Dict[str, Any]] = list(existing)
+        seen = {
+            (
+                item.get("resource_type"),
+                item.get("name"),
+                item.get("region", "global"),
+            )
+            for item in existing
+            if isinstance(item, dict)
+        }
+
+        for item in additions:
+            if not isinstance(item, dict):
+                continue
+            key = (
+                item.get("resource_type"),
+                item.get("name"),
+                item.get("region", "global"),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(item)
+
+        return merged
 
 # Create AWS MCP server instance
 def create_aws_server(config: Dict[str, Any]) -> AWSMCPServer:

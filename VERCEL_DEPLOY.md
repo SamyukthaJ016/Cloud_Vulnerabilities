@@ -37,9 +37,6 @@ Required for basic boot:
 - `DATABASE_URL`
 - `SECRET_KEY`
 - `ENCRYPTION_KEY`
-- `SSO_LOGIN_URL`
-- `SSO_SCANNER_REDIRECT_URL`
-- `SSO_VERIFY_URL`
 - `SCAN_WORKER_URL`
 - `SCAN_WORKER_TOKEN`
 
@@ -67,23 +64,13 @@ Optional feature flags / integrations:
 4. Deploy with `vc deploy` or through the Git integration.
 5. Test `/health`, `/api/info`, `/dashboard`, and `/api/system/status`.
 
-## SSO companion app
+## Authentication mode
 
-CloudGuard now expects the companion DeepTrustxAI SSO portal from:
+The main CloudGuard deployment should run in standalone mode unless a future auth layer is intentionally added back.
 
-- [`sso/new/deeptrustxai`](/Users/anjali/Desktop/sum/Cloud_Vulnerabilities/sso/new/deeptrustxai)
+Recommended production value:
 
-Recommended production values:
-
-- `SSO_LOGIN_URL=https://cloudguard-sso.vercel.app/`
-- `SSO_SCANNER_REDIRECT_URL=https://cloudguard-sso.vercel.app/api/scan/redirect`
-- `SSO_VERIFY_URL=https://cloudguard-sso.vercel.app/api/sso/verify`
-
-The legacy folder:
-
-- [`sso/sso-login`](/Users/anjali/Desktop/sum/Cloud_Vulnerabilities/sso/sso-login)
-
-should be treated as an older implementation reference, not the active public SSO frontend.
+- `CLOUDGUARD_AUTH_MODE=standalone`
 
 ## Recommended production shape
 

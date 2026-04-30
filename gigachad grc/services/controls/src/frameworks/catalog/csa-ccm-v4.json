@@ -1,0 +1,350 @@
+{
+  "id": "csa-ccm-v4",
+  "name": "CSA CCM v4",
+  "version": "4.0",
+  "description": "The Cloud Security Alliance Cloud Controls Matrix (CCM) is a cybersecurity control framework for cloud computing. It is composed of 197 control objectives structured in 17 domains covering all key aspects of cloud technology.",
+  "source": "Cloud Security Alliance",
+  "category": "security",
+  "requirements": [
+    {
+      "reference": "A&A",
+      "title": "Audit & Assurance",
+      "description": "Establish audit planning, implement independent assessments, and manage risk-based planning.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "A&A-01", "title": "Audit and Assurance Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain audit and assurance policies and procedures and standards.", "level": 1, "isCategory": false},
+        {"reference": "A&A-02", "title": "Independent Assessments", "description": "Conduct independent audit and assurance assessments according to relevant standards at least annually.", "level": 1, "isCategory": false},
+        {"reference": "A&A-03", "title": "Risk Based Planning Assessment", "description": "Perform independent audit and assurance assessments according to risk-based plans and policies.", "level": 1, "isCategory": false},
+        {"reference": "A&A-04", "title": "Requirements Compliance", "description": "Verify compliance with all relevant standards, regulations, legal/contractual, and statutory requirements applicable to the audit.", "level": 1, "isCategory": false},
+        {"reference": "A&A-05", "title": "Audit Management Process", "description": "Define and implement an audit management process to support audit planning, risk analysis, security control assessment, and conclusions.", "level": 1, "isCategory": false},
+        {"reference": "A&A-06", "title": "Remediation", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain a remediation process for audit findings.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "AIS",
+      "title": "Application & Interface Security",
+      "description": "Secure applications through development life cycle, application security testing, and API security.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "AIS-01", "title": "Application and Interface Security Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies and procedures for application security.", "level": 1, "isCategory": false},
+        {"reference": "AIS-02", "title": "Application Security Baseline Requirements", "description": "Establish, document, and maintain baseline requirements for securing different applications.", "level": 1, "isCategory": false},
+        {"reference": "AIS-03", "title": "Application Security Metrics", "description": "Define and implement technical and operational metrics in alignment with business objectives and security requirements.", "level": 1, "isCategory": false},
+        {"reference": "AIS-04", "title": "Secure Application Design and Development", "description": "Define and implement a Software Development Life Cycle (SDLC) process for application design, development, deployment, and operation.", "level": 1, "isCategory": false},
+        {"reference": "AIS-05", "title": "Automated Application Security Testing", "description": "Implement automated application security testing (e.g., SAST, DAST, IAST) as part of the SDLC.", "level": 1, "isCategory": false},
+        {"reference": "AIS-06", "title": "Automated Secure Application Deployment", "description": "Implement automated deployment pipelines with security controls and configuration validation.", "level": 1, "isCategory": false},
+        {"reference": "AIS-07", "title": "Application Vulnerability Remediation", "description": "Establish and implement a process for correcting application vulnerabilities discovered during assessments.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "BCR",
+      "title": "Business Continuity Management & Operational Resilience",
+      "description": "Maintain business continuity through planning, testing, and redundancy.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "BCR-01", "title": "Business Continuity Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain business continuity management policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "BCR-02", "title": "Risk Assessment and Impact Analysis", "description": "Determine the impact of business disruptions and risks on operations through business impact analysis.", "level": 1, "isCategory": false},
+        {"reference": "BCR-03", "title": "Business Continuity Strategy", "description": "Establish and implement strategies that reduce the impact of, withstand, and recover from business disruptions.", "level": 1, "isCategory": false},
+        {"reference": "BCR-04", "title": "Business Continuity Planning", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain business continuity plans.", "level": 1, "isCategory": false},
+        {"reference": "BCR-05", "title": "Documentation", "description": "Develop and maintain documentation that provides continuity of operations.", "level": 1, "isCategory": false},
+        {"reference": "BCR-06", "title": "Business Continuity Exercises", "description": "Exercise and test business continuity and operational resilience plans at least annually.", "level": 1, "isCategory": false},
+        {"reference": "BCR-07", "title": "Communication", "description": "Establish communication with relevant parties during business disruptions.", "level": 1, "isCategory": false},
+        {"reference": "BCR-08", "title": "Backup", "description": "Establish and maintain a backup strategy appropriate for business objectives and continuity requirements.", "level": 1, "isCategory": false},
+        {"reference": "BCR-09", "title": "Disaster Response Plan", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain a disaster response plan.", "level": 1, "isCategory": false},
+        {"reference": "BCR-10", "title": "Response Plan Exercises", "description": "Exercise the response plan annually or upon significant organizational or environmental changes.", "level": 1, "isCategory": false},
+        {"reference": "BCR-11", "title": "Equipment Redundancy", "description": "Implement physical and environmental protection with redundancy for all critical equipment.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CCC",
+      "title": "Change Control & Configuration Management",
+      "description": "Manage changes to systems and configurations through controlled processes.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "CCC-01", "title": "Change Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies and procedures for managing changes.", "level": 1, "isCategory": false},
+        {"reference": "CCC-02", "title": "Quality Testing", "description": "Perform functionality and resilience testing to verify quality prior to production deployment.", "level": 1, "isCategory": false},
+        {"reference": "CCC-03", "title": "Change Management Technology", "description": "Implement a change management technology solution supporting change logging, tracking, and approval.", "level": 1, "isCategory": false},
+        {"reference": "CCC-04", "title": "Unauthorized Change Protection", "description": "Implement mechanisms to detect and prevent unauthorized changes to systems.", "level": 1, "isCategory": false},
+        {"reference": "CCC-05", "title": "Change Agreements", "description": "Include change management clauses and responsibilities in agreements with third-party cloud service providers.", "level": 1, "isCategory": false},
+        {"reference": "CCC-06", "title": "Change Management Baseline", "description": "Establish a baseline for the management of change to production resources.", "level": 1, "isCategory": false},
+        {"reference": "CCC-07", "title": "Detection of Baseline Deviation", "description": "Implement detection measures to identify configuration deviations from established baselines.", "level": 1, "isCategory": false},
+        {"reference": "CCC-08", "title": "Exception Management", "description": "Define and implement a process for managing exceptions to the change management baseline.", "level": 1, "isCategory": false},
+        {"reference": "CCC-09", "title": "Change Restoration", "description": "Define and implement a process for restoring the operational environment to the original state.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "CEK",
+      "title": "Cryptography, Encryption & Key Management",
+      "description": "Implement cryptographic controls and key management processes.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "CEK-01", "title": "Encryption and Key Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies and procedures for cryptography and key management.", "level": 1, "isCategory": false},
+        {"reference": "CEK-02", "title": "CEK Roles and Responsibilities", "description": "Define and implement cryptographic and key management roles and responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "CEK-03", "title": "Data Encryption", "description": "Provide cryptographic protection to data at rest and in transit.", "level": 1, "isCategory": false},
+        {"reference": "CEK-04", "title": "Encryption Algorithm", "description": "Use encryption algorithms that are appropriate for data protection using standards-based approaches.", "level": 1, "isCategory": false},
+        {"reference": "CEK-05", "title": "Encryption Change Management", "description": "Manage changes to cryptographic systems and key management in accordance with change management policies.", "level": 1, "isCategory": false},
+        {"reference": "CEK-06", "title": "Encryption Risk Management", "description": "Manage encryption and key management risk aligned with the enterprise risk management framework.", "level": 1, "isCategory": false},
+        {"reference": "CEK-07", "title": "Key Generation", "description": "Generate cryptographic keys using approved methods and secure key generation mechanisms.", "level": 1, "isCategory": false},
+        {"reference": "CEK-08", "title": "Key Rotation", "description": "Rotate cryptographic keys according to established cryptoperiod policies and key management standards.", "level": 1, "isCategory": false},
+        {"reference": "CEK-09", "title": "Key Revocation", "description": "Define and implement mechanisms to revoke and remove cryptographic keys prior to cryptoperiod expiration.", "level": 1, "isCategory": false},
+        {"reference": "CEK-10", "title": "Key Destruction", "description": "Destroy cryptographic keys at the end of cryptoperiod using secure destruction mechanisms.", "level": 1, "isCategory": false},
+        {"reference": "CEK-11", "title": "Key Archival", "description": "Archive cryptographic keys securely with restricted access for potential future recovery.", "level": 1, "isCategory": false},
+        {"reference": "CEK-12", "title": "Key Recovery", "description": "Define and implement cryptographic key recovery mechanisms to restore lost or corrupted keys.", "level": 1, "isCategory": false},
+        {"reference": "CEK-13", "title": "Key Inventory Management", "description": "Define and implement policies for cryptographic key inventory including ownership, location, and key usage.", "level": 1, "isCategory": false},
+        {"reference": "CEK-14", "title": "Key Compromise", "description": "Define and implement processes to address cryptographic key compromise.", "level": 1, "isCategory": false},
+        {"reference": "CEK-15", "title": "Key Management Auditing", "description": "Audit key management operations and enable logging to trace key lifecycle.", "level": 1, "isCategory": false},
+        {"reference": "CEK-16", "title": "Encryption Key Custody", "description": "Define and implement requirements for customers to independently manage their encryption keys.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "DCS",
+      "title": "Datacenter Security",
+      "description": "Protect physical data center facilities and assets.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "DCS-01", "title": "Off-Site Equipment Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies for off-site equipment security.", "level": 1, "isCategory": false},
+        {"reference": "DCS-02", "title": "Off-Site Equipment", "description": "Establish and implement security controls for off-site equipment.", "level": 1, "isCategory": false},
+        {"reference": "DCS-03", "title": "Off-Site Authorization", "description": "Authorize off-site transfer or use of data or assets only when business-justified.", "level": 1, "isCategory": false},
+        {"reference": "DCS-04", "title": "Secure Area Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies for securing physical areas.", "level": 1, "isCategory": false},
+        {"reference": "DCS-05", "title": "Secure Area Authorization", "description": "Restrict ingress and egress to secure areas to authorized personnel only.", "level": 1, "isCategory": false},
+        {"reference": "DCS-06", "title": "Secure Area Surveillance", "description": "Monitor and audit secure areas using surveillance systems.", "level": 1, "isCategory": false},
+        {"reference": "DCS-07", "title": "Secure Area Access Logs", "description": "Maintain access logs for secure areas including authorized and unauthorized access attempts.", "level": 1, "isCategory": false},
+        {"reference": "DCS-08", "title": "Equipment Identification", "description": "Physically label and inventory computing equipment and devices within secure areas.", "level": 1, "isCategory": false},
+        {"reference": "DCS-09", "title": "Secure Area Utility Services", "description": "Protect utility services (e.g., power, HVAC) that support secure areas from interruption.", "level": 1, "isCategory": false},
+        {"reference": "DCS-10", "title": "Secure Disposal of Equipment", "description": "Establish and implement procedures for the secure disposal of equipment.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "DSP",
+      "title": "Data Security & Privacy Lifecycle Management",
+      "description": "Manage data security and privacy throughout the data lifecycle.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "DSP-01", "title": "Data Security and Privacy Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain data security and privacy policies.", "level": 1, "isCategory": false},
+        {"reference": "DSP-02", "title": "Secure Disposal", "description": "Establish and implement a process for secure disposal of data in all phases and media.", "level": 1, "isCategory": false},
+        {"reference": "DSP-03", "title": "Data Inventory", "description": "Create and maintain a data inventory with data classifications, identification of applicable regulations, and data privacy requirements.", "level": 1, "isCategory": false},
+        {"reference": "DSP-04", "title": "Data Classification", "description": "Classify data according to type, sensitivity, and criticality and apply appropriate protective controls.", "level": 1, "isCategory": false},
+        {"reference": "DSP-05", "title": "Data Flow Documentation", "description": "Create and maintain data flow documentation showing how data transits systems and networks.", "level": 1, "isCategory": false},
+        {"reference": "DSP-06", "title": "Data Ownership and Stewardship", "description": "Assign data owners and stewards with defined responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "DSP-07", "title": "Data Protection by Design and Default", "description": "Integrate data protection by design and by default into system development lifecycles.", "level": 1, "isCategory": false},
+        {"reference": "DSP-08", "title": "Data Privacy by Design and Default", "description": "Integrate privacy by design principles in system development and processing activities.", "level": 1, "isCategory": false},
+        {"reference": "DSP-09", "title": "Data Privacy Impact Assessment", "description": "Conduct and document data privacy impact assessments for processing activities involving personal data.", "level": 1, "isCategory": false},
+        {"reference": "DSP-10", "title": "Sensitive Data Transfer", "description": "Define and implement technical, organizational, and contractual measures for transfers of sensitive data.", "level": 1, "isCategory": false},
+        {"reference": "DSP-11", "title": "Personal Data Access, Rectification, and Erasure", "description": "Implement mechanisms for data subjects to access, rectify, or request erasure of personal data.", "level": 1, "isCategory": false},
+        {"reference": "DSP-12", "title": "Limitation of Personal Data Processing", "description": "Limit processing of personal data to that necessary for the stated purpose.", "level": 1, "isCategory": false},
+        {"reference": "DSP-13", "title": "Personal Data Sub-processing", "description": "Define and implement security measures for sub-processors of personal data.", "level": 1, "isCategory": false},
+        {"reference": "DSP-14", "title": "Disclosure of Data Sub-processors", "description": "Disclose the use of third-party sub-processors to data subjects as required by applicable regulations.", "level": 1, "isCategory": false},
+        {"reference": "DSP-15", "title": "Limitation of Purpose", "description": "Limit personal data processing to the purposes identified prior to collection and not process for incompatible purposes.", "level": 1, "isCategory": false},
+        {"reference": "DSP-16", "title": "Retention and Disposal", "description": "Define and implement data retention and disposal policies aligned with regulatory and business requirements.", "level": 1, "isCategory": false},
+        {"reference": "DSP-17", "title": "Sensitive Data Protection", "description": "Implement additional protections for sensitive data as required by applicable regulations.", "level": 1, "isCategory": false},
+        {"reference": "DSP-18", "title": "Disclosure Notifications", "description": "Notify data subjects and relevant authorities of data disclosures as required by law.", "level": 1, "isCategory": false},
+        {"reference": "DSP-19", "title": "Data Location", "description": "Define and implement policies that identify geographic locations where data is stored and processed.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "GRC",
+      "title": "Governance, Risk & Compliance",
+      "description": "Establish governance structures, manage risk, and ensure compliance.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "GRC-01", "title": "Governance Program Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain governance policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "GRC-02", "title": "Risk Management Program", "description": "Establish and maintain an enterprise risk management program aligned with business objectives.", "level": 1, "isCategory": false},
+        {"reference": "GRC-03", "title": "Organizational Policy Reviews", "description": "Review all organizational policies at planned intervals or upon significant changes.", "level": 1, "isCategory": false},
+        {"reference": "GRC-04", "title": "Policy Exception Process", "description": "Establish and implement a policy exception process with documented risk acceptance.", "level": 1, "isCategory": false},
+        {"reference": "GRC-05", "title": "Information Security Program", "description": "Develop and implement an information security program that includes security assessment, awareness, and risk management.", "level": 1, "isCategory": false},
+        {"reference": "GRC-06", "title": "Governance Responsibility Model", "description": "Define and implement a responsibility model that identifies roles and responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "GRC-07", "title": "Information System Regulatory Mapping", "description": "Identify and document overlaps and gaps between organizational security and regulatory requirements.", "level": 1, "isCategory": false},
+        {"reference": "GRC-08", "title": "Special Interest Groups", "description": "Maintain contact and membership with relevant special interest groups and professional associations.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "HRS",
+      "title": "Human Resources",
+      "description": "Manage human resources security throughout employment lifecycle.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "HRS-01", "title": "Background Verification Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies for background verification.", "level": 1, "isCategory": false},
+        {"reference": "HRS-02", "title": "Background Verification", "description": "Conduct background verification checks on all personnel in accordance with policies and regulations.", "level": 1, "isCategory": false},
+        {"reference": "HRS-03", "title": "Employment Agreements", "description": "Require personnel to sign employment agreements that include security and confidentiality obligations.", "level": 1, "isCategory": false},
+        {"reference": "HRS-04", "title": "Employment Termination", "description": "Establish and implement policies for employment termination including access revocation.", "level": 1, "isCategory": false},
+        {"reference": "HRS-05", "title": "Employment Termination Checklist", "description": "Follow a termination checklist for all personnel separating from the organization.", "level": 1, "isCategory": false},
+        {"reference": "HRS-06", "title": "Security Awareness Training", "description": "Provide security awareness training to all personnel upon hire and periodically thereafter.", "level": 1, "isCategory": false},
+        {"reference": "HRS-07", "title": "Roles and Responsibilities Awareness", "description": "Communicate and ensure personnel understand their security roles and responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "HRS-08", "title": "Training Records", "description": "Document and retain security awareness training records.", "level": 1, "isCategory": false},
+        {"reference": "HRS-09", "title": "Personal and Sensitive Data Awareness", "description": "Provide training on handling personal and sensitive data to personnel who process such data.", "level": 1, "isCategory": false},
+        {"reference": "HRS-10", "title": "Non-Disclosure Agreements", "description": "Require non-disclosure agreements from personnel with access to confidential data.", "level": 1, "isCategory": false},
+        {"reference": "HRS-11", "title": "Mobile Device Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain mobile device management policies.", "level": 1, "isCategory": false},
+        {"reference": "HRS-12", "title": "Acceptable Use Policy", "description": "Establish and implement acceptable use policies for organization-issued and personal devices.", "level": 1, "isCategory": false},
+        {"reference": "HRS-13", "title": "Clean Desk Policy", "description": "Establish and implement a clean desk and clear screen policy.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "IAM",
+      "title": "Identity & Access Management",
+      "description": "Manage identities and access to resources through authentication and authorization.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "IAM-01", "title": "Identity and Access Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain identity and access management policies.", "level": 1, "isCategory": false},
+        {"reference": "IAM-02", "title": "Strong Authentication", "description": "Implement multi-factor authentication for access to systems, applications, and data.", "level": 1, "isCategory": false},
+        {"reference": "IAM-03", "title": "Identity Inventory", "description": "Manage an inventory of all identities used to access organizational systems and applications.", "level": 1, "isCategory": false},
+        {"reference": "IAM-04", "title": "Separation of Duties", "description": "Implement separation of duties to prevent unauthorized actions.", "level": 1, "isCategory": false},
+        {"reference": "IAM-05", "title": "Least Privilege", "description": "Employ the principle of least privilege for granting user access.", "level": 1, "isCategory": false},
+        {"reference": "IAM-06", "title": "User Access Provisioning", "description": "Define and implement a user access provisioning process for granting system access.", "level": 1, "isCategory": false},
+        {"reference": "IAM-07", "title": "User Access De-Provisioning", "description": "Define and implement a user access de-provisioning process for removing access.", "level": 1, "isCategory": false},
+        {"reference": "IAM-08", "title": "User Access Reviews", "description": "Conduct periodic user access reviews to validate access privileges.", "level": 1, "isCategory": false},
+        {"reference": "IAM-09", "title": "Segregation of Privileged Access Roles", "description": "Segregate privileged access roles from non-privileged access roles.", "level": 1, "isCategory": false},
+        {"reference": "IAM-10", "title": "Privileged Access Management", "description": "Implement privileged access management for administrative access.", "level": 1, "isCategory": false},
+        {"reference": "IAM-11", "title": "Federated Identity Management", "description": "Define and implement federated identity management for secure cross-organizational access.", "level": 1, "isCategory": false},
+        {"reference": "IAM-12", "title": "User ID Credentials", "description": "Define and implement user ID credential standards for authentication.", "level": 1, "isCategory": false},
+        {"reference": "IAM-13", "title": "Third Party Access", "description": "Manage third party access to organizational systems and data.", "level": 1, "isCategory": false},
+        {"reference": "IAM-14", "title": "System Access Revocation", "description": "Establish and implement timeframes for revoking access when no longer required.", "level": 1, "isCategory": false},
+        {"reference": "IAM-15", "title": "System Trust Verification", "description": "Verify identities and trust relationships between systems before allowing connections.", "level": 1, "isCategory": false},
+        {"reference": "IAM-16", "title": "Authentication Mechanism Protection", "description": "Protect authentication mechanisms from unauthorized access and manipulation.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "IPY",
+      "title": "Interoperability & Portability",
+      "description": "Ensure interoperability and data portability across cloud environments.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "IPY-01", "title": "Interoperability and Portability Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies for interoperability and portability.", "level": 1, "isCategory": false},
+        {"reference": "IPY-02", "title": "Secure Interoperability and Portability Management", "description": "Implement solutions for secure interoperability and portability between cloud environments.", "level": 1, "isCategory": false},
+        {"reference": "IPY-03", "title": "Data Portability", "description": "Provide mechanisms for data portability to allow secure data transfer.", "level": 1, "isCategory": false},
+        {"reference": "IPY-04", "title": "Application Portability", "description": "Provide mechanisms for application portability between cloud environments.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "IVS",
+      "title": "Infrastructure & Virtualization Security",
+      "description": "Secure infrastructure and virtualization technologies.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "IVS-01", "title": "Infrastructure and Virtualization Security Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain policies for infrastructure security.", "level": 1, "isCategory": false},
+        {"reference": "IVS-02", "title": "Capacity and Resource Planning", "description": "Plan and monitor the capacity and use of infrastructure resources.", "level": 1, "isCategory": false},
+        {"reference": "IVS-03", "title": "Network Security", "description": "Implement network security controls including segmentation, filtering, and monitoring.", "level": 1, "isCategory": false},
+        {"reference": "IVS-04", "title": "OS Hardening and Base Controls", "description": "Harden operating systems and establish base security controls.", "level": 1, "isCategory": false},
+        {"reference": "IVS-05", "title": "Production and Non-Production Environments", "description": "Separate production and non-production environments.", "level": 1, "isCategory": false},
+        {"reference": "IVS-06", "title": "Segmentation and Segregation", "description": "Implement logical and physical segmentation controls.", "level": 1, "isCategory": false},
+        {"reference": "IVS-07", "title": "Migration to Cloud Environments", "description": "Establish and implement migration security controls when moving to cloud environments.", "level": 1, "isCategory": false},
+        {"reference": "IVS-08", "title": "Network Architecture Documentation", "description": "Document network architecture including security controls.", "level": 1, "isCategory": false},
+        {"reference": "IVS-09", "title": "Network Defense", "description": "Implement defense-in-depth network security controls.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "LOG",
+      "title": "Logging and Monitoring",
+      "description": "Implement logging, monitoring, and security event management.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "LOG-01", "title": "Logging and Monitoring Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain logging and monitoring policies.", "level": 1, "isCategory": false},
+        {"reference": "LOG-02", "title": "Security Log Management", "description": "Implement security log management including collection, analysis, and retention.", "level": 1, "isCategory": false},
+        {"reference": "LOG-03", "title": "Security Monitoring and Alerting", "description": "Implement security monitoring and alerting to detect security events.", "level": 1, "isCategory": false},
+        {"reference": "LOG-04", "title": "Audit Logs Protection", "description": "Protect audit logs from unauthorized access, modification, and deletion.", "level": 1, "isCategory": false},
+        {"reference": "LOG-05", "title": "Audit Log Retention", "description": "Retain audit logs according to organizational and regulatory requirements.", "level": 1, "isCategory": false},
+        {"reference": "LOG-06", "title": "Clock Synchronization", "description": "Synchronize system clocks to a consistent and accurate time source.", "level": 1, "isCategory": false},
+        {"reference": "LOG-07", "title": "Logging and Monitoring Access", "description": "Restrict access to logging and monitoring systems to authorized personnel.", "level": 1, "isCategory": false},
+        {"reference": "LOG-08", "title": "Monitoring System Access", "description": "Monitor access to audit logging and monitoring systems.", "level": 1, "isCategory": false},
+        {"reference": "LOG-09", "title": "Log Failure Alerts", "description": "Implement alerts for logging failures to ensure continuous audit trail.", "level": 1, "isCategory": false},
+        {"reference": "LOG-10", "title": "Transaction/Activity Logs", "description": "Log transaction and activity data for security monitoring.", "level": 1, "isCategory": false},
+        {"reference": "LOG-11", "title": "Encryption Monitoring and Reporting", "description": "Monitor and report on the use of encryption technologies.", "level": 1, "isCategory": false},
+        {"reference": "LOG-12", "title": "Access Control Logs", "description": "Log access control events including authentication and authorization activities.", "level": 1, "isCategory": false},
+        {"reference": "LOG-13", "title": "Failures and Anomalies Reporting", "description": "Report security failures and anomalies to appropriate personnel.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "SEF",
+      "title": "Security Incident Management, E-Discovery & Cloud Forensics",
+      "description": "Manage security incidents and support forensic investigations.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "SEF-01", "title": "Security Incident Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain security incident management policies.", "level": 1, "isCategory": false},
+        {"reference": "SEF-02", "title": "Service Management Policy and Procedures", "description": "Establish policies for incident reporting and response coordination.", "level": 1, "isCategory": false},
+        {"reference": "SEF-03", "title": "Incident Response Plans", "description": "Develop and maintain incident response plans that define roles, responsibilities, and procedures.", "level": 1, "isCategory": false},
+        {"reference": "SEF-04", "title": "Incident Response Testing", "description": "Test incident response plans and procedures periodically.", "level": 1, "isCategory": false},
+        {"reference": "SEF-05", "title": "Incident Response Metrics", "description": "Define and track incident response metrics.", "level": 1, "isCategory": false},
+        {"reference": "SEF-06", "title": "Event Triage Processes", "description": "Implement event triage processes to identify and prioritize security events.", "level": 1, "isCategory": false},
+        {"reference": "SEF-07", "title": "Security Breach Notification", "description": "Implement procedures for notifying affected parties of security breaches.", "level": 1, "isCategory": false},
+        {"reference": "SEF-08", "title": "Points of Contact Maintenance", "description": "Maintain points of contact for security incident reporting and notification.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "STA",
+      "title": "Supply Chain Management, Transparency & Accountability",
+      "description": "Manage supply chain security and third-party relationships.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "STA-01", "title": "SSRM Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain supply chain policies.", "level": 1, "isCategory": false},
+        {"reference": "STA-02", "title": "SSRM Supply Chain", "description": "Establish and implement supply chain security controls.", "level": 1, "isCategory": false},
+        {"reference": "STA-03", "title": "SSRM Guidance", "description": "Provide guidance on shared security responsibility model to customers.", "level": 1, "isCategory": false},
+        {"reference": "STA-04", "title": "SSRM Control Ownership", "description": "Document and communicate ownership of security controls.", "level": 1, "isCategory": false},
+        {"reference": "STA-05", "title": "SSRM Documentation Review", "description": "Review shared security responsibility documentation periodically.", "level": 1, "isCategory": false},
+        {"reference": "STA-06", "title": "SSRM Control Baseline", "description": "Establish a baseline of security controls that customers can expect.", "level": 1, "isCategory": false},
+        {"reference": "STA-07", "title": "Supply Chain Inventory", "description": "Maintain an inventory of supply chain relationships and dependencies.", "level": 1, "isCategory": false},
+        {"reference": "STA-08", "title": "Supply Chain Risk Management", "description": "Implement supply chain risk management processes.", "level": 1, "isCategory": false},
+        {"reference": "STA-09", "title": "Primary Service and Contractual Agreement", "description": "Define and document primary service obligations and contractual agreements.", "level": 1, "isCategory": false},
+        {"reference": "STA-10", "title": "Supply Chain Agreement Review", "description": "Review and assess supply chain agreements periodically.", "level": 1, "isCategory": false},
+        {"reference": "STA-11", "title": "Internal Compliance Testing", "description": "Conduct internal compliance testing of supply chain security controls.", "level": 1, "isCategory": false},
+        {"reference": "STA-12", "title": "Supply Chain Service Agreement Compliance", "description": "Monitor and ensure compliance with supply chain service agreements.", "level": 1, "isCategory": false},
+        {"reference": "STA-13", "title": "Supply Chain Governance Review", "description": "Conduct periodic reviews of supply chain governance.", "level": 1, "isCategory": false},
+        {"reference": "STA-14", "title": "Supply Chain Data Security Assessment", "description": "Assess data security controls of supply chain partners.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "TVM",
+      "title": "Threat & Vulnerability Management",
+      "description": "Identify, assess, and remediate threats and vulnerabilities.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "TVM-01", "title": "Threat and Vulnerability Management Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain threat and vulnerability management policies.", "level": 1, "isCategory": false},
+        {"reference": "TVM-02", "title": "Malware Protection Policy and Procedures", "description": "Establish policies and procedures for malware protection.", "level": 1, "isCategory": false},
+        {"reference": "TVM-03", "title": "Vulnerability Remediation Schedule", "description": "Establish schedules for vulnerability remediation based on risk.", "level": 1, "isCategory": false},
+        {"reference": "TVM-04", "title": "Detection Updates", "description": "Update threat detection mechanisms regularly.", "level": 1, "isCategory": false},
+        {"reference": "TVM-05", "title": "External Library Vulnerabilities", "description": "Identify and remediate vulnerabilities in external libraries and components.", "level": 1, "isCategory": false},
+        {"reference": "TVM-06", "title": "Penetration Testing", "description": "Conduct penetration testing according to risk-based planning.", "level": 1, "isCategory": false},
+        {"reference": "TVM-07", "title": "Vulnerability Identification", "description": "Identify vulnerabilities through scanning and assessment.", "level": 1, "isCategory": false},
+        {"reference": "TVM-08", "title": "Vulnerability Prioritization", "description": "Prioritize vulnerabilities based on risk and business impact.", "level": 1, "isCategory": false},
+        {"reference": "TVM-09", "title": "Vulnerability Management Reporting", "description": "Report on vulnerability management activities and status.", "level": 1, "isCategory": false},
+        {"reference": "TVM-10", "title": "Vulnerability Remediation Exception Management", "description": "Manage exceptions to vulnerability remediation requirements.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "UEM",
+      "title": "Universal Endpoint Management",
+      "description": "Manage and secure endpoint devices.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "UEM-01", "title": "Endpoint Devices Policy and Procedures", "description": "Establish, document, approve, communicate, apply, evaluate, and maintain endpoint management policies.", "level": 1, "isCategory": false},
+        {"reference": "UEM-02", "title": "Application and Service Approval", "description": "Approve applications and services for use on endpoint devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-03", "title": "Compatibility", "description": "Ensure compatibility of applications and services on managed endpoints.", "level": 1, "isCategory": false},
+        {"reference": "UEM-04", "title": "Endpoint Inventory", "description": "Maintain an inventory of all endpoint devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-05", "title": "Endpoint Management", "description": "Implement endpoint management solutions for configuration and control.", "level": 1, "isCategory": false},
+        {"reference": "UEM-06", "title": "Automatic Lock Screen", "description": "Implement automatic lock screens on endpoint devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-07", "title": "Operating Systems", "description": "Ensure endpoint operating systems are current and supported.", "level": 1, "isCategory": false},
+        {"reference": "UEM-08", "title": "Storage Encryption", "description": "Encrypt data at rest on endpoint devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-09", "title": "Anti-Malware Detection and Prevention", "description": "Implement anti-malware solutions on endpoint devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-10", "title": "Software Firewall", "description": "Implement host-based firewalls on endpoint devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-11", "title": "Data Loss Prevention", "description": "Implement data loss prevention controls on endpoints.", "level": 1, "isCategory": false},
+        {"reference": "UEM-12", "title": "Remote Locate", "description": "Implement capability to remotely locate lost or stolen devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-13", "title": "Remote Wipe", "description": "Implement capability to remotely wipe lost or stolen devices.", "level": 1, "isCategory": false},
+        {"reference": "UEM-14", "title": "Third-Party Endpoint Security Posture", "description": "Assess and monitor third-party endpoint security posture.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}
