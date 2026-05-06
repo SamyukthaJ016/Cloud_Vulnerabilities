@@ -145,7 +145,8 @@ def _user_context_helpers():
 
 def _standalone_user_id(request: Request) -> str:
     return (
-        (request.query_params.get("user_id") or "").strip()
+        getattr(request.state, "user_id", None)
+        or (request.query_params.get("user_id") or "").strip()
         or (request.cookies.get(USER_ID_COOKIE) or "").strip()
         or (os.getenv("STANDALONE_USER_ID") or "").strip()
         or "anonymous"

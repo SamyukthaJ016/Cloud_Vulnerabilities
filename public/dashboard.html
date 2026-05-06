@@ -1984,13 +1984,31 @@ kubectl apply -f deployment.yaml`,
             window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }
 
+        function buildReportAccessQuery(includeScanIds = true) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const scanIds = urlParams.get('scanIds') || urlParams.get('scanId') || urlParams.get('scan_id') || sessionStorage.getItem('last_scan_ids');
+            const secret = urlParams.get('secret');
+            const params = new URLSearchParams();
+
+            if (includeScanIds && scanIds) params.set('scan_ids', scanIds);
+            if (secret) params.set('secret', secret);
+
+            return params.toString();
+        }
+
+        function appendReportAccess(url, includeScanIds = true) {
+            const query = buildReportAccessQuery(includeScanIds);
+            if (!query) return url;
+            return `${url}${url.includes('?') ? '&' : '?'}${query}`;
+        }
+
         async function loadDashboard() {
             try {
                 console.log('Loading dashboard data...');
 
                 // Read scanIds from URL with fallback to sessionStorage
                 const urlParams = new URLSearchParams(window.location.search);
-                let scanIds = urlParams.get('scanIds');
+                let scanIds = urlParams.get('scanIds') || urlParams.get('scanId') || urlParams.get('scan_id');
 
                 if (scanIds) {
                     sessionStorage.setItem('last_scan_ids', scanIds);
@@ -2000,7 +2018,8 @@ kubectl apply -f deployment.yaml`,
                     if (scanIds) console.log(' Retrieved scanIds from session fallback:', scanIds);
                 }
 
-                const filter = scanIds ? `?scan_ids=${scanIds}` : '';
+                const reportQuery = buildReportAccessQuery(true);
+                const filter = reportQuery ? `?${reportQuery}` : '';
 
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
@@ -2017,7 +2036,7 @@ kubectl apply -f deployment.yaml`,
                 const findingsLimit = scanIds
                     ? Math.max(summary.total_findings || 20, 20)
                     : 20;
-                const findingsRes = await fetch(`/api/latest-findings${filter}${scanIds ? '&' : '?'}limit=${findingsLimit}`);
+                const findingsRes = await fetch(`/api/latest-findings${filter}${filter ? '&' : '?'}limit=${findingsLimit}`);
                 const findings = await findingsRes.json();
 
                 console.log(' Dashboard Summary:', summary);
@@ -2078,7 +2097,7 @@ kubectl apply -f deployment.yaml`,
             if (!tbody) return;
 
             try {
-                const response = await fetch('/api/scans?limit=6&latest_only=true');
+                const response = await fetch(appendReportAccess('/api/scans?limit=6&latest_only=true'));
                 const data = await response.json();
 
                 if (data.status !== 'success' || !Array.isArray(data.scans) || data.scans.length === 0) {
@@ -2198,7 +2217,7 @@ kubectl apply -f deployment.yaml`,
 
         async function loadTrendChart() {
             try {
-                const response = await fetch('/api/scan-history?days=30');
+                const response = await fetch(appendReportAccess('/api/scan-history?days=30'));
                 const data = await response.json();
 
                 const ctx = document.getElementById('trendChart');
