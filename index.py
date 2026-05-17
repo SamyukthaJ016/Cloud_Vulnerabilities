@@ -64,7 +64,13 @@ async def require_sso_session(request: Request, call_next):
     ):
         return await call_next(request)
 
-    user = helpers["authenticate_sso_user"](request)
+    try:
+        user = helpers["authenticate_sso_user"](request)
+    except HTTPException as exc:
+        if helpers["is_html_navigation"](request):
+            return HTMLResponse(str(exc.detail), status_code=exc.status_code)
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     if not user:
         if helpers["is_html_navigation"](request):
             return RedirectResponse(helpers["build_sso_login_redirect"](request), status_code=307)
@@ -144,9 +150,12 @@ def _user_context_helpers():
 
 
 def _standalone_user_id(request: Request) -> str:
+    state_user_id = (getattr(request.state, "user_id", None) or "").strip()
+    if state_user_id:
+        return state_user_id
+
     return (
-        getattr(request.state, "user_id", None)
-        or (request.query_params.get("user_id") or "").strip()
+        (request.query_params.get("user_id") or "").strip()
         or (request.cookies.get(USER_ID_COOKIE) or "").strip()
         or (os.getenv("STANDALONE_USER_ID") or "").strip()
         or "anonymous"

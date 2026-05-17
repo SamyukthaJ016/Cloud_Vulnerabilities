@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudGuard MSME Compliance</title>
+    <style>
+        :root {
+            --ink: #10231f;
+            --muted: #66756f;
+            --surface: #ffffff;
+            --surface-soft: #f4f8f5;
+            --line: #dce8e1;
+            --brand: #245f4d;
+            --brand-soft: #dff2e9;
+            --accent: #b7772e;
+            --danger: #b42318;
+            --warning: #b54708;
+            --good: #16734c;
+            --shadow: 0 24px 70px rgba(16, 35, 31, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(183, 119, 46, 0.14), transparent 34rem),
+                linear-gradient(135deg, #eef6f1 0%, #f8f3eb 100%);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        .shell {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.78);
+            border-right: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            padding: 28px 22px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 34px;
+        }
+
+        .brand-mark {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--brand), #6da58d);
+            box-shadow: 0 16px 30px rgba(36, 95, 77, 0.24);
+        }
+
+        .brand h1 {
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .brand p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        .nav {
+            display: grid;
+            gap: 8px;
+        }
+
+        .nav a {
+            color: var(--muted);
+            text-decoration: none;
+            padding: 11px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.92rem;
+        }
+
+        .nav a.active,
+        .nav a:hover {
+            color: var(--brand);
+            background: var(--brand-soft);
+        }
+
+        .main {
+            padding: 34px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 24px;
+            align-items: stretch;
+            margin-bottom: 26px;
+        }
+
+        .hero-card,
+        .panel,
+        .control-detail {
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(220, 232, 225, 0.92);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero-card {
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-card::after {
+            content: "";
+            position: absolute;
+            right: -100px;
+            top: -90px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            border: 38px solid rgba(36, 95, 77, 0.08);
+        }
+
+        .eyebrow {
+            color: var(--accent);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .hero h2 {
+            font-size: clamp(2rem, 5vw, 4.6rem);
+            line-height: 0.95;
+            letter-spacing: -0.06em;
+            margin: 14px 0 16px;
+            max-width: 850px;
+        }
+
+        .hero p {
+            color: var(--muted);
+            max-width: 720px;
+            font-size: 1.04rem;
+        }
+
+        .score-card {
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 320px;
+        }
+
+        .score-ring {
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(var(--brand) calc(var(--score) * 1%), #e6eee9 0);
+            margin: 10px auto;
+            position: relative;
+        }
+
+        .score-ring::before {
+            content: "";
+            width: 124px;
+            height: 124px;
+            border-radius: 50%;
+            background: var(--surface);
+            position: absolute;
+        }
+
+        .score-value {
+            position: relative;
+            font-size: 2.4rem;
+            font-weight: 900;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 22px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 13px;
+            padding: 11px 15px;
+            cursor: pointer;
+            font-weight: 800;
+            transition: 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--brand);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: var(--surface-soft);
+            color: var(--brand);
+            border: 1px solid var(--line);
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 14px;
+            margin-bottom: 26px;
+        }
+
+        .metric {
+            background: rgba(255, 255, 255, 0.82);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 18px;
+        }
+
+        .metric-label {
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 900;
+            margin-top: 8px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 420px;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .panel {
+            padding: 24px;
+        }
+
+        .panel h3 {
+            margin: 0 0 18px;
+            font-size: 1.1rem;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+            gap: 14px;
+        }
+
+        .control-card {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 16px;
+            cursor: pointer;
+            min-height: 182px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: 0.2s ease;
+        }
+
+        .control-card:hover,
+        .control-card.active {
+            border-color: var(--brand);
+            box-shadow: 0 18px 40px rgba(36, 95, 77, 0.14);
+            transform: translateY(-2px);
+        }
+
+        .control-code {
+            color: var(--brand);
+            font-weight: 900;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+        }
+
+        .control-title {
+            font-size: 1rem;
+            font-weight: 900;
+            margin: 8px 0;
+        }
+
+        .control-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chip {
+            border-radius: 999px;
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+            padding: 5px 9px;
+            color: var(--muted);
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .chip.good {
+            color: var(--good);
+            background: #e6f5ee;
+        }
+
+        .chip.warn {
+            color: var(--warning);
+            background: #fff4e5;
+        }
+
+        .chip.bad {
+            color: var(--danger);
+            background: #ffebe8;
+        }
+
+        .progress {
+            height: 9px;
+            background: #e7eee9;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress span {
+            display: block;
+            height: 100%;
+            width: var(--w);
+            background: linear-gradient(90deg, var(--brand), #83b69f);
+        }
+
+        .control-detail {
+            padding: 24px;
+            position: sticky;
+            top: 24px;
+        }
+
+        .detail-empty {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .detail-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .detail-head h3 {
+            margin: 0;
+            font-size: 1.45rem;
+        }
+
+        .section {
+            border-top: 1px solid var(--line);
+            padding-top: 16px;
+            margin-top: 16px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .checklist,
+        .simple-list {
+            display: grid;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .checklist li,
+        .simple-list li {
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+            border-radius: 13px;
+            padding: 10px 12px;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .form-row {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #fff;
+            color: var(--ink);
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .notice {
+            background: #fff7ed;
+            color: #8a4b13;
+            border: 1px solid #fed7aa;
+            border-radius: 16px;
+            padding: 13px 15px;
+            margin-top: 14px;
+            font-size: 0.9rem;
+        }
+
+        .footer-note {
+            color: var(--muted);
+            margin-top: 22px;
+            font-size: 0.86rem;
+        }
+
+        @media (max-width: 1100px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                height: auto;
+            }
+
+            .hero,
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .control-detail {
+                position: static;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main {
+                padding: 18px;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark"></div>
+                <h1>CloudGuard MSME Compliance</h1>
+                <p>CERT-In MSME readiness cockpit for 15 mandatory elemental cyber defense controls.</p>
+            </div>
+            <nav class="nav">
+                <a href="/" class="active">MSME Compliance</a>
+                <a href="/dashboard">CloudGuard Dashboard</a>
+                <a href="/frontend/history.html">Scan History</a>
+                <a href="/schedules">Scheduled Scans</a>
+                <a href="/api/msme/framework">Framework API</a>
+            </nav>
+            <p class="footer-note">Baseline: CERT-In Elemental Cyber Defense Controls for MSMEs, Version 1.0, 01.09.2025.</p>
+        </aside>
+
+        <main class="main">
+            <section class="hero">
+                <div class="hero-card">
+                    <div class="eyebrow">CERT-In MSME 2025</div>
+                    <h2>Compliance built for MSMEs, not enterprise paperwork.</h2>
+                    <p>Track 15 mandatory controls, upload audit evidence, map CloudGuard scanner gaps, and generate an audit-ready readiness summary.</p>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="mapScannerFindings()">Map Latest Scanner Findings</button>
+                        <button class="btn btn-secondary" onclick="exportReadiness()">Generate Audit Summary</button>
+                        <button class="btn btn-secondary" onclick="window.location.href='/'">Run Cloud Scan</button>
+                    </div>
+                    <div class="notice" id="status-message">Loading MSME compliance workspace...</div>
+                </div>
+
+                <div class="score-card hero-card">
+                    <div>
+                        <div class="eyebrow">Readiness Score</div>
+                        <div class="score-ring" id="score-ring" style="--score: 0">
+                            <div class="score-value" id="readiness-score">--</div>
+                        </div>
+                    </div>
+                    <p id="score-caption">Scores improve when controls are implemented, evidence is uploaded, and scanner gaps are closed.</p>
+                </div>
+            </section>
+
+            <section class="metrics">
+                <div class="metric">
+                    <div class="metric-label">Controls Verified</div>
+                    <div class="metric-value" id="controls-verified">--</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Evidence Items</div>
+                    <div class="metric-value" id="evidence-total">--</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Scanner Gaps</div>
+                    <div class="metric-value" id="scanner-gaps">--</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Open Tasks</div>
+                    <div class="metric-value" id="open-tasks">--</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">Controls Total</div>
+                    <div class="metric-value" id="controls-total">15</div>
+                </div>
+            </section>
+
+            <section class="content-grid">
+                <div class="panel">
+                    <h3>15 CERT-In MSME Controls</h3>
+                    <div class="controls-grid" id="controls-grid"></div>
+                </div>
+
+                <aside class="control-detail" id="control-detail">
+                    <p class="detail-empty">Select a control to see checklist items, evidence requirements, scanner gaps, and quick actions.</p>
+                </aside>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let dashboardState = null;
+        let selectedControlCode = null;
+
+        function setMessage(message, isError = false) {
+            const el = document.getElementById('status-message');
+            el.textContent = message;
+            el.style.background = isError ? '#ffebe8' : '#fff7ed';
+            el.style.color = isError ? '#b42318' : '#8a4b13';
+            el.style.borderColor = isError ? '#ffc9c3' : '#fed7aa';
+        }
+
+        async function api(path, options = {}) {
+            const response = await fetch(path, {
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                },
+                ...options
+            });
+            if (!response.ok) {
+                let detail = `Request failed with ${response.status}`;
+                try {
+                    const payload = await response.json();
+                    detail = payload.detail || payload.message || detail;
+                } catch (error) {
+                    detail = response.statusText || detail;
+                }
+                throw new Error(detail);
+            }
+            return response.json();
+        }
+
+        function statusChipClass(control) {
+            if (control.score >= 85) return 'good';
+            if (control.score >= 55) return 'warn';
+            return 'bad';
+        }
+
+        function renderMetrics(data) {
+            document.getElementById('readiness-score').textContent = `${Math.round(data.readiness_score)}%`;
+            document.getElementById('score-ring').style.setProperty('--score', data.readiness_score);
+            document.getElementById('controls-verified').textContent = data.controls_verified;
+            document.getElementById('evidence-total').textContent = data.evidence_total;
+            document.getElementById('scanner-gaps').textContent = data.open_scanner_gaps;
+            document.getElementById('open-tasks').textContent = data.open_tasks;
+            document.getElementById('controls-total').textContent = data.controls_total;
+        }
+
+        function renderControls(controls) {
+            const grid = document.getElementById('controls-grid');
+            grid.innerHTML = controls.map(control => `
+                <article class="control-card ${control.code === selectedControlCode ? 'active' : ''}" onclick="selectControl('${control.code}')">
+                    <div>
+                        <div class="control-code">${control.number.toString().padStart(2, '0')} / ${control.code}</div>
+                        <div class="control-title">${control.title}</div>
+                        <p style="color: var(--muted); font-size: 0.88rem; margin: 0;">${control.plain_language}</p>
+                    </div>
+                    <div>
+                        <div class="control-meta">
+                            <span class="chip ${statusChipClass(control)}">${control.score}%</span>
+                            <span class="chip">${control.status.status_label}</span>
+                            <span class="chip">${control.evidence_count} evidence</span>
+                            ${control.scanner_gap_count ? `<span class="chip bad">${control.scanner_gap_count} gaps</span>` : ''}
+                        </div>
+                        <div class="progress"><span style="--w: ${control.score}%"></span></div>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function controlByCode(code) {
+            return dashboardState.controls.find(control => control.code === code);
+        }
+
+        function renderDetail(control) {
+            const detail = document.getElementById('control-detail');
+            if (!control) {
+                detail.innerHTML = '<p class="detail-empty">Select a control to see checklist items, evidence requirements, scanner gaps, and quick actions.</p>';
+                return;
+            }
+
+            detail.innerHTML = `
+                <div class="detail-head">
+                    <div>
+                        <div class="control-code">${control.code}</div>
+                        <h3>${control.title}</h3>
+                        <p style="color: var(--muted); margin-bottom: 0;">${control.plain_language}</p>
+                    </div>
+                    <span class="chip ${statusChipClass(control)}">${control.score}%</span>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Quick Status</div>
+                    <div class="two-col">
+                        <select id="status-select">
+                            ${Object.entries(dashboardState.framework.status_labels).map(([value, label]) => `
+                                <option value="${value}" ${value === control.status.status ? 'selected' : ''}>${label}</option>
+                            `).join('')}
+                        </select>
+                        <input id="owner-input" placeholder="Owner" value="${control.status.owner || ''}">
+                    </div>
+                    <div class="form-row">
+                        <textarea id="notes-input" rows="2" placeholder="Notes">${control.status.notes || ''}</textarea>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="saveControlStatus('${control.code}')">Save Status</button>
+                        <button class="btn btn-secondary" onclick="markVerified('${control.code}')">Mark Verified</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Recommendation Checklist</div>
+                    <ul class="checklist">
+                        ${control.recommendations.map(item => `<li><strong>${item.code}</strong> ${item.title}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Evidence Required</div>
+                    <ul class="simple-list">
+                        ${control.evidence_required.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                    <div class="form-row">
+                        <input id="evidence-title" placeholder="Evidence title, e.g. MFA policy screenshot">
+                    </div>
+                    <div class="two-col">
+                        <select id="evidence-type">
+                            <option value="document">Document</option>
+                            <option value="screenshot">Screenshot</option>
+                            <option value="scanner_result">Scanner Result</option>
+                            <option value="policy">Policy</option>
+                            <option value="training_record">Training Record</option>
+                        </select>
+                        <input id="evidence-file" placeholder="File name or URL">
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-secondary" onclick="addEvidence('${control.code}')">Add Evidence Metadata</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">Scanner Gaps</div>
+                    ${control.scanner_gaps.length ? `
+                        <ul class="simple-list">
+                            ${control.scanner_gaps.map(gap => `
+                                <li><strong>${gap.severity || 'INFO'}</strong> ${gap.resource_name || 'resource'}: ${(gap.description || '').slice(0, 180)}</li>
+                            `).join('')}
+                        </ul>
+                    ` : '<p class="detail-empty">No scanner gaps currently mapped to this control.</p>'}
+                    <div class="form-row">
+                        <input id="task-title" placeholder="Task title">
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-secondary" onclick="addTask('${control.code}')">Create Manual Task</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadWorkspace() {
+            try {
+                setMessage('Loading MSME compliance workspace...');
+                dashboardState = await api('/api/msme/dashboard');
+                selectedControlCode = selectedControlCode || dashboardState.controls[0]?.code;
+                renderMetrics(dashboardState);
+                renderControls(dashboardState.controls);
+                renderDetail(controlByCode(selectedControlCode));
+                setMessage('Workspace ready. Use the control cards to update implementation status and evidence.');
+            } catch (error) {
+                console.error(error);
+                setMessage(error.message || 'Failed to load MSME compliance workspace.', true);
+            }
+        }
+
+        function selectControl(code) {
+            selectedControlCode = code;
+            renderControls(dashboardState.controls);
+            renderDetail(controlByCode(code));
+        }
+
+        async function saveControlStatus(code) {
+            try {
+                await api(`/api/msme/controls/${code}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({
+                        status: document.getElementById('status-select').value,
+                        owner: document.getElementById('owner-input').value,
+                        notes: document.getElementById('notes-input').value
+                    })
+                });
+                setMessage(`${code} status saved.`);
+                await loadWorkspace();
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        async function markVerified(code) {
+            try {
+                await api(`/api/msme/controls/${code}/status`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ status: 'verified' })
+                });
+                setMessage(`${code} marked as verified.`);
+                await loadWorkspace();
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        async function addEvidence(code) {
+            const title = document.getElementById('evidence-title').value.trim();
+            const fileValue = document.getElementById('evidence-file').value.trim();
+            if (!title) {
+                setMessage('Evidence title is required.', true);
+                return;
+            }
+            try {
+                await api('/api/msme/evidence', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        control_code: code,
+                        title,
+                        evidence_type: document.getElementById('evidence-type').value,
+                        file_name: fileValue && !fileValue.startsWith('http') ? fileValue : null,
+                        file_url: fileValue.startsWith('http') ? fileValue : null
+                    })
+                });
+                setMessage(`Evidence added for ${code}.`);
+                await loadWorkspace();
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        async function addTask(code) {
+            const title = document.getElementById('task-title').value.trim();
+            if (!title) {
+                setMessage('Task title is required.', true);
+                return;
+            }
+            try {
+                await api('/api/msme/tasks', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        control_code: code,
+                        title,
+                        severity: 'medium',
+                        source: 'manual'
+                    })
+                });
+                setMessage(`Task created for ${code}.`);
+                await loadWorkspace();
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        async function mapScannerFindings() {
+            try {
+                const result = await api('/api/msme/scanner/map-latest', { method: 'POST', body: '{}' });
+                setMessage(`Created ${result.created_count || 0} remediation tasks from latest scanner findings.`);
+                await loadWorkspace();
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        async function exportReadiness() {
+            try {
+                const result = await api('/api/msme/reports/audit-pack', { method: 'POST', body: '{}' });
+                const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `msme-readiness-summary-${result.export_id}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+                setMessage(`Audit summary generated as export #${result.export_id}.`);
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadWorkspace);
+    </script>
+</body>
+
+</html>

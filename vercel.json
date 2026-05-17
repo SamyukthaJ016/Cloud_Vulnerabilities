@@ -27,6 +27,46 @@
     },
     {
       "src": "^/dashboard/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "scanId"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/dashboard/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "scan_id"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/dashboard/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "scanIds"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/dashboard/?$",
+      "has": [
+        {
+          "type": "query",
+          "key": "scan_ids"
+        }
+      ],
+      "dest": "/index.py"
+    },
+    {
+      "src": "^/dashboard/?$",
       "dest": "/dashboard.html"
     },
     {

@@ -73,6 +73,20 @@ from backend.worker_client import (
 )
 from backend.grc_bridge import get_grc_status, is_grc_server_sync_enabled, trigger_grc_sync
 from backend.upload_utils import store_uploaded_directory
+from backend.msme_compliance import (
+    create_evidence as create_msme_evidence,
+    create_scanner_mapping_tasks,
+    create_task as create_msme_task,
+    export_readiness_payload,
+    get_control as get_msme_control,
+    get_dashboard as get_msme_dashboard,
+    get_framework as get_msme_framework,
+    list_controls as list_msme_controls,
+    list_evidence as list_msme_evidence,
+    list_tasks as list_msme_tasks,
+    update_control_status as update_msme_control_status,
+    update_task as update_msme_task,
+)
 
 # CloudFox (Offensive Security)
 from backend.cloudfox.cloudfox_scanner import (
@@ -101,6 +115,8 @@ logger = logging.getLogger("mcp_scanner")
 
 MCP_SCAN_PROVIDERS = {"aws", "gcp", "kubernetes"}
 SPECIALIZED_SCAN_PROVIDERS = {"iac"}
+CONTROL_PLANE_SCAN_PROVIDERS = {"aws", "gcp", "kubernetes", "iac"}
+CONTROL_PLANE_USER_ID = "control-plane"
 
 
 async def _maybe_sync_grc_after_scans(scan_ids: list[int]) -> dict[str, Any]:
@@ -184,7 +200,10 @@ async def require_sso_session(request: Request, call_next):
     try:
         user = authenticate_sso_user(request)
     except HTTPException as exc:
+        if is_html_navigation(request):
+            return HTMLResponse(str(exc.detail), status_code=exc.status_code)
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     if not user:
         if is_html_navigation(request):
             return RedirectResponse(build_sso_login_redirect(request), status_code=307)
@@ -309,27 +328,101 @@ class SessionResponse(BaseModel):
     providers_available: List[str]
 
 
-# ============================================================
-# CONTROL PLANE SCANNER CONTRACT
-# ============================================================
+class MSMEControlStatusUpdate(BaseModel):
+    status: Optional[str] = None
+    owner: Optional[str] = None
+    due_date: Optional[str] = None
+    notes: Optional[str] = None
+    score_override: Optional[int] = None
 
-CONTROL_PLANE_SCANNER_KEY = os.getenv("CONTROL_PLANE_SCANNER_KEY", "cloudguard_cloud")
-CONTROL_PLANE_SCANNER_KEY_PREFIX = (
-    os.getenv("CONTROL_PLANE_SCANNER_KEY_PREFIX")
-    or CONTROL_PLANE_SCANNER_KEY.replace("_cloud", "")
-    or "cloudguard"
-)
 
-CONTROL_PLANE_PROVIDER_BY_SCANNER_KEY = {
-    f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_aws": "aws",
-    f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_gcp": "gcp",
-    f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_k8s": "kubernetes",
-    f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_kubernetes": "kubernetes",
-    f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_iac": "iac",
+class MSMEEvidenceRequest(BaseModel):
+    control_code: str
+    recommendation_code: Optional[str] = None
+    title: str
+    evidence_type: str = "document"
+    file_name: Optional[str] = None
+    file_url: Optional[str] = None
+    notes: Optional[str] = None
+    evidence_date: Optional[str] = None
+    expires_at: Optional[str] = None
+
+
+class MSMETaskRequest(BaseModel):
+    control_code: str
+    recommendation_code: Optional[str] = None
+    title: str
+    severity: str = "medium"
+    owner: Optional[str] = None
+    due_date: Optional[str] = None
+    source: str = "manual"
+    linked_scan_id: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class MSMETaskUpdate(BaseModel):
+    title: Optional[str] = None
+    severity: Optional[str] = None
+    owner: Optional[str] = None
+    due_date: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ControlPlaneScanRequest(BaseModel):
+    jobId: str
+    orgId: str
+    callbackUrl: str
+    nonce: str
+    credentials: Dict[str, Any] = {}
+
+
+SCANNER_SLOT_PROFILES: dict[str, dict[str, Any]] = {
+    "s1": {
+        "key": "cloudguard_cloud",
+        "name": "CloudGuard Scanner 1 - Cloud Posture",
+        "description": "Runs AWS, GCP, and Kubernetes posture scans with CloudGuard.",
+        "category": "cloud",
+        "default_providers": "aws",
+        "allowed_providers": {"aws", "gcp", "kubernetes"},
+    },
+    "s2": {
+        "key": "cloudguard_iac",
+        "name": "CloudGuard Scanner 2 - IaC Posture",
+        "description": "Runs Infrastructure-as-Code posture scans with Checkov, tfsec, Semgrep, and Gitleaks.",
+        "category": "iac",
+        "default_providers": "iac",
+        "allowed_providers": {"iac"},
+    },
 }
 
 
-def _control_plane_shared_secret() -> str:
+def _normalize_scanner_slot(scanner_slot: Optional[str]) -> Optional[str]:
+    if not scanner_slot:
+        return None
+    normalized = scanner_slot.strip().lower()
+    if normalized not in SCANNER_SLOT_PROFILES:
+        raise HTTPException(status_code=404, detail=f"Scanner slot {scanner_slot} is not configured")
+    return normalized
+
+
+def _scanner_key(scanner_slot: Optional[str] = None) -> str:
+    normalized = _normalize_scanner_slot(scanner_slot)
+    if normalized:
+        return SCANNER_SLOT_PROFILES[normalized]["key"]
+    return (os.getenv("CONTROL_PLANE_SCANNER_KEY") or "cloudguard").strip() or "cloudguard"
+
+
+def _scanner_public_base_url(request: Optional[Request] = None) -> str:
+    configured = (os.getenv("CONTROL_PLANE_SCANNER_PUBLIC_BASE_URL") or "").strip().rstrip("/")
+    if configured:
+        return configured
+    if request:
+        return str(request.base_url).rstrip("/")
+    return "http://localhost:8000"
+
+
+def _scanner_shared_secret() -> str:
     return (
         os.getenv("CONTROL_PLANE_SCANNER_SHARED_SECRET")
         or os.getenv("SCANNER_SHARED_SECRET")
@@ -338,143 +431,49 @@ def _control_plane_shared_secret() -> str:
     ).strip()
 
 
+def _require_scanner_shared_secret() -> str:
+    secret = _scanner_shared_secret()
+    if not secret:
+        raise HTTPException(
+            status_code=503,
+            detail="Scanner shared secret is not configured",
+        )
+    return secret
+
+
+def _json_bytes(payload: dict[str, Any]) -> bytes:
+    return json.dumps(payload, separators=(",", ":"), sort_keys=False).encode("utf-8")
+
+
 def _scanner_signature(raw_body: bytes, nonce: str, shared_secret: str) -> str:
-    data = raw_body + b"." + nonce.encode("utf-8")
-    return hmac.new(shared_secret.encode("utf-8"), data, hashlib.sha256).hexdigest()
+    signed = raw_body + b"." + nonce.encode("utf-8")
+    return hmac.new(shared_secret.encode("utf-8"), signed, hashlib.sha256).hexdigest()
 
 
-def _verify_scanner_signature(raw_body: bytes, nonce: str, signature: str) -> bool:
-    shared_secret = _control_plane_shared_secret()
-    if not shared_secret or not nonce or not signature:
-        return False
+async def _verify_scanner_request(request: Request, raw_body: bytes) -> None:
+    shared_secret = _require_scanner_shared_secret()
+    nonce = (request.headers.get("X-Scanner-Nonce") or "").strip()
+    signature = (request.headers.get("X-Scanner-Signature") or "").strip()
+    if not nonce or not signature:
+        raise HTTPException(status_code=401, detail="Missing scanner signature headers")
 
     expected = _scanner_signature(raw_body, nonce, shared_secret)
-    return hmac.compare_digest(expected, signature)
-
-
-def _control_plane_public_base_url(request: Request | None = None) -> str:
-    configured = (
-        os.getenv("CONTROL_PLANE_SCANNER_PUBLIC_BASE_URL")
-        or os.getenv("PUBLIC_BASE_URL")
-        or os.getenv("APP_BASE_URL")
-        or ""
-    ).strip().rstrip("/")
-    if configured:
-        return configured
-    if request:
-        return str(request.base_url).rstrip("/")
-    return "http://localhost:8000"
-
-
-def _control_plane_value(payload: dict[str, Any], *keys: str, default: Any = None) -> Any:
-    for key in keys:
-        value = payload.get(key)
-        if value not in (None, ""):
-            return value
-    return default
-
-
-def _control_plane_bool(value: Any, default: bool = False) -> bool:
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _control_plane_provider_from_scanner_key(scanner_key: str | None) -> str | None:
-    if not scanner_key:
-        return None
-    return CONTROL_PLANE_PROVIDER_BY_SCANNER_KEY.get(scanner_key.strip().lower())
-
-
-def _control_plane_providers(
-    credentials: dict[str, Any],
-    scanner_key: str | None = None,
-) -> list[str]:
-    provider_from_key = _control_plane_provider_from_scanner_key(scanner_key)
-    if provider_from_key:
-        return [provider_from_key]
-
-    raw = credentials.get("providers") or credentials.get("provider")
-    if isinstance(raw, list):
-        providers = [str(item).strip().lower() for item in raw if str(item).strip()]
-    elif isinstance(raw, str) and raw.strip():
-        providers = [item.strip().lower() for item in raw.split(",") if item.strip()]
-    elif _control_plane_value(credentials, "gcpServiceAccountJson", "gcp_service_account_json"):
-        providers = ["gcp"]
-    elif _control_plane_value(credentials, "kubeconfig", "kubernetes_kubeconfig"):
-        providers = ["kubernetes"]
-    else:
-        providers = ["aws"]
-
-    allowed = MCP_SCAN_PROVIDERS | SPECIALIZED_SCAN_PROVIDERS
-    unique: list[str] = []
-    for provider in providers:
-        normalized = "kubernetes" if provider in {"k8s", "kube"} else provider
-        if normalized not in allowed:
-            raise HTTPException(status_code=400, detail=f"Unsupported provider: {provider}")
-        if normalized not in unique:
-            unique.append(normalized)
-    return unique
-
-
-def _control_plane_account_ids(
-    credentials: dict[str, Any],
-    providers: list[str],
-) -> dict[str, str]:
-    account_ids: dict[str, str] = {}
-    generic_account_id = str(_control_plane_value(credentials, "accountId", "account_id", default="default"))
-
-    for provider in providers:
-        account_ids[provider] = generic_account_id or "default"
-
-    aws_account_id = _control_plane_value(credentials, "awsAccountId", "aws_account_id")
-    if aws_account_id:
-        account_ids["aws"] = str(aws_account_id)
-
-    gcp_project_id = _control_plane_value(credentials, "gcpProjectId", "gcp_project_id", "projectId")
-    if gcp_project_id:
-        account_ids["gcp"] = str(gcp_project_id)
-
-    kube_cluster = _control_plane_value(credentials, "clusterName", "kubernetes_cluster_name")
-    if kube_cluster:
-        account_ids["kubernetes"] = str(kube_cluster)
-
-    return account_ids
-
-
-def _control_plane_scan_targets(credentials: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {
-        "iac": {
-            "path": _control_plane_value(credentials, "iacTargetPath", "iac_target_path"),
-            "enabled_tools": credentials.get("iacEnabledTools") or credentials.get("iac_enabled_tools"),
-        },
-    }
-
-
-def _control_plane_user_id(org_id: str) -> str:
-    safe_org = "".join(ch for ch in org_id if ch.isalnum() or ch in {"-", "_"})[:80]
-    return f"control-plane:{safe_org or 'unknown-org'}"
+    if not hmac.compare_digest(expected, signature):
+        raise HTTPException(status_code=401, detail="Invalid scanner signature")
 
 
 def _control_plane_view_secret(scan_id: str) -> str:
-    shared_secret = _control_plane_shared_secret()
-    if not shared_secret:
-        raise HTTPException(
-            status_code=500,
-            detail="CONTROL_PLANE_SCANNER_SHARED_SECRET is not configured",
-        )
+    shared_secret = _require_scanner_shared_secret()
     return hmac.new(
         shared_secret.encode("utf-8"),
-        f"view:{scan_id}".encode("utf-8"),
+        f"cloudguard-view.{scan_id}".encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
 
 
-def _control_plane_severity_summary(scan_results: list[ScanResult]) -> dict[str, int]:
+def _scan_summary(results: list[ScanResult]) -> dict[str, int]:
     summary = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
-    for result in scan_results:
+    for result in results:
         for finding in result.findings:
             severity = getattr(finding.severity, "value", str(finding.severity)).lower()
             if severity in summary:
@@ -482,500 +481,116 @@ def _control_plane_severity_summary(scan_results: list[ScanResult]) -> dict[str,
     return summary
 
 
-async def _post_control_plane_callback(
-    callback_url: str,
-    nonce: str,
-    payload: dict[str, Any],
-) -> None:
-    shared_secret = _control_plane_shared_secret()
-    if not shared_secret:
-        logger.error("Cannot post control-plane callback: scanner shared secret is not configured")
-        return
-
-    raw_body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    signature = _scanner_signature(raw_body, nonce, shared_secret)
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(
-                callback_url,
-                content=raw_body,
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Scanner-Nonce": nonce,
-                    "X-Scanner-Signature": signature,
-                },
-            )
-        if response.status_code >= 400:
-            logger.error(
-                "Control-plane callback failed: status=%s body=%s",
-                response.status_code,
-                response.text[:500],
-            )
-    except Exception as exc:
-        logger.error("Control-plane callback request failed: %s", exc)
+def _credential_value(credentials: dict[str, Any], *keys: str) -> str:
+    for key in keys:
+        value = credentials.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
 
 
-async def _initialize_control_plane_servers(
-    user_id: str,
-    providers: list[str],
-    credentials: dict[str, Any],
-) -> dict[str, bool]:
-    initialized: dict[str, bool] = {}
+def _credential_bool(credentials: dict[str, Any], key: str, default: bool = False) -> bool:
+    value = credentials.get(key)
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
+
+def _providers_from_control_plane_credentials(credentials: dict[str, Any]) -> list[str]:
+    requested = credentials.get("providers")
+    if isinstance(requested, str):
+        providers = [item.strip().lower() for item in requested.split(",") if item.strip()]
+    elif isinstance(requested, list):
+        providers = [str(item).strip().lower() for item in requested if str(item).strip()]
+    else:
+        providers = []
+
+    for provider, enabled_key in (
+        ("aws", "runAws"),
+        ("gcp", "runGcp"),
+        ("kubernetes", "runKubernetes"),
+        ("iac", "runIac"),
+    ):
+        if _credential_bool(credentials, enabled_key, default=False) and provider not in providers:
+            providers.append(provider)
+
+    if not providers:
+        if _credential_value(credentials, "awsAccessKeyId", "accessKeyId", "aws_access_key_id"):
+            providers.append("aws")
+        if _credential_value(credentials, "gcpServiceAccountJson", "serviceAccountJson", "gcp_service_account_json"):
+            providers.append("gcp")
+        if _credential_value(credentials, "kubernetesKubeconfig", "kubeconfig", "kubernetes_kubeconfig"):
+            providers.append("kubernetes")
+        if _credential_value(credentials, "iacTargetPath", "path", "iac_target_path"):
+            providers.append("iac")
+
+    invalid = [provider for provider in providers if provider not in CONTROL_PLANE_SCAN_PROVIDERS]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Unsupported providers requested: {', '.join(invalid)}")
+    if not providers:
+        raise HTTPException(status_code=400, detail="No scan provider selected or configured")
+    return providers
+
+
+def _control_plane_account_ids(credentials: dict[str, Any], providers: list[str]) -> dict[str, str]:
+    account_ids: dict[str, str] = {}
     if "aws" in providers:
-        access_key_id = _control_plane_value(
-            credentials,
-            "awsAccessKeyId",
-            "aws_access_key_id",
-            "accessKeyId",
-            "access_key_id",
-        )
-        secret_access_key = _control_plane_value(
-            credentials,
-            "awsSecretAccessKey",
-            "aws_secret_access_key",
-            "secretAccessKey",
-            "secret_access_key",
-        )
-        if not access_key_id or not secret_access_key:
-            raise HTTPException(status_code=400, detail="AWS access key and secret key are required")
-
-        aws_config = {
-            "access_key_id": access_key_id,
-            "secret_access_key": secret_access_key,
-            "session_token": _control_plane_value(
-                credentials,
-                "awsSessionToken",
-                "aws_session_token",
-                "sessionToken",
-                "session_token",
-            ),
-            "region": _control_plane_value(
-                credentials,
-                "awsRegion",
-                "aws_region",
-                "region",
-                default=os.getenv("AWS_REGION", "us-east-1"),
-            ),
-            "role_arn": _control_plane_value(credentials, "awsRoleArn", "aws_role_arn", "roleArn"),
-            "user_id": user_id,
-        }
-        server = create_aws_server(aws_config)
-        mcp_server_manager.register_server(server)
-        await server.start()
-        mcp_registry.register("aws", server)
-        initialized["aws"] = True
-
+        account_ids["aws"] = _credential_value(credentials, "awsAccountId", "accountId", "aws_account_id") or "default"
     if "gcp" in providers:
-        service_account_json = _control_plane_value(
-            credentials,
-            "gcpServiceAccountJson",
-            "gcp_service_account_json",
-            "serviceAccountJson",
-        )
-        project_id = _control_plane_value(credentials, "gcpProjectId", "gcp_project_id", "projectId")
-        if not service_account_json and not project_id:
-            raise HTTPException(status_code=400, detail="GCP project or service account JSON is required")
-
-        server = create_gcp_server(
-            {
-                "service_account_json": service_account_json,
-                "project_id": project_id,
-                "user_id": user_id,
-            }
-        )
-        mcp_server_manager.register_server(server)
-        await server.start()
-        mcp_registry.register("gcp", server)
-        initialized["gcp"] = True
-
+        account_ids["gcp"] = _credential_value(credentials, "gcpProjectId", "projectId", "gcp_project_id") or "default"
     if "kubernetes" in providers:
-        kubeconfig = _control_plane_value(credentials, "kubeconfig", "kubernetes_kubeconfig")
-        if not kubeconfig:
-            raise HTTPException(status_code=400, detail="Kubernetes kubeconfig is required")
-
-        server = create_kubernetes_server(
-            {
-                "kubeconfig": kubeconfig,
-                "context": _control_plane_value(credentials, "kubernetesContext", "kubernetes_context"),
-                "cluster_name": _control_plane_value(
-                    credentials,
-                    "kubernetesClusterName",
-                    "kubernetes_cluster_name",
-                    "clusterName",
-                ),
-                "aws_access_key_id": _control_plane_value(credentials, "awsAccessKeyId", "aws_access_key_id"),
-                "aws_secret_access_key": _control_plane_value(
-                    credentials,
-                    "awsSecretAccessKey",
-                    "aws_secret_access_key",
-                ),
-                "aws_session_token": _control_plane_value(credentials, "awsSessionToken", "aws_session_token"),
-                "aws_region": _control_plane_value(credentials, "awsRegion", "aws_region", "region"),
-                "user_id": user_id,
-            }
+        account_ids["kubernetes"] = (
+            _credential_value(credentials, "kubernetesClusterId", "clusterId", "kubernetes_context")
+            or _credential_value(credentials, "kubernetesContext", "context")
+            or "default"
         )
-        mcp_server_manager.register_server(server)
-        await server.start()
-        mcp_registry.register("kubernetes", server)
-        initialized["kubernetes"] = True
-
-    return initialized
+    if "iac" in providers:
+        account_ids["iac"] = _credential_value(credentials, "iacTargetPath", "path", "iac_target_path") or "default"
+    return account_ids
 
 
-async def _run_control_plane_scan_internal(
-    *,
-    providers: list[str],
-    account_ids: dict[str, str],
-    deep_scan: bool,
-    user_id: str,
+def _control_plane_scan_targets(credentials: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    iac_path = _credential_value(credentials, "iacTargetPath", "path", "iac_target_path")
+    return {
+        "iac": {
+            "path": iac_path,
+            "enabled_tools": ["checkov", "tfsec", "semgrep", "gitleaks"],
+        }
+    } if iac_path else {}
+
+
+def _apply_scanner_slot_defaults(
+    scanner_slot: Optional[str],
     credentials: dict[str, Any],
-    scan_ids_by_provider: dict[str, int],
-    scan_targets: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    mcp_providers = [provider for provider in providers if provider in MCP_SCAN_PROVIDERS]
-    if mcp_providers:
-        initialized = await _initialize_control_plane_servers(user_id, mcp_providers, credentials)
-        missing = [provider for provider in mcp_providers if provider not in initialized]
-        if missing:
-            raise HTTPException(status_code=400, detail=f"Missing credentials for: {', '.join(missing)}")
+    normalized = _normalize_scanner_slot(scanner_slot)
+    if not normalized:
+        return dict(credentials or {})
 
-    scan_results: list[ScanResult] = []
-    stored_ids: list[int] = []
+    profile = SCANNER_SLOT_PROFILES[normalized]
+    updated = dict(credentials or {})
+    if not updated.get("providers"):
+        updated["providers"] = profile["default_providers"]
 
-    for provider in providers:
-        existing_scan_id = scan_ids_by_provider[provider]
-        account_id = account_ids.get(provider, "default") or "default"
-        try:
-            if provider in SPECIALIZED_SCAN_PROVIDERS:
-                result = await _run_specialized_scan(provider, scan_targets.get(provider, {}), account_id)
-            else:
-                raw_result = await mcp_registry.scan(provider, account_id)
-                result = _mcp_to_scan_result(provider, raw_result)
+    requested = updated.get("providers")
+    if isinstance(requested, str):
+        requested_providers = {item.strip().lower() for item in requested.split(",") if item.strip()}
+    elif isinstance(requested, list):
+        requested_providers = {str(item).strip().lower() for item in requested if str(item).strip()}
+    else:
+        requested_providers = set()
 
-                if deep_scan:
-                    plugin = mcp_registry.get_plugin(provider)
-                    cloud_client = None
-                    if plugin:
-                        cloud_client = getattr(plugin, "s3", None) or getattr(plugin, "storage_client", None)
-                    for resource in result.resources:
-                        try:
-                            vuln_findings = await vuln_integration.scan_cloud_resource(resource, cloud_client)
-                            result.findings.extend(vuln_findings)
-                        except Exception as exc:
-                            logger.error("Deep scan failed for resource %s: %s", resource.name, exc)
-
-            scan_id = await store_scan_result(result, user_id=user_id, scan_id=existing_scan_id)
-            stored_ids.append(scan_id)
-            scan_results.append(result)
-        except Exception as exc:
-            logger.error("Control-plane scan failed for provider=%s: %s", provider, exc)
-            failed_resource = CloudResource(
-                provider=provider,
-                resource_type="scan_error",
-                name=f"{provider}-scanner",
-                region="local",
-                config={"error": str(exc)},
-                is_public=False,
-            )
-            failed_result = ScanResult(
-                provider=provider,
-                account_id=account_id,
-                resources=[failed_resource],
-                findings=[
-                    SecurityFinding(
-                        resource=failed_resource,
-                        severity=Severity.HIGH,
-                        issue=f"[SCANNER] {provider.upper()} scan failed",
-                        description=str(exc),
-                        recommendation="Review the credentials or target configuration and retry.",
-                        detection_tool="SCANNER",
-                        tool_category="execution",
-                    )
-                ],
-                errors=[str(exc)],
-            )
-            scan_id = await store_scan_result(failed_result, user_id=user_id, scan_id=existing_scan_id)
-            stored_ids.append(scan_id)
-            scan_results.append(failed_result)
-
-    return {
-        "scan_ids": stored_ids,
-        "scan_results": scan_results,
-        "ai_analysis": await _analyze_scan_results_with_ai(scan_results),
-        "grc_sync": await _maybe_sync_grc_after_scans(stored_ids),
-    }
-
-
-async def _run_control_plane_scan_job(
-    *,
-    external_scan_id: str,
-    job_id: str,
-    org_id: str,
-    callback_url: str,
-    nonce: str,
-    credentials: dict[str, Any],
-    providers: list[str],
-    account_ids: dict[str, str],
-    deep_scan: bool,
-    scan_ids_by_provider: dict[str, int],
-    scan_targets: dict[str, dict[str, Any]],
-) -> None:
-    await _post_control_plane_callback(callback_url, nonce, {"status": "running"})
-    try:
-        result_ctx = await _run_control_plane_scan_internal(
-            providers=providers,
-            account_ids=account_ids,
-            deep_scan=deep_scan,
-            user_id=_control_plane_user_id(org_id),
-            credentials=credentials,
-            scan_ids_by_provider=scan_ids_by_provider,
-            scan_targets=scan_targets,
-        )
-        await _post_control_plane_callback(
-            callback_url,
-            nonce,
-            {
-                "status": "completed",
-                "viewSecret": _control_plane_view_secret(external_scan_id),
-                "summary": _control_plane_severity_summary(result_ctx["scan_results"]),
-            },
-        )
-    except Exception as exc:
-        logger.exception("Control-plane scan job failed: job_id=%s", job_id)
-        for scan_id in scan_ids_by_provider.values():
-            try:
-                finalize_scan_record(scan_id, status="failed", error_message=str(exc)[:5000])
-            except Exception:
-                logger.exception("Failed to mark control-plane scan %s as failed", scan_id)
-        await _post_control_plane_callback(
-            callback_url,
-            nonce,
-            {"status": "failed", "error": str(exc)},
+    allowed = profile["allowed_providers"]
+    invalid = sorted(requested_providers - allowed)
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{normalized} supports only: {', '.join(sorted(allowed))}. Invalid: {', '.join(invalid)}",
         )
 
-
-@app.get("/api/manifest")
-async def control_plane_scanner_manifest(request: Request):
-    """Scanner manifests consumed by the new CloudGuard Control Plane."""
-    base_url = _control_plane_public_base_url(request)
-    dashboard_base_url = f"{base_url}/dashboard"
-    schema_base = {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "additionalProperties": False,
-    }
-
-    return {
-        "scanners": [
-            {
-                "key": f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_aws",
-                "name": "CloudGuard AWS Scanner",
-                "description": "Scans AWS accounts for misconfigurations, risky exposure, IAM issues, and cloud security findings.",
-                "version": "1.0.0",
-                "category": "aws",
-                "iconUrl": None,
-                "dashboardBaseUrl": dashboard_base_url,
-                "credentialSchema": {
-                    **schema_base,
-                    "required": ["awsAccessKeyId", "awsSecretAccessKey"],
-                    "properties": {
-                        "accountId": {
-                            "type": "string",
-                            "title": "AWS Account ID",
-                            "default": "default",
-                        },
-                        "awsRegion": {
-                            "type": "string",
-                            "title": "AWS Region",
-                            "default": "us-east-1",
-                        },
-                        "awsAccessKeyId": {
-                            "type": "string",
-                            "title": "AWS Access Key ID",
-                        },
-                        "awsSecretAccessKey": {
-                            "type": "string",
-                            "title": "AWS Secret Access Key",
-                            "format": "password",
-                        },
-                        "awsSessionToken": {
-                            "type": "string",
-                            "title": "AWS Session Token",
-                            "format": "password",
-                        },
-                        "awsRoleArn": {
-                            "type": "string",
-                            "title": "AWS Role ARN",
-                        },
-                        "deepScan": {
-                            "type": "boolean",
-                            "title": "Enable deep vulnerability scan",
-                            "default": False,
-                        },
-                    },
-                },
-            },
-            {
-                "key": f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_gcp",
-                "name": "CloudGuard GCP Scanner",
-                "description": "Scans Google Cloud projects for IAM, storage, compute, networking, and posture risks.",
-                "version": "1.0.0",
-                "category": "gcp",
-                "iconUrl": None,
-                "dashboardBaseUrl": dashboard_base_url,
-                "credentialSchema": {
-                    **schema_base,
-                    "required": ["gcpProjectId"],
-                    "properties": {
-                        "gcpProjectId": {
-                            "type": "string",
-                            "title": "GCP Project ID",
-                        },
-                        "gcpServiceAccountJson": {
-                            "type": "string",
-                            "title": "GCP Service Account JSON",
-                            "format": "password",
-                        },
-                        "deepScan": {
-                            "type": "boolean",
-                            "title": "Enable deep vulnerability scan",
-                            "default": False,
-                        },
-                    },
-                },
-            },
-            {
-                "key": f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_k8s",
-                "name": "CloudGuard Kubernetes Scanner",
-                "description": "Scans Kubernetes clusters for workload, RBAC, namespace, and cluster security issues.",
-                "version": "1.0.0",
-                "category": "kubernetes",
-                "iconUrl": None,
-                "dashboardBaseUrl": dashboard_base_url,
-                "credentialSchema": {
-                    **schema_base,
-                    "required": ["kubeconfig"],
-                    "properties": {
-                        "kubeconfig": {
-                            "type": "string",
-                            "title": "Kubernetes kubeconfig",
-                            "format": "password",
-                        },
-                        "kubernetesContext": {
-                            "type": "string",
-                            "title": "Kubernetes context",
-                        },
-                        "kubernetesClusterName": {
-                            "type": "string",
-                            "title": "Kubernetes cluster name",
-                        },
-                        "deepScan": {
-                            "type": "boolean",
-                            "title": "Enable deep vulnerability scan",
-                            "default": False,
-                        },
-                    },
-                },
-            },
-            {
-                "key": f"{CONTROL_PLANE_SCANNER_KEY_PREFIX}_iac",
-                "name": "CloudGuard IaC Scanner",
-                "description": "Scans Terraform, Kubernetes YAML, and infrastructure-as-code folders for insecure configuration.",
-                "version": "1.0.0",
-                "category": "iac",
-                "iconUrl": None,
-                "dashboardBaseUrl": dashboard_base_url,
-                "credentialSchema": {
-                    **schema_base,
-                    "required": ["iacTargetPath"],
-                    "properties": {
-                        "iacTargetPath": {
-                            "type": "string",
-                            "title": "IaC target path",
-                        },
-                    },
-                },
-            },
-        ]
-    }
-
-
-@app.post("/api/scan")
-async def control_plane_start_scan(request: Request, background_tasks: BackgroundTasks):
-    """Accept a signed scan dispatch from the CloudGuard Control Plane."""
-    raw_body = await request.body()
-    header_nonce = request.headers.get("x-scanner-nonce", "")
-    signature = request.headers.get("x-scanner-signature", "")
-    if not _verify_scanner_signature(raw_body, header_nonce, signature):
-        raise HTTPException(status_code=401, detail="Invalid scanner signature")
-
-    try:
-        body = json.loads(raw_body.decode("utf-8")) if raw_body else {}
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail="Invalid JSON body") from exc
-
-    job_id = str(body.get("jobId") or "").strip()
-    org_id = str(body.get("orgId") or "").strip()
-    callback_url = str(body.get("callbackUrl") or "").strip()
-    dispatch_nonce = str(body.get("nonce") or "").strip()
-    credentials = body.get("credentials") if isinstance(body.get("credentials"), dict) else {}
-    scanner_key = str(body.get("scannerKey") or "").strip()
-
-    if not job_id or not org_id or not callback_url or not dispatch_nonce:
-        raise HTTPException(status_code=400, detail="Missing jobId, orgId, callbackUrl, or nonce")
-    if dispatch_nonce != header_nonce:
-        raise HTTPException(status_code=401, detail="Nonce mismatch")
-
-    providers = _control_plane_providers(credentials, scanner_key=scanner_key)
-    account_ids = _control_plane_account_ids(credentials, providers)
-    deep_scan = _control_plane_bool(
-        _control_plane_value(credentials, "deepScan", "deep_scan"),
-        default=False,
-    )
-    scan_targets = _control_plane_scan_targets(credentials)
-    user_id = _control_plane_user_id(org_id)
-
-    scan_ids_by_provider: dict[str, int] = {}
-    for provider in providers:
-        scan_ids_by_provider[provider] = create_scan_record(
-            account_ids.get(provider, "default"),
-            provider,
-            user_id,
-        )
-
-    external_scan_id = ",".join(str(scan_ids_by_provider[provider]) for provider in providers)
-    background_tasks.add_task(
-        _run_control_plane_scan_job,
-        external_scan_id=external_scan_id,
-        job_id=job_id,
-        org_id=org_id,
-        callback_url=callback_url,
-        nonce=dispatch_nonce,
-        credentials=credentials,
-        providers=providers,
-        account_ids=account_ids,
-        deep_scan=deep_scan,
-        scan_ids_by_provider=scan_ids_by_provider,
-        scan_targets=scan_targets,
-    )
-
-    return JSONResponse(
-        status_code=202,
-        content={"scanId": external_scan_id, "status": "accepted"},
-    )
-
-
-@app.post("/api/scans/{scan_id}/view-token")
-async def control_plane_view_token(scan_id: str, request: Request):
-    """Issue a stateless view token for the CP redirect handoff."""
-    raw_body = await request.body()
-    nonce = request.headers.get("x-scanner-nonce", "")
-    signature = request.headers.get("x-scanner-signature", "")
-    if not _verify_scanner_signature(raw_body, nonce, signature):
-        raise HTTPException(status_code=401, detail="Invalid scanner signature")
-
-    return {"viewSecret": _control_plane_view_secret(scan_id)}
+    return updated
 
 # ============================================================
 # 🔥 FIXED CREDENTIAL INITIALIZATION
@@ -1354,6 +969,91 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
             mcp_registry.register("cloudfox", server)
 
             logger.info("✅ CloudFox MCP server initialized")
+
+
+async def initialize_mcp_servers_with_inline_credentials(
+    credentials: dict[str, Any],
+    providers: list[str],
+) -> dict[str, bool]:
+    """Initialize scan servers from credentials forwarded by the control plane."""
+    initialized: dict[str, bool] = {}
+
+    for provider in providers:
+        if provider == "aws":
+            access_key = _credential_value(credentials, "awsAccessKeyId", "accessKeyId", "aws_access_key_id")
+            secret_key = _credential_value(credentials, "awsSecretAccessKey", "secretAccessKey", "aws_secret_access_key")
+            if not access_key or not secret_key:
+                raise HTTPException(status_code=400, detail="AWS scan requires access key and secret key")
+
+            aws_config = {
+                "access_key_id": access_key,
+                "secret_access_key": secret_key,
+                "region": _credential_value(credentials, "awsRegion", "region", "aws_region") or "us-east-1",
+                "user_id": CONTROL_PLANE_USER_ID,
+            }
+            session_token = _credential_value(credentials, "awsSessionToken", "sessionToken", "aws_session_token")
+            role_arn = _credential_value(credentials, "awsRoleArn", "roleArn", "aws_role_arn")
+            if session_token:
+                aws_config["session_token"] = session_token
+            if role_arn:
+                aws_config["role_arn"] = role_arn
+
+            server = create_aws_server(aws_config)
+            mcp_server_manager.register_server(server)
+            await server.start()
+            mcp_registry.register("aws", server)
+            initialized["aws"] = True
+
+        elif provider == "gcp":
+            service_account_json = _credential_value(
+                credentials,
+                "gcpServiceAccountJson",
+                "serviceAccountJson",
+                "gcp_service_account_json",
+            )
+            project_id = _credential_value(credentials, "gcpProjectId", "projectId", "gcp_project_id")
+            if not service_account_json:
+                raise HTTPException(status_code=400, detail="GCP scan requires service account JSON")
+
+            server = create_gcp_server(
+                {
+                    "service_account_json": service_account_json,
+                    "project_id": project_id or None,
+                }
+            )
+            mcp_server_manager.register_server(server)
+            await server.start()
+            mcp_registry.register("gcp", server)
+            initialized["gcp"] = True
+
+        elif provider == "kubernetes":
+            kubeconfig = _credential_value(
+                credentials,
+                "kubernetesKubeconfig",
+                "kubeconfig",
+                "kubernetes_kubeconfig",
+            )
+            if not kubeconfig:
+                raise HTTPException(status_code=400, detail="Kubernetes scan requires kubeconfig")
+
+            server = create_kubernetes_server(
+                {
+                    "kubeconfig": kubeconfig,
+                    "context": _credential_value(credentials, "kubernetesContext", "context", "kubernetes_context") or None,
+                    "cluster_name": _credential_value(credentials, "kubernetesClusterName", "clusterName") or None,
+                    "aws_access_key_id": _credential_value(credentials, "awsAccessKeyId", "accessKeyId") or None,
+                    "aws_secret_access_key": _credential_value(credentials, "awsSecretAccessKey", "secretAccessKey") or None,
+                    "aws_session_token": _credential_value(credentials, "awsSessionToken", "sessionToken") or None,
+                    "aws_region": _credential_value(credentials, "awsRegion", "region") or None,
+                }
+            )
+            mcp_server_manager.register_server(server)
+            await server.start()
+            mcp_registry.register("kubernetes", server)
+            initialized["kubernetes"] = True
+
+    return initialized
+
 
 def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
     """Convert raw MCP response dict to ScanResult object"""
@@ -1818,6 +1518,104 @@ async def run_multi_cloud_scan_internal(
         "grc_sync": grc_sync,
         "deep_scan_enabled": deep_scan,
         "user_credentials_used": len(providers_initialized) > 0,
+    }
+
+
+async def run_control_plane_scan_internal(
+    providers: list[str],
+    account_ids: dict[str, str],
+    credentials: dict[str, Any],
+    scan_ids_by_provider: dict[str, int],
+    deep_scan: bool = False,
+):
+    """Run a control-plane dispatched scan using inline Vault-backed credentials."""
+    logger.info("🚀 Control-plane scan for providers: %s", providers)
+    scan_targets = _control_plane_scan_targets(credentials)
+    mcp_providers = [provider for provider in providers if provider in MCP_SCAN_PROVIDERS]
+    initialized = (
+        await initialize_mcp_servers_with_inline_credentials(credentials, mcp_providers)
+        if mcp_providers
+        else {}
+    )
+    scan_results: list[ScanResult] = []
+    stored_ids: list[int] = []
+
+    for provider in providers:
+        scan_id = scan_ids_by_provider[provider]
+        account_id = account_ids.get(provider, "default") or "default"
+        try:
+            if provider in SPECIALIZED_SCAN_PROVIDERS:
+                result = await _run_specialized_scan(
+                    provider,
+                    scan_targets.get(provider, {}),
+                    account_id,
+                )
+            else:
+                if provider not in initialized:
+                    raise HTTPException(status_code=400, detail=f"{provider} credentials were not initialized")
+
+                raw_result = await mcp_registry.scan(provider, account_id)
+                result = _mcp_to_scan_result(provider, raw_result)
+
+                if deep_scan:
+                    logger.info("🔬 Running deep vulnerability scan for %s", provider)
+                    plugin = mcp_registry.get_plugin(provider)
+                    cloud_client = None
+                    if plugin:
+                        cloud_client = getattr(plugin, "s3", None) or getattr(plugin, "storage_client", None)
+
+                    for resource in result.resources:
+                        try:
+                            vuln_findings = await vuln_integration.scan_cloud_resource(resource, cloud_client)
+                            result.findings.extend(vuln_findings)
+                        except Exception as exc:
+                            logger.error("Failed to deep scan resource %s: %s", resource.name, exc)
+
+            scan_results.append(result)
+            await store_scan_result(result, user_id=CONTROL_PLANE_USER_ID, scan_id=scan_id)
+            stored_ids.append(scan_id)
+            logger.info("✅ Control-plane %s scan stored as scan_id=%s", provider, scan_id)
+
+        except Exception as exc:
+            logger.error("❌ Control-plane %s scan failed: %s", provider, exc)
+            failed_resource = CloudResource(
+                provider=provider,
+                resource_type="scan_error",
+                name=f"{provider}-scanner",
+                region="local",
+                config={"error": str(exc)},
+                is_public=False,
+            )
+            failed_result = ScanResult(
+                provider=provider,
+                account_id=account_id,
+                resources=[failed_resource],
+                findings=[
+                    SecurityFinding(
+                        resource=failed_resource,
+                        severity=Severity.HIGH,
+                        issue=f"[SCANNER] {provider.upper()} scan failed",
+                        description=str(exc),
+                        recommendation="Review credentials, targets, or scanner service logs, then retry.",
+                        detection_tool="SCANNER",
+                        tool_category="execution",
+                    )
+                ],
+                errors=[str(exc)],
+            )
+            scan_results.append(failed_result)
+            await store_scan_result(failed_result, user_id=CONTROL_PLANE_USER_ID, scan_id=scan_id)
+            stored_ids.append(scan_id)
+
+    ai_analysis = await _analyze_scan_results_with_ai(scan_results)
+    grc_sync = await _maybe_sync_grc_after_scans(stored_ids)
+    return {
+        "scan_ids": stored_ids,
+        "scan_results": scan_results,
+        "ai_analysis": ai_analysis,
+        "grc_sync": grc_sync,
+        "deep_scan_enabled": deep_scan,
+        "user_credentials_used": True,
     }
 @app.post("/scan/schedule")
 async def schedule_scan(request: ScheduledScanRequest, req: Request):
@@ -2380,6 +2178,258 @@ async def mcp_architecture_status():
 # REST OF ENDPOINTS (unchanged)
 # ============================================================
 
+
+def _manifest_properties(scanner_slot: Optional[str] = None) -> dict[str, Any]:
+    normalized = _normalize_scanner_slot(scanner_slot)
+    common = {
+        "providers": {
+            "type": "string",
+            "title": "Providers to scan",
+            "description": "Comma-separated provider list.",
+            "default": SCANNER_SLOT_PROFILES.get(normalized or "", {}).get("default_providers", "aws"),
+        },
+        "deepScan": {
+            "type": "boolean",
+            "title": "Enable deep vulnerability scan",
+            "default": False,
+        },
+    }
+
+    cloud_properties = {
+        "awsRegion": {
+            "type": "string",
+            "title": "AWS Region",
+            "default": "us-east-1",
+        },
+        "awsAccountId": {
+            "type": "string",
+            "title": "AWS Account ID / Alias",
+            "default": "default",
+        },
+        "awsAccessKeyId": {
+            "type": "string",
+            "title": "AWS Access Key ID",
+        },
+        "awsSecretAccessKey": {
+            "type": "string",
+            "title": "AWS Secret Access Key",
+            "format": "password",
+        },
+        "awsSessionToken": {
+            "type": "string",
+            "title": "AWS Session Token",
+            "format": "password",
+        },
+        "awsRoleArn": {
+            "type": "string",
+            "title": "AWS Role ARN",
+        },
+        "gcpProjectId": {
+            "type": "string",
+            "title": "GCP Project ID",
+        },
+        "gcpServiceAccountJson": {
+            "type": "string",
+            "title": "GCP Service Account JSON",
+            "format": "password",
+        },
+        "kubernetesKubeconfig": {
+            "type": "string",
+            "title": "Kubernetes kubeconfig",
+            "format": "password",
+        },
+        "kubernetesContext": {
+            "type": "string",
+            "title": "Kubernetes context",
+        },
+        "kubernetesClusterName": {
+            "type": "string",
+            "title": "Kubernetes cluster name",
+        },
+    }
+    iac_properties = {
+        "iacTargetPath": {
+            "type": "string",
+            "title": "IaC target path",
+            "description": "Path available to the CloudGuard scanner service.",
+        },
+    }
+
+    if normalized == "s1":
+        return {**common, **cloud_properties}
+    if normalized == "s2":
+        return {**common, **iac_properties}
+    return {**common, **cloud_properties, **iac_properties}
+
+
+def _control_plane_manifest_payload(
+    request: Optional[Request] = None,
+    scanner_slot: Optional[str] = None,
+) -> dict[str, Any]:
+    normalized = _normalize_scanner_slot(scanner_slot)
+    profile = SCANNER_SLOT_PROFILES.get(normalized or "")
+    base_url = _scanner_public_base_url(request)
+    return {
+        "key": _scanner_key(normalized),
+        "name": profile["name"] if profile else "CloudGuard Cloud Vulnerability Scanner",
+        "description": profile["description"] if profile else "Runs AWS, GCP, Kubernetes, and IaC posture scans with CloudGuard.",
+        "version": app.version,
+        "category": profile["category"] if profile else "cloud",
+        "iconUrl": None,
+        "dashboardBaseUrl": f"{base_url}/dashboard",
+        "credentialSchema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "required": [],
+            "properties": _manifest_properties(normalized),
+        },
+    }
+
+
+async def _post_control_plane_callback(callback_url: str, nonce: str, payload: dict[str, Any]) -> None:
+    shared_secret = _require_scanner_shared_secret()
+    raw_body = _json_bytes(payload)
+    signature = _scanner_signature(raw_body, nonce, shared_secret)
+    headers = {
+        "Content-Type": "application/json",
+        "X-Scanner-Nonce": nonce,
+        "X-Scanner-Signature": signature,
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        response = await client.post(callback_url, content=raw_body, headers=headers)
+        response.raise_for_status()
+
+
+async def _execute_control_plane_scan(
+    scan_request: ControlPlaneScanRequest,
+    providers: list[str],
+    account_ids: dict[str, str],
+    scan_ids_by_provider: dict[str, int],
+    external_scan_id: str,
+    deep_scan: bool,
+) -> None:
+    try:
+        await _post_control_plane_callback(scan_request.callbackUrl, scan_request.nonce, {"status": "running"})
+    except Exception as exc:
+        logger.warning("Control-plane running callback failed for job %s: %s", scan_request.jobId, exc)
+
+    try:
+        result_ctx = await run_control_plane_scan_internal(
+            providers=providers,
+            account_ids=account_ids,
+            credentials=scan_request.credentials,
+            scan_ids_by_provider=scan_ids_by_provider,
+            deep_scan=deep_scan,
+        )
+        payload = {
+            "status": "completed",
+            "viewSecret": _control_plane_view_secret(external_scan_id),
+            "summary": _scan_summary(result_ctx.get("scan_results", [])),
+        }
+    except Exception as exc:
+        logger.exception("Control-plane scan failed for job %s", scan_request.jobId)
+        for scan_id in scan_ids_by_provider.values():
+            try:
+                finalize_scan_record(scan_id, status="failed", error_message=str(exc)[:5000])
+            except Exception:
+                logger.exception("Failed to finalize control-plane scan row %s", scan_id)
+        payload = {"status": "failed", "error": str(exc)}
+
+    try:
+        await _post_control_plane_callback(scan_request.callbackUrl, scan_request.nonce, payload)
+    except Exception as exc:
+        logger.warning("Control-plane terminal callback failed for job %s: %s", scan_request.jobId, exc)
+
+
+@app.get("/api/manifest")
+async def scanner_manifest(request: Request):
+    return _control_plane_manifest_payload(request)
+
+
+@app.get("/{scanner_slot}/api/manifest")
+async def scanner_slot_manifest(scanner_slot: str, request: Request):
+    return _control_plane_manifest_payload(request, scanner_slot)
+
+
+async def _start_control_plane_scan_impl(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    scanner_slot: Optional[str] = None,
+):
+    raw_body = await request.body()
+    await _verify_scanner_request(request, raw_body)
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8") or "{}")
+        scan_request = ControlPlaneScanRequest(**payload)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid scan request: {exc}") from exc
+
+    scan_request.credentials = _apply_scanner_slot_defaults(scanner_slot, scan_request.credentials)
+    providers = _providers_from_control_plane_credentials(scan_request.credentials)
+    account_ids = _control_plane_account_ids(scan_request.credentials, providers)
+    scan_ids_by_provider = {
+        provider: create_scan_record(account_ids.get(provider, "default") or "default", provider, CONTROL_PLANE_USER_ID)
+        for provider in providers
+    }
+    external_scan_id = ",".join(str(scan_ids_by_provider[provider]) for provider in providers)
+    deep_scan = _credential_bool(scan_request.credentials, "deepScan", default=False)
+
+    background_tasks.add_task(
+        _execute_control_plane_scan,
+        scan_request,
+        providers,
+        account_ids,
+        scan_ids_by_provider,
+        external_scan_id,
+        deep_scan,
+    )
+    return {"scanId": external_scan_id, "status": "accepted"}
+
+
+@app.post("/api/scan", status_code=202)
+async def start_control_plane_scan(request: Request, background_tasks: BackgroundTasks):
+    return await _start_control_plane_scan_impl(request, background_tasks)
+
+
+@app.post("/{scanner_slot}/api/scan", status_code=202)
+async def start_control_plane_scan_for_slot(
+    scanner_slot: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    _normalize_scanner_slot(scanner_slot)
+    return await _start_control_plane_scan_impl(request, background_tasks, scanner_slot)
+
+
+async def _issue_scanner_view_token_impl(scan_id: str, request: Request):
+    raw_body = await request.body()
+    await _verify_scanner_request(request, raw_body)
+
+    try:
+        payload = json.loads(raw_body.decode("utf-8") or "{}")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid view-token request: {exc}") from exc
+
+    requested_scan_id = str(payload.get("scanId") or scan_id).strip()
+    if not requested_scan_id:
+        raise HTTPException(status_code=400, detail="scanId is required")
+
+    return {"viewSecret": _control_plane_view_secret(requested_scan_id)}
+
+
+@app.post("/api/scans/{scan_id}/view-token")
+async def issue_scanner_view_token(scan_id: str, request: Request):
+    return await _issue_scanner_view_token_impl(scan_id, request)
+
+
+@app.post("/{scanner_slot}/api/scans/{scan_id}/view-token")
+async def issue_scanner_slot_view_token(scanner_slot: str, scan_id: str, request: Request):
+    _normalize_scanner_slot(scanner_slot)
+    return await _issue_scanner_view_token_impl(scan_id, request)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     try:
@@ -2400,17 +2450,9 @@ async def root():
             </html>
             """
 
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
-    scan_id = (request.query_params.get("scanId") or "").strip()
-    view_secret = (request.query_params.get("secret") or "").strip()
-    if scan_id or view_secret:
-        if not scan_id or not view_secret:
-            raise HTTPException(status_code=401, detail="Missing dashboard view token")
-        expected = _control_plane_view_secret(scan_id)
-        if not hmac.compare_digest(expected, view_secret):
-            raise HTTPException(status_code=401, detail="Invalid dashboard view token")
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
     try:
         with open("/app/frontend/dashboard.html", "r") as f:
             return f.read()
@@ -2420,6 +2462,104 @@ async def dashboard(request: Request):
                 return f.read()
         except:
             return "<h1>Dashboard HTML not found</h1>"
+
+
+@app.get("/msme-compliance", response_class=HTMLResponse)
+async def msme_compliance_page():
+    try:
+        with open("/app/frontend/msme_compliance.html", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        try:
+            with open("frontend/msme_compliance.html", "r") as f:
+                return f.read()
+        except Exception:
+            return "<h1>MSME compliance page not found</h1>"
+
+
+@app.get("/api/msme/framework")
+async def api_msme_framework():
+    return get_msme_framework()
+
+
+@app.get("/api/msme/dashboard")
+async def api_msme_dashboard(req: Request):
+    return get_msme_dashboard(get_user_id(req))
+
+
+@app.get("/api/msme/controls")
+async def api_msme_controls(req: Request):
+    return {"status": "success", "controls": list_msme_controls(get_user_id(req))}
+
+
+@app.get("/api/msme/controls/{control_code}")
+async def api_msme_control(control_code: str, req: Request):
+    control = get_msme_control(get_user_id(req), control_code)
+    if not control:
+        raise HTTPException(status_code=404, detail="MSME control not found")
+    return control
+
+
+@app.patch("/api/msme/controls/{control_code}/status")
+async def api_msme_update_control_status(
+    control_code: str,
+    payload: MSMEControlStatusUpdate,
+    req: Request,
+):
+    try:
+        return update_msme_control_status(
+            get_user_id(req),
+            control_code,
+            payload.model_dump(exclude_unset=True),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/msme/evidence")
+async def api_msme_evidence(req: Request, control_code: Optional[str] = None):
+    return {"status": "success", "evidence": list_msme_evidence(get_user_id(req), control_code)}
+
+
+@app.post("/api/msme/evidence")
+async def api_msme_create_evidence(payload: MSMEEvidenceRequest, req: Request):
+    try:
+        evidence = create_msme_evidence(get_user_id(req), payload.model_dump())
+        return {"status": "success", "evidence": evidence}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/msme/tasks")
+async def api_msme_tasks(req: Request, control_code: Optional[str] = None):
+    return {"status": "success", "tasks": list_msme_tasks(get_user_id(req), control_code)}
+
+
+@app.post("/api/msme/tasks")
+async def api_msme_create_task(payload: MSMETaskRequest, req: Request):
+    try:
+        task = create_msme_task(get_user_id(req), payload.model_dump())
+        return {"status": "success", "task": task}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/msme/tasks/{task_id}")
+async def api_msme_update_task(task_id: int, payload: MSMETaskUpdate, req: Request):
+    task = update_msme_task(get_user_id(req), task_id, payload.model_dump(exclude_unset=True))
+    if not task:
+        raise HTTPException(status_code=404, detail="MSME task not found")
+    return {"status": "success", "task": task}
+
+
+@app.post("/api/msme/scanner/map-latest")
+async def api_msme_map_latest_scanner_findings(req: Request):
+    return create_scanner_mapping_tasks(get_user_id(req))
+
+
+@app.post("/api/msme/reports/audit-pack")
+async def api_msme_export_audit_pack(req: Request):
+    return export_readiness_payload(get_user_id(req))
 
 @app.get("/health")
 async def health():

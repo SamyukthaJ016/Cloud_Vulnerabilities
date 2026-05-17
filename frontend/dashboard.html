@@ -907,7 +907,7 @@
             <div class="action-buttons">
                 <button class="btn btn-secondary" onclick="loadDashboard()">Refresh Dashboard
                 </button>
-                <button class="btn btn-secondary" id="grc-button" onclick="openGrc()">GRC
+                <button class="btn btn-secondary" onclick="window.location.href='/msme-compliance'">MSME Compliance
                 </button>
                 <button class="btn btn-secondary" onclick="window.location.href='/schedules'">Scheduled Scans
                 </button>
@@ -1066,7 +1066,6 @@
         let trendChart, cloudChart;
         let currentFilter = 'all';
         let scanInProgress = false;
-        let grcStatus = null;
         let authContext = {
             authenticated: false,
             auth_mode: 'standalone',
@@ -1903,7 +1902,6 @@ kubectl apply -f deployment.yaml`,
             initializeUserContext();
             console.log('CloudGuard Dashboard initializing...');
             updateTimestamp();
-            loadGrcStatus();
             loadDashboard();
             checkForScanCompletion();
 
@@ -1927,79 +1925,20 @@ kubectl apply -f deployment.yaml`,
                 `Last updated: ${now.toLocaleTimeString('en-US', options)}`;
         }
 
-        async function loadGrcStatus(force = false) {
-            if (grcStatus && !force) {
-                return grcStatus;
-            }
-
-            const button = document.getElementById('grc-button');
-            if (button) {
-                button.textContent = ' GRC';
-            }
-
-            try {
-                const response = await fetch('/api/grc/status');
-                const data = await response.json();
-                grcStatus = data;
-
-                if (button) {
-                    if (data.server_sync_available) {
-                        button.textContent = ' GRC Synced';
-                    } else if (data.browser_bridge_available) {
-                        button.textContent = ' Open GRC';
-                    } else {
-                        button.textContent = ' GRC';
-                    }
-                }
-            } catch (error) {
-                console.warn('Failed to load GRC status', error);
-                grcStatus = null;
-            }
-
-            return grcStatus;
-        }
-
-        async function openGrc() {
-            const status = await loadGrcStatus(true);
-
-            if (!status || !status.links) {
-                showError('GRC connection details are not available yet.');
-                return;
-            }
-
-            if (status.server_sync_available) {
-                try {
-                    await fetch('/api/grc/sync', { method: 'POST' });
-                } catch (error) {
-                    console.warn('Best-effort GRC sync failed', error);
-                }
-            }
-
-            const targetUrl = status.links.integration_url || status.links.risks_url || status.links.ui_url;
-            if (!targetUrl) {
-                showError('No GRC destination is configured.');
-                return;
-            }
-
-            window.open(targetUrl, '_blank', 'noopener,noreferrer');
-        }
-
-        function buildReportAccessQuery(includeScanIds = true) {
+        function buildReportAccessQuery() {
             const urlParams = new URLSearchParams(window.location.search);
-            const scanIds = urlParams.get('scanIds') || urlParams.get('scanId') || urlParams.get('scan_id') || sessionStorage.getItem('last_scan_ids');
-            const secret = urlParams.get('secret');
+            const scanIds = urlParams.get('scanIds') || urlParams.get('scan_ids') || urlParams.get('scanId') || urlParams.get('scan_id');
+            const secret = urlParams.get('secret') || urlParams.get('viewSecret') || urlParams.get('view_secret');
             const params = new URLSearchParams();
-
-            if (includeScanIds && scanIds) params.set('scan_ids', scanIds);
+            if (scanIds) params.set('scan_ids', scanIds);
             if (secret) params.set('secret', secret);
-
             return params.toString();
         }
 
-        function appendReportAccess(url, includeScanIds = true) {
-            const query = buildReportAccessQuery(includeScanIds);
-            if (!query) return url;
-            return `${url}${url.includes('?') ? '&' : '?'}${query}`;
+        function appendReportAccess(url) {
+            const reportQuery = buildReportAccessQuery();
+            if (!reportQuery) return url;
+            return `${url}${url.includes('?') ? '&' : '?'}${reportQuery}`;
         }
 
         async function loadDashboard() {
@@ -2008,7 +1947,7 @@ kubectl apply -f deployment.yaml`,
 
                 // Read scanIds from URL with fallback to sessionStorage
                 const urlParams = new URLSearchParams(window.location.search);
-                let scanIds = urlParams.get('scanIds') || urlParams.get('scanId') || urlParams.get('scan_id');
+                let scanIds = urlParams.get('scanIds') || urlParams.get('scan_ids') || urlParams.get('scanId') || urlParams.get('scan_id');
 
                 if (scanIds) {
                     sessionStorage.setItem('last_scan_ids', scanIds);
@@ -2018,7 +1957,7 @@ kubectl apply -f deployment.yaml`,
                     if (scanIds) console.log(' Retrieved scanIds from session fallback:', scanIds);
                 }
 
-                const reportQuery = buildReportAccessQuery(true);
+                const reportQuery = buildReportAccessQuery();
                 const filter = reportQuery ? `?${reportQuery}` : '';
 
                 document.getElementById('total-resources').textContent = '...';

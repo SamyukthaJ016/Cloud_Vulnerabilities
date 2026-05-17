@@ -1,6 +1,7 @@
 import os
 import hashlib
 import hmac
+import re
 from typing import Optional
 from urllib.parse import urlencode, urlparse, urlunparse
 
@@ -23,9 +24,18 @@ PUBLIC_PATHS = {
     "/api/manifest",
     "/api/scan",
 }
+SCANNER_REPORT_PATHS = {
+    "/dashboard",
+    "/posture/dashboard",
+    "/api/provider-breakdown",
+    "/api/latest-findings",
+    "/api/scans",
+    "/api/scan-history",
+}
 HTML_PAGE_PATHS = {
     "/",
     "/dashboard",
+    "/msme-compliance",
     "/frontend/history.html",
     "/schedules",
     "/system-status",
@@ -33,16 +43,6 @@ HTML_PAGE_PATHS = {
 
 USER_ID_COOKIE = "cloudguard_user_id"
 SSO_TOKEN_COOKIE = "cloudguard_sso_token"
-
-SCANNER_REPORT_PATHS = {
-    "/dashboard",
-    "/posture/dashboard",
-    "/api/severity-breakdown",
-    "/api/provider-breakdown",
-    "/api/scan-history",
-    "/api/latest-findings",
-    "/api/scans",
-}
 
 
 def _clean_user_id(value: str | None) -> str | None:
@@ -53,10 +53,116 @@ def _clean_user_id(value: str | None) -> str | None:
     return cleaned or None
 
 
-def is_public_path(path: str) -> bool:
+def _scanner_shared_secret() -> str:
     return (
-        path in PUBLIC_PATHS
-        or (path.startswith("/api/scans/") and path.endswith("/view-token"))
+        os.getenv("CONTROL_PLANE_SCANNER_SHARED_SECRET")
+        or os.getenv("SCANNER_SHARED_SECRET")
+        or os.getenv("SHARED_SECRET")
+        or ""
+    ).strip()
+
+
+def _scanner_view_secret(scan_id: str) -> str:
+    secret = _scanner_shared_secret()
+    if not secret:
+        return ""
+    return hmac.new(
+        secret.encode("utf-8"),
+        f"cloudguard-view.{scan_id}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+
+def _report_scan_token_source(request: Request) -> str | None:
+    return (
+        _clean_user_id(request.query_params.get("scanIds"))
+        or _clean_user_id(request.query_params.get("scan_ids"))
+        or _clean_user_id(request.query_params.get("scanId"))
+        or _clean_user_id(request.query_params.get("scan_id"))
+    )
+
+
+def _report_secret(request: Request) -> str | None:
+    return (
+        _clean_user_id(request.query_params.get("secret"))
+        or _clean_user_id(request.query_params.get("viewSecret"))
+        or _clean_user_id(request.query_params.get("view_secret"))
+    )
+
+
+def _parse_report_scan_ids(scan_source: str) -> list[int]:
+    ids: list[int] = []
+    for item in scan_source.split(","):
+        try:
+            ids.append(int(item.strip()))
+        except (TypeError, ValueError):
+            continue
+    return ids
+
+
+def _report_scan_owner(scan_ids: list[int]) -> str | None:
+    if not scan_ids:
+        return None
+
+    conn = psycopg2.connect(_get_database_url())
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT user_id
+                FROM scans
+                WHERE id = ANY(%s)
+                ORDER BY id ASC
+                LIMIT 1
+                """,
+                (scan_ids,),
+            )
+            row = cur.fetchone()
+            return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def _authenticate_scanner_report_user(request: Request) -> dict | None:
+    normalized_path = request.url.path.rstrip("/") or "/"
+    if normalized_path not in SCANNER_REPORT_PATHS:
+        return None
+
+    scan_source = _report_scan_token_source(request)
+    supplied_secret = _report_secret(request)
+    if not scan_source and not supplied_secret:
+        return None
+    if not scan_source or not supplied_secret:
+        raise HTTPException(status_code=401, detail="Scan report token is required")
+
+    expected_secret = _scanner_view_secret(scan_source)
+    if not expected_secret or not hmac.compare_digest(expected_secret, supplied_secret):
+        raise HTTPException(status_code=401, detail="Invalid scan report token")
+
+    owner_id = _report_scan_owner(_parse_report_scan_ids(scan_source)) or "control-plane"
+    user = {
+        "id": owner_id,
+        "email": "control-plane-report@cloudguard.local",
+        "name": "Control Plane Report Viewer",
+        "scanner_report": True,
+    }
+    request.state.authenticated_user = user
+    request.state.user_id = user["id"]
+    request.state.scanner_report_scan_ids = scan_source
+    return user
+
+
+def is_public_path(path: str) -> bool:
+    normalized = path.rstrip("/") or "/"
+    return (
+        normalized in PUBLIC_PATHS
+        or (
+            normalized.startswith("/api/scans/")
+            and normalized.endswith("/view-token")
+        )
+        or re.match(r"^/s\d+/api/manifest$", normalized) is not None
+        or re.match(r"^/s\d+/api/scan$", normalized) is not None
+        or re.match(r"^/s\d+/api/scans/.+/view-token$", normalized) is not None
     )
 
 
@@ -162,94 +268,6 @@ def _get_database_url() -> str:
     return db_url
 
 
-def _scanner_shared_secret() -> str:
-    return (
-        os.getenv("CONTROL_PLANE_SCANNER_SHARED_SECRET")
-        or os.getenv("SCANNER_SHARED_SECRET")
-        or os.getenv("SHARED_SECRET")
-        or ""
-    ).strip()
-
-
-def _scanner_view_secret(scan_id: str) -> str:
-    return hmac.new(
-        _scanner_shared_secret().encode("utf-8"),
-        f"view:{scan_id}".encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
-
-
-def _extract_report_scan_token_source(request: Request) -> str:
-    return (
-        (request.query_params.get("scanIds") or "").strip()
-        or (request.query_params.get("scanId") or "").strip()
-        or (request.query_params.get("scan_ids") or "").strip()
-        or (request.query_params.get("scan_id") or "").strip()
-    )
-
-
-def _has_report_token_attempt(request: Request) -> bool:
-    return bool((request.query_params.get("secret") or "").strip()) or bool(
-        _extract_report_scan_token_source(request)
-    )
-
-
-def _parse_report_scan_ids(value: str) -> list[int]:
-    ids: list[int] = []
-    for item in value.split(","):
-        item = item.strip()
-        if not item:
-            continue
-        try:
-            ids.append(int(item))
-        except ValueError:
-            return []
-    return ids
-
-
-def _authenticate_scanner_report_user(request: Request) -> Optional[dict]:
-    if request.url.path not in SCANNER_REPORT_PATHS:
-        return None
-
-    shared_secret = _scanner_shared_secret()
-    provided_secret = (request.query_params.get("secret") or "").strip()
-    token_source = _extract_report_scan_token_source(request)
-    scan_ids = _parse_report_scan_ids(token_source)
-    if not shared_secret or not provided_secret or not token_source or not scan_ids:
-        return None
-
-    if not hmac.compare_digest(provided_secret, _scanner_view_secret(token_source)):
-        return None
-
-    conn = psycopg2.connect(_get_database_url())
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT user_id
-                FROM scans
-                WHERE id = ANY(%s)
-                GROUP BY user_id
-                HAVING COUNT(*) = %s
-                LIMIT 1
-                """,
-                (scan_ids, len(scan_ids)),
-            )
-            row = cur.fetchone()
-            if not row:
-                return None
-
-            user_id = row[0]
-            return {
-                "id": user_id,
-                "email": f"{user_id}@scanner-report.cloudguard.local",
-                "name": "CloudGuard scanner report",
-                "role": "report_viewer",
-            }
-    finally:
-        conn.close()
-
-
 def _get_nextauth_session_token(request: Request) -> Optional[str]:
     for cookie_name in SSO_SESSION_COOKIE_NAMES:
         token = _clean_user_id(request.cookies.get(cookie_name))
@@ -316,13 +334,9 @@ def authenticate_sso_user(request: Request) -> Optional[dict]:
     if cached_user:
         return cached_user
 
-    report_user = _authenticate_scanner_report_user(request)
-    if report_user:
-        request.state.authenticated_user = report_user
-        request.state.user_id = report_user["id"]
-        return report_user
-    if request.url.path in SCANNER_REPORT_PATHS and _has_report_token_attempt(request):
-        raise HTTPException(status_code=401, detail="Invalid scanner report token")
+    scanner_report_user = _authenticate_scanner_report_user(request)
+    if scanner_report_user:
+        return scanner_report_user
 
     if use_standalone_auth(request):
         user = _build_standalone_user(request)
