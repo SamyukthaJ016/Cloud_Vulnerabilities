@@ -22,6 +22,7 @@ SSO_TOKEN_COOKIE = "cloudguard_sso_token"
 LIGHTWEIGHT_PATHS = {
     "/",
     "/dashboard",
+    "/grc",
     "/frontend/history.html",
     "/schedules",
     "/system-status",
@@ -334,6 +335,14 @@ async def lightweight_dashboard_page(request: Request):
     if landing_response:
         return landing_response
     return _frontend_file_response("dashboard.html")
+
+
+@lightweight_app.get("/grc", response_class=HTMLResponse)
+async def lightweight_grc_page(request: Request):
+    landing_response = _maybe_complete_sso_html_landing(request)
+    if landing_response:
+        return landing_response
+    return _frontend_file_response("grc.html")
 
 
 @lightweight_app.get("/frontend/history.html", response_class=HTMLResponse)

@@ -72,6 +72,11 @@ from backend.worker_client import (
     upload_iac_folder_to_scan_worker,
 )
 from backend.grc_bridge import get_grc_status, is_grc_server_sync_enabled, trigger_grc_sync
+from backend.grc_platform import (
+    export_grc_audit_pack,
+    get_grc_dashboard,
+    list_grc_risks,
+)
 from backend.upload_utils import store_uploaded_directory
 from backend.msme_compliance import (
     create_evidence as create_msme_evidence,
@@ -2475,6 +2480,53 @@ async def msme_compliance_page():
                 return f.read()
         except Exception:
             return "<h1>MSME compliance page not found</h1>"
+
+
+@app.get("/grc", response_class=HTMLResponse)
+async def grc_platform_page():
+    try:
+        with open("/app/frontend/grc.html", "r") as f:
+            return f.read()
+    except FileNotFoundError:
+        try:
+            with open("frontend/grc.html", "r") as f:
+                return f.read()
+        except Exception:
+            return "<h1>GRC platform page not found</h1>"
+
+
+@app.get("/api/grc/platform")
+async def api_grc_platform(req: Request):
+    return get_grc_dashboard(get_user_id(req))
+
+
+@app.get("/api/grc/risks")
+async def api_grc_risks(req: Request):
+    return list_grc_risks(get_user_id(req))
+
+
+@app.get("/api/grc/controls")
+async def api_grc_controls(req: Request):
+    dashboard = get_grc_dashboard(get_user_id(req))
+    return {
+        "status": "success",
+        "framework": dashboard["framework"],
+        "controls": dashboard["controls"],
+    }
+
+
+@app.get("/api/grc/policies")
+async def api_grc_policies(req: Request):
+    dashboard = get_grc_dashboard(get_user_id(req))
+    return {
+        "status": "success",
+        "policies": dashboard["policy_register"],
+    }
+
+
+@app.post("/api/grc/reports/audit-pack")
+async def api_grc_export_audit_pack(req: Request):
+    return export_grc_audit_pack(get_user_id(req))
 
 
 @app.get("/api/msme/framework")

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudGuard GRC Platform</title>
+    <style>
+        :root {
+            --ink: #111827;
+            --muted: #64748b;
+            --soft: #f6f8fb;
+            --surface: #ffffff;
+            --line: #d7dee8;
+            --nav: #0f172a;
+            --brand: #155e75;
+            --brand-2: #0f766e;
+            --amber: #b45309;
+            --red: #b91c1c;
+            --green: #166534;
+            --shadow: 0 22px 70px rgba(15, 23, 42, 0.13);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at 12% 10%, rgba(21, 94, 117, 0.16), transparent 28rem),
+                radial-gradient(circle at 88% 0%, rgba(180, 83, 9, 0.12), transparent 30rem),
+                linear-gradient(135deg, #f8fafc 0%, #edf4f6 100%);
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        .shell {
+            display: grid;
+            grid-template-columns: 290px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: rgba(15, 23, 42, 0.96);
+            color: #e5edf5;
+            padding: 30px 24px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .brand {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 34px;
+        }
+
+        .brand-mark {
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            background:
+                linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0)),
+                linear-gradient(135deg, var(--brand), var(--brand-2));
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 18px 40px rgba(8, 145, 178, 0.25);
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .brand p {
+            margin: 0;
+            color: #94a3b8;
+            line-height: 1.55;
+            font-size: 0.9rem;
+        }
+
+        .nav {
+            display: grid;
+            gap: 8px;
+        }
+
+        .nav a {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 12px 14px;
+            border-radius: 13px;
+            font-weight: 800;
+            font-size: 0.94rem;
+        }
+
+        .nav a.active,
+        .nav a:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-footer {
+            position: absolute;
+            bottom: 28px;
+            left: 24px;
+            right: 24px;
+            color: #94a3b8;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        .main {
+            padding: 34px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+            gap: 22px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(215, 222, 232, 0.92);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero-copy {
+            padding: 34px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hero-copy::after {
+            content: "";
+            position: absolute;
+            right: -110px;
+            top: -120px;
+            width: 290px;
+            height: 290px;
+            border-radius: 50%;
+            border: 42px solid rgba(21, 94, 117, 0.08);
+        }
+
+        .eyebrow {
+            color: var(--amber);
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.11em;
+            font-size: 0.75rem;
+        }
+
+        h2 {
+            margin: 14px 0 16px;
+            max-width: 850px;
+            font-size: clamp(2.4rem, 6vw, 5.4rem);
+            line-height: 0.92;
+            letter-spacing: -0.07em;
+        }
+
+        .hero-copy p {
+            max-width: 760px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 1.03rem;
+        }
+
+        .score-card {
+            padding: 28px;
+            display: grid;
+            align-content: space-between;
+            min-height: 330px;
+        }
+
+        .score-ring {
+            --score: 0;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            margin: 8px auto;
+            background: conic-gradient(var(--brand) calc(var(--score) * 1%), #e2e8f0 0);
+            position: relative;
+        }
+
+        .score-ring::before {
+            content: "";
+            position: absolute;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: var(--surface);
+        }
+
+        .score-value {
+            position: relative;
+            font-size: 2.45rem;
+            font-weight: 950;
+            letter-spacing: -0.06em;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 22px;
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 13px;
+            padding: 11px 15px;
+            cursor: pointer;
+            font-weight: 900;
+            transition: 0.18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), var(--brand-2));
+        }
+
+        .btn-secondary {
+            color: var(--ink);
+            background: #e2e8f0;
+        }
+
+        .notice {
+            margin-top: 18px;
+            padding: 12px 14px;
+            border-radius: 15px;
+            color: #0f5132;
+            background: #dcfce7;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .notice.error {
+            color: #7f1d1d;
+            background: #fee2e2;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .metric {
+            padding: 20px;
+        }
+
+        .metric-label {
+            color: var(--muted);
+            font-weight: 900;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .metric-value {
+            margin-top: 8px;
+            font-size: 2rem;
+            font-weight: 950;
+            letter-spacing: -0.06em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+            gap: 22px;
+            margin-bottom: 22px;
+        }
+
+        .panel {
+            padding: 24px;
+        }
+
+        .panel h3 {
+            margin: 0 0 16px;
+            font-size: 1.25rem;
+            letter-spacing: -0.03em;
+        }
+
+        .pillar-list,
+        .policy-list,
+        .action-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .pillar,
+        .policy,
+        .action {
+            padding: 15px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: #fbfdff;
+        }
+
+        .row-between {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .small {
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        .progress {
+            height: 9px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .progress span {
+            display: block;
+            height: 100%;
+            width: calc(var(--w) * 1%);
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--brand), var(--brand-2));
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 5px 9px;
+            background: #e2e8f0;
+            color: #334155;
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+        }
+
+        .chip.critical,
+        .chip.high {
+            background: #fee2e2;
+            color: var(--red);
+        }
+
+        .chip.medium {
+            background: #fef3c7;
+            color: var(--amber);
+        }
+
+        .chip.low,
+        .chip.ready {
+            background: #dcfce7;
+            color: var(--green);
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--line);
+            border-radius: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 920px;
+            background: #fff;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            border-bottom: 1px solid var(--line);
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: #475569;
+            background: #f8fafc;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        @media (max-width: 1100px) {
+            .shell,
+            .hero,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                height: auto;
+                position: static;
+            }
+
+            .sidebar-footer {
+                position: static;
+                margin-top: 28px;
+            }
+
+            .metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main {
+                padding: 18px;
+            }
+
+            .hero-copy,
+            .score-card,
+            .panel {
+                padding: 20px;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark"></div>
+                <div>
+                    <h1>CloudGuard GRC</h1>
+                    <p>Governance, risk, compliance, scanner findings, and MSME control evidence in one cockpit.</p>
+                </div>
+            </div>
+            <nav class="nav">
+                <a href="/grc" class="active">GRC Platform</a>
+                <a href="/dashboard">Security Dashboard</a>
+                <a href="/msme-compliance">MSME Controls</a>
+                <a href="/frontend/history.html">Scan History</a>
+                <a href="/schedules">Scheduled Scans</a>
+                <a href="/system-status">System Status</a>
+            </nav>
+            <div class="sidebar-footer">
+                Primary framework: CERT-In MSME controls. Risk data is generated from CloudGuard scanner findings and control maturity.
+            </div>
+        </aside>
+
+        <main class="main">
+            <section class="hero">
+                <div class="card hero-copy">
+                    <div class="eyebrow">First-party GRC layer</div>
+                    <h2>One view for governance, risk, and compliance.</h2>
+                    <p>
+                        CloudGuard now acts as the GRC front door: scanner findings become risks, risks map to CERT-In MSME controls,
+                        evidence closes controls, and audit packs summarize readiness for management review.
+                    </p>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="syncScannerGaps()">Map Latest Scanner Findings</button>
+                        <button class="btn btn-secondary" onclick="exportAuditPack()">Export GRC Audit Pack</button>
+                        <button class="btn btn-secondary" onclick="location.href='/msme-compliance'">Open Control Workspace</button>
+                    </div>
+                    <div id="status-message" class="notice">Loading GRC platform...</div>
+                </div>
+
+                <div class="card score-card">
+                    <div>
+                        <div class="eyebrow">Overall GRC score</div>
+                        <div class="score-ring" id="score-ring">
+                            <div class="score-value" id="overall-score">--</div>
+                        </div>
+                    </div>
+                    <p class="small" id="score-caption">Score blends governance maturity, residual risk, and compliance readiness.</p>
+                </div>
+            </section>
+
+            <section class="metrics">
+                <div class="card metric">
+                    <div class="metric-label">Open Risks</div>
+                    <div class="metric-value" id="open-risks">--</div>
+                </div>
+                <div class="card metric">
+                    <div class="metric-label">Critical Risks</div>
+                    <div class="metric-value" id="critical-risks">--</div>
+                </div>
+                <div class="card metric">
+                    <div class="metric-label">High Risks</div>
+                    <div class="metric-value" id="high-risks">--</div>
+                </div>
+                <div class="card metric">
+                    <div class="metric-label">Open Tasks</div>
+                    <div class="metric-value" id="open-tasks">--</div>
+                </div>
+                <div class="card metric">
+                    <div class="metric-label">Evidence</div>
+                    <div class="metric-value" id="evidence-total">--</div>
+                </div>
+            </section>
+
+            <section class="grid">
+                <div class="card panel">
+                    <h3>GRC Pillars</h3>
+                    <div class="pillar-list" id="pillars"></div>
+                </div>
+
+                <div class="card panel">
+                    <h3>Priority Actions</h3>
+                    <div class="action-list" id="priority-actions"></div>
+                </div>
+            </section>
+
+            <section class="grid">
+                <div class="card panel">
+                    <h3>Policy Register</h3>
+                    <div class="policy-list" id="policy-register"></div>
+                </div>
+
+                <div class="card panel">
+                    <h3>Risk Summary</h3>
+                    <div class="metrics" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 0;">
+                        <div class="metric" style="box-shadow: none; border: 1px solid var(--line); border-radius: 18px;">
+                            <div class="metric-label">Residual Avg</div>
+                            <div class="metric-value" id="avg-residual">--</div>
+                        </div>
+                        <div class="metric" style="box-shadow: none; border: 1px solid var(--line); border-radius: 18px;">
+                            <div class="metric-label">Risk Score</div>
+                            <div class="metric-value" id="risk-score">--</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card panel">
+                <div class="row-between">
+                    <div>
+                        <h3>Risk Register</h3>
+                        <p class="small">Scanner findings and weak controls are converted into risk rows with inherent and residual scoring.</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="loadGrc()">Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Risk</th>
+                                <th>Rating</th>
+                                <th>Control</th>
+                                <th>Asset</th>
+                                <th>Residual</th>
+                                <th>Status</th>
+                                <th>Owner</th>
+                                <th>Treatment</th>
+                            </tr>
+                        </thead>
+                        <tbody id="risk-register">
+                            <tr>
+                                <td colspan="8">Loading risks...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let grcState = null;
+
+        function escapeHtml(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML;
+        }
+
+        function setMessage(message, isError = false) {
+            const node = document.getElementById('status-message');
+            node.textContent = message;
+            node.classList.toggle('error', isError);
+        }
+
+        async function api(path, options = {}) {
+            const response = await fetch(path, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                },
+                ...options
+            });
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || `Request failed: ${response.status}`);
+            }
+            return response.json();
+        }
+
+        function chipClass(value) {
+            return String(value || '').toLowerCase().replace(/\s+/g, '-');
+        }
+
+        function renderMetrics(metrics, riskSummary) {
+            const score = Number(metrics.overall_grc_score || 0);
+            document.getElementById('overall-score').textContent = `${score}%`;
+            document.getElementById('score-ring').style.setProperty('--score', score);
+            document.getElementById('open-risks').textContent = metrics.open_risks;
+            document.getElementById('critical-risks').textContent = metrics.critical_risks;
+            document.getElementById('high-risks').textContent = metrics.high_risks;
+            document.getElementById('open-tasks').textContent = metrics.open_tasks;
+            document.getElementById('evidence-total').textContent = metrics.evidence_total;
+            document.getElementById('avg-residual').textContent = riskSummary.average_residual;
+            document.getElementById('risk-score').textContent = `${riskSummary.risk_score}%`;
+        }
+
+        function renderPillars(pillars) {
+            document.getElementById('pillars').innerHTML = pillars.map(pillar => `
+                <article class="pillar">
+                    <div class="row-between">
+                        <div>
+                            <strong>${escapeHtml(pillar.title)}</strong>
+                            <p class="small">${escapeHtml(pillar.description)}</p>
+                        </div>
+                        <span class="chip ready">${escapeHtml(pillar.score)}%</span>
+                    </div>
+                    <div class="progress"><span style="--w: ${Number(pillar.score || 0)}"></span></div>
+                    <p class="small">Controls: ${pillar.controls.map(escapeHtml).join(', ')}</p>
+                </article>
+            `).join('');
+        }
+
+        function renderActions(actions) {
+            const node = document.getElementById('priority-actions');
+            if (!actions.length) {
+                node.innerHTML = '<p class="small">No priority risks yet. Run a scan or map scanner findings to populate the action list.</p>';
+                return;
+            }
+            node.innerHTML = actions.map(action => `
+                <article class="action">
+                    <div class="row-between">
+                        <strong>${escapeHtml(action.title)}</strong>
+                        <span class="chip ${chipClass(action.rating)}">${escapeHtml(action.rating)}</span>
+                    </div>
+                    <p class="small">Control ${escapeHtml(action.linked_control)} | Owner: ${escapeHtml(action.owner)}</p>
+                    <p class="small">${escapeHtml(action.treatment)}</p>
+                </article>
+            `).join('');
+        }
+
+        function renderPolicies(policies) {
+            document.getElementById('policy-register').innerHTML = policies.map(policy => `
+                <article class="policy">
+                    <div class="row-between">
+                        <strong>${escapeHtml(policy.name)}</strong>
+                        <span class="chip ${policy.status === 'Ready' ? 'ready' : 'medium'}">${escapeHtml(policy.status)}</span>
+                    </div>
+                    <p class="small">${escapeHtml(policy.requirement)}</p>
+                    <p class="small">Controls: ${policy.mapped_controls.map(escapeHtml).join(', ')} | Maturity: ${escapeHtml(policy.maturity)}% | Evidence: ${escapeHtml(policy.evidence_count)}</p>
+                </article>
+            `).join('');
+        }
+
+        function renderRiskRegister(risks) {
+            const node = document.getElementById('risk-register');
+            if (!risks.length) {
+                node.innerHTML = '<tr><td colspan="8">No risks yet. Run a scan or update controls to generate the register.</td></tr>';
+                return;
+            }
+            node.innerHTML = risks.map(risk => `
+                <tr>
+                    <td>
+                        <strong>${escapeHtml(risk.title)}</strong>
+                        <div class="small">${escapeHtml(risk.source)} | ${escapeHtml(risk.category)}</div>
+                    </td>
+                    <td><span class="chip ${chipClass(risk.rating)}">${escapeHtml(risk.rating)}</span></td>
+                    <td>
+                        <strong>${escapeHtml(risk.linked_control)}</strong>
+                        <div class="small">${escapeHtml(risk.linked_control_title)}</div>
+                    </td>
+                    <td>
+                        ${escapeHtml(risk.asset)}
+                        <div class="small">${escapeHtml(risk.cloud)}</div>
+                    </td>
+                    <td>${escapeHtml(risk.residual_score)} / ${escapeHtml(risk.inherent_score)}</td>
+                    <td>${escapeHtml(risk.status)}</td>
+                    <td>${escapeHtml(risk.owner)}</td>
+                    <td>${escapeHtml(risk.treatment)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function syncScannerGaps() {
+            try {
+                setMessage('Mapping latest CloudGuard findings into controls and risk tasks...');
+                const result = await api('/api/msme/scanner/map-latest', { method: 'POST' });
+                setMessage(`Scanner mapping complete. Created ${result.created_count || 0} treatment tasks.`);
+                await loadGrc();
+            } catch (error) {
+                setMessage(error.message || 'Failed to map scanner findings.', true);
+            }
+        }
+
+        async function exportAuditPack() {
+            try {
+                setMessage('Generating GRC audit pack...');
+                const result = await api('/api/grc/reports/audit-pack', { method: 'POST' });
+                setMessage(`GRC audit pack generated. Readiness export ID: ${result.readiness_export_id}`);
+            } catch (error) {
+                setMessage(error.message || 'Failed to export GRC audit pack.', true);
+            }
+        }
+
+        async function loadGrc() {
+            try {
+                setMessage('Loading GRC platform...');
+                grcState = await api('/api/grc/platform');
+                renderMetrics(grcState.metrics, grcState.risk_summary);
+                renderPillars(grcState.pillars || []);
+                renderActions(grcState.priority_actions || []);
+                renderPolicies(grcState.policy_register || []);
+                renderRiskRegister(grcState.risk_register || []);
+                setMessage('GRC platform ready.');
+            } catch (error) {
+                setMessage(error.message || 'Failed to load GRC platform.', true);
+            }
+        }
+
+        loadGrc();
+    </script>
+</body>
+
+</html>

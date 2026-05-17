@@ -35,6 +35,7 @@ SCANNER_REPORT_PATHS = {
 HTML_PAGE_PATHS = {
     "/",
     "/dashboard",
+    "/grc",
     "/msme-compliance",
     "/frontend/history.html",
     "/schedules",

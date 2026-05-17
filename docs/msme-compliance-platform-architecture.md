@@ -2,15 +2,15 @@
 
 ## Purpose
 
-This document converts the current GRC direction into an MSME-focused cyber compliance platform for Indian Micro, Small, and Medium Enterprises. The platform should help an MSME understand, implement, evidence, monitor, and report compliance against CERT-In's "15 Elemental Cyber Defense Controls for Micro, Small, and Medium Enterprises (MSMEs)", Version 1.0 dated 01.09.2025.
+This document defines the MSME compliance framework inside the CloudGuard GRC platform. The platform should help an MSME understand, implement, evidence, monitor, and report compliance against CERT-In's "15 Elemental Cyber Defense Controls for Micro, Small, and Medium Enterprises (MSMEs)", Version 1.0 dated 01.09.2025.
 
 Official source: https://cert-in.org.in/PDF/Elemental_Cyber_Defense_Controls_for_MSME.pdf
 
-The platform should not feel like a generic enterprise GRC product. It should feel like an MSME readiness cockpit: simple language, guided implementation, clear evidence requirements, automated scanner inputs where possible, and audit-ready exports.
+The GRC shell should remain first-party to CloudGuard: Governance, Risk, and Compliance are visible together, while the initial compliance framework remains MSME-focused with simple language, guided implementation, clear evidence requirements, automated scanner inputs where possible, and audit-ready exports.
 
 ## Product Positioning
 
-Working name: CloudGuard MSME Compliance
+Working name: CloudGuard GRC with MSME Compliance
 
 Primary users:
 
@@ -21,7 +21,7 @@ Primary users:
 
 Core promise:
 
-MSMEs can track all 15 CERT-In baseline controls, attach evidence, run cloud/security checks, generate remediation tasks, and export an audit-ready compliance pack.
+MSMEs can track all 15 CERT-In baseline controls, attach evidence, run cloud/security checks, generate remediation tasks, review a scanner-driven risk register, and export an audit-ready GRC pack.
 
 ## CERT-In MSME Control Library
 
@@ -484,7 +484,29 @@ Overall readiness:
 - Notifications and reminders.
 - Optional AI assistant for policy drafting and remediation guidance.
 
-## Migration From GRC Direction
+## GRC Product Shell
+
+CloudGuard now keeps GRC as a native product layer instead of treating it only as an external integration.
+
+Governance:
+
+- Control ownership, policy register, owners, due dates, and management-ready status.
+- Evidence and review workflow for audit preparation.
+- Optional external GRC sync through the existing bridge.
+
+Risk:
+
+- CloudGuard findings become risk-register rows.
+- Weak control maturity creates control-gap risks.
+- Each risk has source, owner, severity, inherent score, residual score, linked control, and treatment guidance.
+
+Compliance:
+
+- CERT-In MSME controls are the first supported framework.
+- Controls retain evidence, tasks, scanner gaps, readiness scores, and audit-pack export.
+- The platform can add more frameworks later without replacing the GRC shell.
+
+## Migration From MSME-Only Direction
 
 Keep:
 
@@ -493,13 +515,14 @@ Keep:
 - Scan history and findings.
 - Report generation utilities.
 - Evidence-style audit logging concepts.
+- CERT-In MSME as the first compliance framework.
 
 Replace or rename:
 
-- Generic "GRC" language should become "MSME Compliance".
+- "MSME Compliance" should sit under "CloudGuard GRC".
 - Framework mapping should default to `CERTIN_MSME_2025_V1`.
-- Generic risks should become MSME control gaps.
-- Trust-center style enterprise features should be secondary or removed.
+- Scanner gaps should feed both MSME controls and the GRC risk register.
+- Heavy trust-center style enterprise features should be secondary until needed.
 
 Do not build first:
 
@@ -512,12 +535,12 @@ Do not build first:
 
 Suggested language:
 
-- "GRC Dashboard" -> "MSME Compliance Dashboard"
+- "MSME Compliance Dashboard" -> "GRC Platform"
 - "Frameworks" -> "CERT-In MSME Controls"
-- "Risks" -> "Compliance Gaps"
+- "Compliance Gaps" -> "Risks and Compliance Gaps"
 - "Evidence" -> "Audit Evidence"
-- "Reports" -> "Audit Pack"
-- "Controls" -> "15 Controls"
+- "Reports" -> "GRC Audit Pack"
+- "Controls" -> "CERT-In MSME Controls"
 
 ## Success Criteria
 
@@ -530,4 +553,3 @@ The platform is ready for the first demo when:
 - CloudGuard findings can be mapped to at least 6 technical controls.
 - Dashboard shows readiness score and open gaps.
 - Audit pack export produces a formal report with evidence index.
-
