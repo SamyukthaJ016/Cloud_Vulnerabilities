@@ -1,0 +1,28 @@
+name: Convert All Markdown to PDF
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  convert-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Convert All Markdown Files to PDF
+        uses: baileyjm02/markdown-to-pdf@v1
+        with:
+          # Use input_dir instead of input_path to avoid the directory error
+          input_dir: .
+          output_dir: pdf-output
+          theme: github # Fixed the warning by using the correct theme input
+
+      - name: Upload PDFs as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: all-converted-pdfs
+          path: pdf-output/
