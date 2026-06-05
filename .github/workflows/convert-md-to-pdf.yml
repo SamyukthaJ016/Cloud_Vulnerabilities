@@ -1,40 +1,49 @@
-name: Convert All Markdown to PDF
+name: Convert Markdown to PDF
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+  push:
+    paths:
+      - '**.md'
 
 jobs:
-  convert-pdf:
+  convert-md-to-pdf:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Pandoc and PDF Engine
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc wkhtmltopdf
+          sudo apt-get install -y pandoc texlive-xetex texlive-fonts-recommended texlive-plain-generic
 
-      - name: Create Output Directory
-        run: mkdir -p pdf-output
-
-      - name: Find and Convert All MD Files
+      - name: Convert all MD files to PDF
         run: |
-          # This safely finds all .md files, ignoring the output directory itself
-          find . -type f -name "*.md" -not -path "./pdf-output/*" -not -path "./.github/*" | while read -r file; do
-            # Generate a clean output name inside the pdf-output folder
-            base_name=$(basename "$file" .md)
-            echo "Converting $file to pdf-output/$base_name.pdf"
-            
-            # Run the conversion
-            pandoc "$file" -o "pdf-output/$base_name.pdf" --pdf-engine=wkhtmltopdf
+          find . -name "*.md" \
+            ! -path "./.git/*" \
+            ! -name "CHANGELOG.md" \
+            ! -name "LICENSE.md" | while read mdfile; do
+              dir=$(dirname "$mdfile")
+              base=$(basename "$mdfile" .md)
+              echo "Converting: $mdfile → $dir/$base.pdf"
+              pandoc "$mdfile" \
+                -o "$dir/$base.pdf" \
+                --pdf-engine=xelatex \
+                -V geometry:margin=1in \
+                -V fontsize=12pt \
+                -V linkcolor=blue \
+                --standalone || echo "Warning: Failed to convert $mdfile"
           done
 
-      - name: Upload PDFs as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: all-converted-pdfs
-          path: pdf-output/
+      - name: Commit and push PDFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "**/*.pdf"
+          git diff --cached --quiet || git commit -m "chore: convert markdown files to PDF [skip ci]"
+          git push
