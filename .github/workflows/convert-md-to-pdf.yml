@@ -13,13 +13,17 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Convert All Markdown Files to PDF
-        uses: baileyjm02/markdown-to-pdf@v1
+      - name: Create Output Directory
+        run: mkdir -p pdf-output
+
+      - name: Convert All Markdown Files
+        uses: fi3ework/markdown-to-pdf-action@v1
         with:
-          # Use input_dir instead of input_path to avoid the directory error
-          input_dir: .
-          output_dir: pdf-output
-          theme: github # Fixed the warning by using the correct theme input
+          # This action safely accepts glob patterns to find all MD files
+          input: ./
+          output: ./pdf-output
+          # Exclude the output directory so it doesn't loop into itself
+          exclude: ./pdf-output
 
       - name: Upload PDFs as Artifact
         uses: actions/upload-artifact@v4
