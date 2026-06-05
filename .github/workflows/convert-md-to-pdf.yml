@@ -13,17 +13,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Install Pandoc and PDF Engine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc wkhtmltopdf
+
       - name: Create Output Directory
         run: mkdir -p pdf-output
 
-      - name: Convert All Markdown Files
-        uses: fi3ework/markdown-to-pdf-action@v1
-        with:
-          # This action safely accepts glob patterns to find all MD files
-          input: ./
-          output: ./pdf-output
-          # Exclude the output directory so it doesn't loop into itself
-          exclude: ./pdf-output
+      - name: Find and Convert All MD Files
+        run: |
+          # This safely finds all .md files, ignoring the output directory itself
+          find . -type f -name "*.md" -not -path "./pdf-output/*" -not -path "./.github/*" | while read -r file; do
+            # Generate a clean output name inside the pdf-output folder
+            base_name=$(basename "$file" .md)
+            echo "Converting $file to pdf-output/$base_name.pdf"
+            
+            # Run the conversion
+            pandoc "$file" -o "pdf-output/$base_name.pdf" --pdf-engine=wkhtmltopdf
+          done
 
       - name: Upload PDFs as Artifact
         uses: actions/upload-artifact@v4
