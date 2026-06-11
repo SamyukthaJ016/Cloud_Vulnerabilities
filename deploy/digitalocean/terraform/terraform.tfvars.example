@@ -1,0 +1,17 @@
+do_token = "dop_v1_replace_me"
+
+spaces_access_id  = "replace-with-spaces-key"
+spaces_secret_key = "replace-with-spaces-secret"
+spaces_bucket_name = "cloudguard-evidence-prod"
+
+region       = "blr1"
+droplet_size = "s-2vcpu-4gb"
+droplet_image = "ubuntu-24-04-x64"
+enable_backups = true
+
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
+ssh_allowed_cidrs = ["0.0.0.0/0", "::/0"]
+
+project_name = "cloudguard"
+environment  = "prod"
+deploy_user  = "cloudguard"

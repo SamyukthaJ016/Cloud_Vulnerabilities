@@ -165,19 +165,22 @@
         }
 
         .provider-option.has-credentials::after {
-            content: '✓';
+            content: 'READY';
             position: absolute;
             top: 8px;
             right: 8px;
-            width: 20px;
+            min-width: 44px;
             height: 20px;
-            background: #10b981;
-            border-radius: 50%;
+            padding: 0 7px;
+            background: rgba(16, 185, 129, 0.16);
+            border: 1px solid rgba(16, 185, 129, 0.34);
+            border-radius: 999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
-            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            color: #6ee7b7;
         }
 
         .provider-icon {
@@ -399,12 +402,14 @@
         }
 
         .checkbox:checked::after {
-            content: '✓';
+            content: '';
             position: absolute;
-            color: white;
-            font-size: 12px;
             top: 50%;
             left: 50%;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 2px;
             transform: translate(-50%, -50%);
         }
 
@@ -813,17 +818,19 @@
             border-color: rgba(148, 163, 184, 0.4);
         }
     </style>
+    <link rel="stylesheet" href="/cloudguard-theme.css">
+    <script src="/cloudguard-ui.js" defer></script>
 </head>
 
 <body>
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <div class="logo">🛡️</div>
+            <div class="logo cg-hero-mark">CG</div>
             <h1 class="title">CloudGuard Security Scanner</h1>
             <p class="subtitle">
                 AI-powered multi-cloud security scanning with real-time vulnerability detection.
-                Protect your AWS, GCP and Azure environments.
+                Protect your AWS, GCP, Kubernetes, and infrastructure-as-code environments.
             </p>
         </div>
 
@@ -831,9 +838,9 @@
         <div class="content-grid">
             <!-- Left Panel: Scan Configuration -->
             <div class="scan-panel">
-                <h2 class="panel-title">⚙️ Configure Your Scan</h2>
+                <h2 class="panel-title">Configure Your Scan</h2>
                 <p class="panel-subtitle">
-                    Select cloud providers, configure scan options, and schedule your security assessment.
+                    Select cloud, Kubernetes, and IaC scan targets, then configure your security assessment.
                 </p>
 
                 <!-- Credentials Banner -->
@@ -843,16 +850,16 @@
                         <span id="credentialsMessage">Checking credentials...</span>
                     </div>
                     <button class="btn btn-credentials" onclick="openCredentialsModal()">
-                        🔐 Manage Credentials
+                        Manage Credentials
                     </button>
                 </div>
 
                 <div class="input-group">
                     <div class="input-label-row">
-                        <div class="input-label">Select Cloud Providers</div>
+                        <div class="input-label">Select Scan Targets</div>
                         <button class="btn btn-text btn-sm" onclick="clearSelection()"
                             style="padding: 2px 8px; font-size: 12px; color: var(--accent-blue); background: none; border: 1px solid var(--accent-blue); border-radius: 4px; cursor: pointer;">
-                            🧹 Clear Selection
+                            Clear Selection
                         </button>
                     </div>
                     <div class="providers-grid" id="providersGrid">
@@ -864,13 +871,13 @@
                 <div class="scan-schedule">
                     <div class="schedule-tabs">
                         <button class="schedule-tab active" onclick="switchScheduleTab('immediate')">
-                            🚀 Immediate Scan
+                            Immediate Scan
                         </button>
                         <button class="schedule-tab" onclick="switchScheduleTab('scheduled')">
-                            📅 Schedule Scan
+                            Schedule Scan
                         </button>
                         <button class="schedule-tab" onclick="switchScheduleTab('recurring')">
-                            🔄 Recurring Scan
+                            Recurring Scan
                         </button>
                     </div>
 
@@ -878,7 +885,7 @@
                     <div id="immediateTab" class="schedule-content active">
                         <div class="immediate-scan-info">
                             <h4>⚡ Run Scan Now</h4>
-                            <p>Start a comprehensive security scan immediately across all selected cloud providers.</p>
+                            <p>Start a comprehensive security scan immediately across all selected targets.</p>
                         </div>
                     </div>
 
@@ -887,7 +894,7 @@
                         <div class="schedule-form">
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label class="form-label">📅 Scan Date</label>
+                                    <label class="form-label">Scan Date</label>
                                     <input type="date" class="form-input" id="scheduleDate">
                                 </div>
                                 <div class="form-group">
@@ -926,7 +933,7 @@
 
                             <div class="recurring-options">
                                 <div class="recurring-header">
-                                    🔄 Scan Frequency
+                                    Scan Frequency
                                 </div>
                                 <div class="frequency-selector">
                                     <button class="frequency-btn" data-frequency="10m">10 Mins</button>
@@ -1027,10 +1034,10 @@
                 <!-- Action Buttons -->
                 <div class="buttons-group">
                     <button class="btn btn-secondary" onclick="goToDashboard()">
-                        📊 View Dashboard
+                        View Dashboard
                     </button>
                     <button class="btn btn-primary" onclick="startScan()">
-                        <span id="scanButtonText">🚀 Start Security Scan</span>
+                        <span id="scanButtonText">Start Security Scan</span>
                     </button>
                 </div>
             </div>
@@ -1039,17 +1046,17 @@
             <div class="features-panel">
                 <!-- Feature 1 -->
                 <div class="feature-card">
-                    <div class="feature-icon">🔐</div>
+                    <div class="feature-icon">CM</div>
                     <h3 class="feature-title">Secure Credential Management</h3>
                     <p class="feature-description">
-                        Store your cloud credentials securely with encryption. Use your own AWS,GCP and Azure
+                        Store your cloud credentials securely with encryption. Use your own AWS, GCP and Azure
                         credentials for scanning instead of environment variables.
                     </p>
                 </div>
 
                 <!-- Feature 2 -->
                 <div class="feature-card">
-                    <div class="feature-icon">🤖</div>
+                    <div class="feature-icon">AI</div>
                     <h3 class="feature-title">AI-Powered Analysis</h3>
                     <p class="feature-description">
                         Our GPT-4 powered AI analyzes scan results, provides risk assessments,
@@ -1059,11 +1066,10 @@
 
                 <!-- Feature 3 -->
                 <div class="feature-card">
-                    <div class="feature-icon">🛡️</div>
+                    <div class="feature-icon">VD</div>
                     <h3 class="feature-title">Vulnerability Detection</h3>
                     <p class="feature-description">
-                        Integrated with industry-standard vulnerability scanners including
-                        Trivy, Grype, Safety, and OWASP tools for comprehensive security coverage.
+                        Integrated with cloud, Kubernetes manifest, IaC, dependency, and secret scanners for comprehensive security coverage.
                     </p>
                 </div>
 
@@ -1080,7 +1086,7 @@
         <!-- Scan Progress Modal -->
         <div class="scan-modal" id="scanModal">
             <div class="modal-content">
-                <div class="modal-icon">🔄</div>
+                <div class="modal-icon">SCAN</div>
                 <h2 class="modal-title">Security Scan in Progress</h2>
                 <p class="modal-message" id="scanStatusMessage">
                     Initializing cloud security scan...
@@ -1104,16 +1110,15 @@
         <!-- Footer -->
         <div class="footer">
             <div class="nav-links">
-                <a href="/dashboard" class="nav-link" style="display: none;">📊 Dashboard</a>
-                <a href="/frontend/history.html" class="nav-link">📜 Scan History</a>
-                <a href="/system-status" class="nav-link" style="display: none;">🔍 System Status</a>
+                <a href="/dashboard" class="nav-link" style="display: none;">Dashboard</a>
+                <a href="/history" class="nav-link">Scan History</a>
                 <a href="#" class="nav-link" onclick="openCredentialsModal()">🔐 Credentials</a>
                 <a href="/api/info" class="nav-link">🔧 API Info</a>
                 <a href="/health" class="nav-link">❤️ Health</a>
             </div>
             <p>CloudGuard Security Scanner v3.1 • Multi-Cloud CSPM with AI & Credential Management</p>
             <p style="margin-top: 8px; font-size: 0.8rem; color: #475569;">
-                Securing AWS, GCP and Azure environments with user credentials
+                Securing AWS, GCP, Kubernetes, and IaC environments
             </p>
         </div>
     </div>
@@ -1128,7 +1133,9 @@
             'aws': false,
             'gcp': false,
             'openai': false,
-            'azure': false
+            'azure': false,
+            'kubernetes': false,
+            'iac': true
         };
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
@@ -1263,7 +1270,7 @@
                     select.appendChild(option);
                 });
 
-                console.log(`✅ Loaded ${awsCredentials.length} AWS credentials for selector`);
+                console.log(`Loaded ${awsCredentials.length} AWS credentials for selector`);
             } catch (error) {
                 console.error('Failed to load credentials for selector:', error);
             }
@@ -1317,16 +1324,23 @@
                     const statusDot = document.getElementById('credentialsStatus');
                     const message = document.getElementById('credentialsMessage');
 
-                    const configuredProviders = Object.values(data).filter(p => p.configured).length;
+                    const configuredProviders = ['aws', 'gcp', 'kubernetes']
+                        .filter(provider => data[provider]?.configured).length;
+                    const hasAksEnrichment = data.azure?.configured;
 
                     if (configuredProviders > 0) {
                         statusDot.className = 'status-dot';
-                        message.textContent = `${configuredProviders} cloud provider(s) configured`;
+                        message.textContent = `${configuredProviders} scanner credential(s) configured${hasAksEnrichment ? ' plus AKS enrichment' : ''}`;
                         banner.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(13, 148, 136, 0.1))';
                         banner.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                    } else if (hasAksEnrichment) {
+                        statusDot.className = 'status-dot warning';
+                        message.textContent = 'AKS enrichment is configured. Add scanner credentials or use IaC file scans.';
+                        banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))';
+                        banner.style.borderColor = 'rgba(245, 158, 11, 0.3)';
                     } else {
                         statusDot.className = 'status-dot warning';
-                        message.textContent = 'No credentials configured. Add credentials or use environment defaults.';
+                        message.textContent = 'No cloud scanner credentials configured. IaC file scans do not need credentials.';
                         banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))';
                         banner.style.borderColor = 'rgba(245, 158, 11, 0.3)';
                     }
@@ -1348,13 +1362,17 @@
                         'aws': data.aws?.configured || false,
                         'gcp': data.gcp?.configured || false,
                         'openai': data.openai?.configured || false,
-                        'azure': data.azure?.configured || false
+                        'azure': data.azure?.configured || false,
+                        'kubernetes': data.kubernetes?.configured || false,
+                        'iac': data.iac?.configured !== false
                     };
 
                     const providersGrid = document.getElementById('providersGrid');
                     const providers = [
-                        { id: 'aws', name: 'AWS', icon: '☁️', iconClass: 'aws-icon' },
-                        { id: 'gcp', name: 'GCP', icon: '📊', iconClass: 'gcp-icon' }
+                        { id: 'aws', name: 'AWS', icon: 'AWS', iconClass: 'aws-icon', hint: 'Cloud posture', credentialless: false },
+                        { id: 'gcp', name: 'GCP', icon: 'GCP', iconClass: 'gcp-icon', hint: 'Cloud posture', credentialless: false },
+                        { id: 'kubernetes', name: 'Kubernetes', icon: 'K8S', iconClass: 'kubernetes-icon', hint: 'Live cluster', credentialless: false },
+                        { id: 'iac', name: 'IaC', icon: 'IaC', iconClass: 'iac-icon', hint: 'Terraform and CloudFormation', credentialless: true }
                     ];
 
                     providersGrid.innerHTML = providers.map(provider => {
@@ -1363,9 +1381,12 @@
 
                         return `
                             <div class="provider-option ${isSelected ? 'selected' : ''} ${hasCredentials ? 'has-credentials' : ''}" 
-                                 onclick="toggleProvider('${provider.id}')">
+                                onclick="toggleProvider('${provider.id}')">
                                 <div class="provider-icon ${provider.iconClass}">${provider.icon}</div>
-                                <div class="provider-name">${provider.name}</div>
+                                <div class="provider-copy">
+                                    <div class="provider-name">${provider.name}</div>
+                                    <div class="provider-hint">${provider.hint}</div>
+                                </div>
                             </div>
                         `;
                     }).join('');
@@ -1374,7 +1395,9 @@
                     const currentSelected = new Set(selectedProviders);
 
                     // Identify providers that actually have credentials (STRICT check)
-                    const configuredProviders = providers.filter(p => availableProviders[p.id] && availableProviders[p.id].configured).map(p => p.id);
+                    const configuredProviders = providers
+                        .filter(p => !p.credentialless && availableProviders[p.id])
+                        .map(p => p.id);
 
                     // Additive Selection: if credentials for a provider are newly found AND 
                     // this is the first load or the provider was just added, select it.
@@ -1387,7 +1410,7 @@
                     });
 
                     console.log('📊 Provider Status:', availableProviders);
-                    console.log('✅ Current Selection:', selectedProviders);
+                    console.log('Current Selection:', selectedProviders);
 
                     document.querySelectorAll('.provider-option').forEach(option => {
                         const providerId = option.getAttribute('onclick').match(/'([^']+)'/)[1];
@@ -1487,7 +1510,7 @@
             const emailNotification = document.getElementById('emailNotification').checked;
 
             if (selectedProviders.length === 0) {
-                alert('Please select at least one cloud provider.');
+                alert('Please select at least one scan target.');
                 return;
             }
 
@@ -1495,17 +1518,16 @@
             const userId = getUserId();
             console.log('🚀 Starting scan for user:', userId);
 
-            // Check if we have credentials for selected providers
-            const missingCredentials = selectedProviders.filter(p => !availableProviders[p]);
+            // Check if we have credentials for selected cloud providers.
+            const credentiallessProviders = ['iac'];
+            const missingCredentials = selectedProviders.filter(p => !credentiallessProviders.includes(p) && !availableProviders[p]);
             if (missingCredentials.length > 0) {
-                const confirmScan = confirm(
-                    `No credentials configured for: ${missingCredentials.join(', ')}. ` +
-                    `The scan will use environment variables if available. Continue?`
+                alert(
+                    `No credentials configured for: ${missingCredentials.join(', ')}.\n\n` +
+                    `Add credentials in Manage Credentials, then retry the scan.`
                 );
-                if (!confirmScan) {
-                    openCredentialsModal();
-                    return;
-                }
+                openCredentialsModal();
+                return;
             }
 
             // Build scan request
@@ -1573,8 +1595,8 @@
 
                     if (resp.ok) {
                         const nextRunLocal = new Date(result.next_run_at).toLocaleString();
-                        alert(`✅ Scan scheduled successfully!\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
-                        console.log('✅ Schedule created:', result);
+                        alert(`Scan scheduled successfully.\n\nSchedule ID: ${result.schedule_id}\nNext run: ${nextRunLocal}`);
+                        console.log('Schedule created:', result);
                         closeScanModal(); // Fixed: was closeScanModal
                         loadRecentScans();
                     } else {
@@ -1623,7 +1645,7 @@
                     }
 
                     if (resp.ok) {
-                        alert(`✅ Recurring scan '${scanRequest.schedule.name}' scheduled!\n\nFrequency: ${scanRequest.schedule.frequency}\nNext run: ${new Date(result.next_run_at).toLocaleString()}`);
+                        alert(`Recurring scan '${scanRequest.schedule.name}' scheduled.\n\nFrequency: ${scanRequest.schedule.frequency}\nNext run: ${new Date(result.next_run_at).toLocaleString()}`);
                         closeScanModal();
                         loadRecentScans();
                     } else {
@@ -1669,16 +1691,14 @@
                 await simulateProgress(2000);
             }
 
-            updateScanStatus('Generating security report...', 95);
+            updateScanStatus('Submitting scan job...', 95);
             await simulateProgress(1500);
 
-            updateScanStatus('Scan completed successfully!', 100);
-
-            // Actually send the request to backend
+            // Send the request to the ingestion API. The worker handles the scan.
             try {
                 console.log('📡 Sending scan request:', scanRequest);
 
-                const response = await fetch('/scan/multi-cloud', {
+                const response = await fetch('/api/jobs/scan', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1702,24 +1722,16 @@
                 }
 
                 if (response.ok) {
-                    console.log('✅ Scan completed:', result);
+                    console.log('Scan job queued:', result);
 
-                    if (!result.scan_ids || result.scan_ids.length === 0) {
-                        updateScanStatus('Scan finished but no resources were found. Check your credentials.', 100);
-                        setTimeout(() => {
-                            modal.classList.remove('active');
-                            scanInProgress = false;
-                            enableControls();
-                            alert('Scan completed but found no vulnerabilities or resources. This might happen if your cloud provider credentials have limited permissions.');
-                        }, 2000);
-                        return;
+                    if (!result.job_id) {
+                        throw new Error('Scan job was not created');
                     }
 
-                    setTimeout(() => {
-                        window.location.href = `/dashboard?scanComplete=true&scanIds=${result.scan_ids.join(',')}`;
-                    }, 1500);
+                    updateScanStatus('Scan queued. Worker is starting...', 65);
+                    await pollQueuedScanJob(result.job_id, modal);
                 } else {
-                    throw new Error(result.detail || 'Scan failed');
+                    throw new Error(result.detail || 'Scan job failed');
                 }
 
             } catch (error) {
@@ -1733,6 +1745,57 @@
                     alert(`Scan failed: ${error.message}`);
                 }, 3000);
             }
+        }
+
+        async function pollQueuedScanJob(jobId, modal) {
+            const maxAttempts = 180;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const response = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
+                const job = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(job.detail || 'Could not load scan job status');
+                }
+
+                if (job.result?.status === 'permission_required') {
+                    handlePermissionError(job.result.permission_error);
+                    modal.classList.remove('active');
+                    scanInProgress = false;
+                    enableControls();
+                    return;
+                }
+
+                if (job.status === 'queued') {
+                    updateScanStatus('Scan queued. Waiting for an available worker...', Math.min(75, 65 + attempt));
+                } else if (job.status === 'running') {
+                    updateScanStatus('Scanner workers are checking cloud resources...', Math.min(95, 75 + attempt));
+                } else if (job.status === 'completed') {
+                    const scanIds = job.scan_ids || job.result?.scan_ids || [];
+                    updateScanStatus('Scan completed successfully!', 100);
+
+                    if (!scanIds.length) {
+                        setTimeout(() => {
+                            modal.classList.remove('active');
+                            scanInProgress = false;
+                            enableControls();
+                            alert('Scan completed but found no vulnerabilities or resources. This might happen if your cloud provider credentials have limited permissions.');
+                        }, 1500);
+                        return;
+                    }
+
+                    setTimeout(() => {
+                        window.location.href = `/dashboard?scanComplete=true&scanIds=${scanIds.join(',')}&jobId=${encodeURIComponent(jobId)}`;
+                    }, 1000);
+                    return;
+                } else if (job.status === 'failed' || job.status === 'dead_letter') {
+                    throw new Error(job.error || 'Scan job failed');
+                }
+
+                await simulateProgress(2000);
+            }
+
+            throw new Error('Scan is still running. Please check the dashboard again in a moment.');
         }
 
         let pendingPermissionRequest = null;
@@ -1848,7 +1911,7 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    alert('✅ Permission granted successfully! Retrying your scan setup now...');
+                    alert('Permission granted successfully. Retrying your scan setup now.');
                     document.getElementById('permissionModal').style.display = 'none';
                     // Retry the scan setup automatically
                     startScan();
@@ -1873,7 +1936,7 @@
                 alert('❌ Error granting permission: ' + error.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '✅ Grant & Retry Scan';
+                btn.textContent = 'Grant & Retry Scan';
             }
         }
 
@@ -1960,6 +2023,14 @@
                 return;
             }
             tab.classList.add('active');
+        }
+
+        async function selectCredentiallessScanTarget(provider) {
+            if (!selectedProviders.includes(provider)) {
+                selectedProviders.push(provider);
+            }
+            await loadProviders();
+            closeCredentialsModal();
         }
 
         function getUserId() {
@@ -2072,6 +2143,192 @@
             }
         }
 
+        async function saveAzureCredentials() {
+            const credentialName = document.getElementById('azureCredentialName').value || 'default';
+            const tenantId = document.getElementById('azureTenantId').value;
+            const clientId = document.getElementById('azureClientId').value;
+            const clientSecret = document.getElementById('azureClientSecret').value;
+            const subscriptionId = document.getElementById('azureSubscriptionId').value;
+            const isDefault = document.getElementById('azureIsDefault').checked;
+
+            if (!tenantId || !clientId || !clientSecret) {
+                showAlert('Please enter Azure tenant ID, client ID, and client secret.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/credentials/azure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_name: credentialName,
+                        azure_tenant_id: tenantId,
+                        azure_client_id: clientId,
+                        azure_client_secret: clientSecret,
+                        azure_subscription_id: subscriptionId || undefined,
+                        is_default: isDefault
+                    })
+                });
+
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to save Azure credentials');
+                }
+
+                showAlert(`AKS enrichment credentials saved. Validation is running. ID: ${result.id}`, 'success');
+
+                document.getElementById('azureClientSecret').value = '';
+
+                await loadSavedCredentials();
+                await checkCredentialsStatus();
+                await loadProviders();
+
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function saveKubernetesCredentials() {
+            const credentialName = document.getElementById('kubernetesCredentialName').value || 'default';
+            const kubeconfig = document.getElementById('kubernetesKubeconfig').value;
+            const context = document.getElementById('kubernetesContext').value;
+            const clusterName = document.getElementById('kubernetesClusterName').value;
+            const isDefault = document.getElementById('kubernetesIsDefault').checked;
+
+            if (!kubeconfig.trim()) {
+                showAlert('Please paste a Kubernetes kubeconfig YAML file.', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/credentials/kubernetes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        credential_name: credentialName,
+                        kubernetes_kubeconfig: kubeconfig,
+                        kubernetes_context: context || undefined,
+                        kubernetes_cluster_name: clusterName || undefined,
+                        is_default: isDefault
+                    })
+                });
+
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to save Kubernetes kubeconfig');
+                }
+
+                showAlert(`Kubernetes kubeconfig saved. Validation is running. ID: ${result.id}`, 'success');
+
+                document.getElementById('kubernetesKubeconfig').value = '';
+                document.getElementById('kubernetesContext').value = '';
+                document.getElementById('kubernetesClusterName').value = '';
+
+                await loadSavedCredentials();
+                await checkCredentialsStatus();
+                await loadProviders();
+
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function collectIacUploadFiles() {
+            const uploads = [];
+            const fileInput = document.getElementById('iacFileInput');
+            const pastedContent = document.getElementById('iacPastedContent').value;
+            const pastedFilename = document.getElementById('iacPastedFilename').value || 'pasted-template.tf';
+
+            if (fileInput?.files?.length) {
+                for (const file of fileInput.files) {
+                    uploads.push({
+                        filename: file.name,
+                        content: await file.text()
+                    });
+                }
+            }
+
+            if (pastedContent.trim()) {
+                uploads.push({
+                    filename: pastedFilename,
+                    content: pastedContent
+                });
+            }
+
+            return uploads;
+        }
+
+        async function scanUploadedIacFiles() {
+            const resultPanel = document.getElementById('iacUploadResult');
+            const scanButton = document.getElementById('scanIacFilesBtn');
+            const files = await collectIacUploadFiles();
+
+            if (!files.length) {
+                showAlert('Upload or paste at least one Terraform or CloudFormation file.', 'error');
+                return;
+            }
+
+            scanButton.disabled = true;
+            resultPanel.style.display = 'block';
+            resultPanel.innerHTML = '<div class="loading">Scanning IaC files...</div>';
+            showAlert('Scanning uploaded IaC files...', 'warning');
+
+            try {
+                const response = await fetch('/api/iac/scan-files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: getUserId(),
+                        files
+                    })
+                });
+
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(result.detail || 'IaC file scan failed');
+                }
+
+                const scanIds = result.scan_ids || [];
+                const summary = result.summary || {};
+                const uploadedFiles = (result.uploaded_files || files.map(file => file.filename)).map(escapeHtml);
+                const dashboardUrl = scanIds.length
+                    ? `/dashboard?scanComplete=true&scanIds=${scanIds.join(',')}`
+                    : '/dashboard';
+
+                resultPanel.innerHTML = `
+                    <div class="scanner-ready-card" style="margin-top: 0;">
+                        <div class="scanner-ready-mark iac-icon">IaC</div>
+                        <div>
+                            <strong>Uploaded IaC scan complete</strong>
+                            <p>${summary.files_scanned || files.length} file(s), ${summary.total_findings || 0} finding(s), scan ID ${scanIds.join(', ') || 'not stored'}.</p>
+                            <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 6px;">${uploadedFiles.join(', ')}</p>
+                        </div>
+                    </div>
+                    <div class="form-actions" style="margin-top: 14px;">
+                        <button class="btn btn-primary" onclick="window.location.href='${dashboardUrl}'">Open Dashboard</button>
+                    </div>
+                `;
+
+                showAlert('IaC file scan completed.', 'success');
+                await loadRecentScans();
+            } catch (error) {
+                resultPanel.innerHTML = `<div class="alert alert-error">Error: ${escapeHtml(error.message)}</div>`;
+                showAlert(`Error: ${error.message}`, 'error');
+            } finally {
+                scanButton.disabled = false;
+            }
+        }
+
+        function clearIacUploadForm() {
+            document.getElementById('iacFileInput').value = '';
+            document.getElementById('iacPastedFilename').value = 'pasted-template.tf';
+            document.getElementById('iacPastedContent').value = '';
+            document.getElementById('iacUploadResult').style.display = 'none';
+            showAlert('IaC upload form cleared.', 'success');
+        }
+
         async function testAWSCredentials() {
             showAlert('Testing AWS credentials...', 'warning');
         }
@@ -2082,6 +2339,14 @@
 
         async function testGCPCredentials() {
             showAlert('Testing GCP credentials...', 'warning');
+        }
+
+        async function testAzureCredentials() {
+            showAlert('Save the AKS enrichment credential first. CloudGuard validates Azure Resource Manager access immediately after saving.', 'warning');
+        }
+
+        async function testKubernetesCredentials() {
+            showAlert('Save the kubeconfig first. CloudGuard validates live cluster access immediately after saving.', 'warning');
         }
 
         async function loadSavedCredentials() {
@@ -2110,7 +2375,7 @@
                     const providerClass = `provider-${cred.cloud_provider}`;
                     const providerName = cred.cloud_provider.toUpperCase();
                     const isDefault = cred.is_default ? 'default' : '';
-                    const isValid = cred.is_valid ? '✅' : '❌';
+                    const statusText = cred.is_valid ? 'Valid' : 'Needs validation';
 
                     return `
                         <div class="credential-item ${isDefault}">
@@ -2125,7 +2390,7 @@
                                 <div class="credential-detail">
                                     <span class="detail-label">Status:</span>
                                     <span class="detail-value" style="color: ${cred.is_valid ? '#4ade80' : '#fca5a5'}">
-                                        ${isValid} ${cred.validation_status || 'pending'}
+                                        ${statusText} (${cred.validation_status || 'pending'})
                                     </span>
                                 </div>
                                 
@@ -2136,13 +2401,22 @@
                                     </span>
                                 </div>
                                 
+                            <div class="credential-detail">
+                                <span class="detail-label">Last Used:</span>
+                                <span class="detail-value">
+                                    ${cred.last_used ? new Date(cred.last_used).toLocaleDateString() : 'Never'}
+                                </span>
+                            </div>
+
+                            ${cred.cloud_provider === 'kubernetes' && (cred.kubernetes_cluster_name || cred.kubernetes_context) ? `
                                 <div class="credential-detail">
-                                    <span class="detail-label">Last Used:</span>
+                                    <span class="detail-label">Cluster:</span>
                                     <span class="detail-value">
-                                        ${cred.last_used ? new Date(cred.last_used).toLocaleDateString() : 'Never'}
+                                        ${cred.kubernetes_cluster_name || cred.kubernetes_context}
                                     </span>
                                 </div>
-                            </div>
+                            ` : ''}
+                        </div>
                             
                             <div class="credential-actions">
                                 <button class="btn btn-secondary" onclick="validateCredential(${cred.id})">
@@ -2199,6 +2473,15 @@
             showAlert('Credentials list refreshed', 'success');
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         function showAlert(message, type = 'success') {
             const modal = document.getElementById('credentialsModal');
             if (!modal) return;
@@ -2207,8 +2490,9 @@
 
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert alert-${type}`;
+            const alertLabel = type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Notice';
             alertDiv.innerHTML = `
-                <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️'}</span>
+                <span class="alert-label">${alertLabel}</span>
                 <span>${message}</span>
             `;
 
@@ -2248,7 +2532,7 @@
 
                 // Show success message with instructions
                 showAlert(
-                    `✅ CloudFormation console opened! Stack name: ${data.stack_name}. ` +
+                    `CloudFormation console opened. Stack name: ${data.stack_name}. ` +
                     `Follow the steps in the console, then return here to complete setup.`,
                     'success'
                 );
@@ -2286,7 +2570,7 @@
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
 
-                showAlert('✅ Template downloaded! Deploy it using AWS CLI or console.', 'success');
+                showAlert('Template downloaded. Deploy it using AWS CLI or console.', 'success');
 
             } catch (error) {
                 console.error('Template download error:', error);
@@ -2305,9 +2589,16 @@
         window.saveAWSCredentials = saveAWSCredentials;
         window.saveOpenAICredentials = saveOpenAICredentials;
         window.saveGCPCredentials = saveGCPCredentials;
+        window.saveAzureCredentials = saveAzureCredentials;
+        window.saveKubernetesCredentials = saveKubernetesCredentials;
+        window.scanUploadedIacFiles = scanUploadedIacFiles;
+        window.clearIacUploadForm = clearIacUploadForm;
         window.testAWSCredentials = testAWSCredentials;
         window.testOpenAICredentials = testOpenAICredentials;
         window.testGCPCredentials = testGCPCredentials;
+        window.testAzureCredentials = testAzureCredentials;
+        window.testKubernetesCredentials = testKubernetesCredentials;
+        window.selectCredentiallessScanTarget = selectCredentiallessScanTarget;
         window.validateCredential = validateCredential;
         window.deleteCredential = deleteCredential;
         window.refreshCredentials = refreshCredentials;
@@ -2326,6 +2617,9 @@
             <div class="modal-tabs">
                 <button class="tab-btn active" onclick="switchCredentialTab('aws', this)">AWS</button>
                 <button class="tab-btn" onclick="switchCredentialTab('gcp', this)">GCP</button>
+                <button class="tab-btn" onclick="switchCredentialTab('azure', this)">AKS Enrichment</button>
+                <button class="tab-btn" onclick="switchCredentialTab('kubernetes', this)">Kubernetes</button>
+                <button class="tab-btn" onclick="switchCredentialTab('iac', this)">IaC</button>
                 <button class="tab-btn" onclick="switchCredentialTab('saved', this)">Saved Credentials</button>
             </div>
 
@@ -2609,6 +2903,165 @@
                 </div>
             </div>
 
+            <!-- AKS Enrichment Tab -->
+            <div id="azureTab" class="tab-content">
+                <div class="form-section">
+                    <h3>Azure AKS Enrichment Credentials</h3>
+                    <p class="form-description">
+                        Optional. These credentials are only used by the Kubernetes scanner to enrich AKS clusters
+                        through Azure Resource Manager. This is not a separate Azure scanner target.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="azureCredentialName" placeholder="azure-production" value="default">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tenant ID</label>
+                        <input type="text" id="azureTenantId" placeholder="00000000-0000-0000-0000-000000000000">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Client ID</label>
+                        <input type="text" id="azureClientId" placeholder="00000000-0000-0000-0000-000000000000">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Client Secret</label>
+                        <input type="password" id="azureClientSecret" placeholder="Azure app registration secret">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Subscription ID (Optional)</label>
+                        <input type="text" id="azureSubscriptionId"
+                            placeholder="Required for AKS management API enrichment">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="azureIsDefault" checked>
+                        <label for="azureIsDefault">Set as default AKS enrichment credential</label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="testAzureCredentials()">
+                            Validation Info
+                        </button>
+                        <button class="btn btn-primary" onclick="saveAzureCredentials()">
+                            Save AKS Enrichment Credentials
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kubernetes Tab -->
+            <div id="kubernetesTab" class="tab-content">
+                <div class="form-section">
+                    <h3>Kubernetes Live Cluster Credentials</h3>
+                    <p class="form-description">
+                        Paste a kubeconfig with read-only access to your cluster. CloudGuard uses it to connect to the
+                        live API server and scan workloads, services, RBAC, and secret metadata.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Credential Name</label>
+                        <input type="text" id="kubernetesCredentialName" placeholder="production-cluster"
+                            value="default">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Kubeconfig YAML</label>
+                        <textarea id="kubernetesKubeconfig" rows="9"
+                            placeholder="apiVersion: v1&#10;kind: Config&#10;clusters: ..."></textarea>
+                        <small style="color: #94a3b8; display: block; margin-top: 4px;">
+                            Use a service-account kubeconfig with list/get permissions. Private clusters must be
+                            reachable from Vercel.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Context (Optional)</label>
+                        <input type="text" id="kubernetesContext"
+                            placeholder="Leave blank to use current-context">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cluster Name (Optional)</label>
+                        <input type="text" id="kubernetesClusterName" placeholder="production-eks">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="kubernetesIsDefault" checked>
+                        <label for="kubernetesIsDefault">Set as default Kubernetes credential</label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="testKubernetesCredentials()">
+                            Validation Info
+                        </button>
+                        <button class="btn btn-primary" onclick="saveKubernetesCredentials()">
+                            Save Kubeconfig
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IaC Tab -->
+            <div id="iacTab" class="tab-content">
+                <div class="form-section">
+                    <h3>Infrastructure as Code Scanner</h3>
+                    <p class="form-description">
+                        Credential requirement: none. Upload full Terraform or CloudFormation files, or paste a complete
+                        file directly, and scan it immediately.
+                    </p>
+
+                    <div class="scanner-ready-card">
+                        <div class="scanner-ready-mark iac-icon">IaC</div>
+                        <div>
+                            <strong>IaC scanner ready</strong>
+                            <p>Checks public access, broad security groups, database exposure, encryption settings, and
+                                wildcard IAM policy patterns.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload IaC Files</label>
+                        <input type="file" id="iacFileInput" multiple
+                            accept=".tf,.tfvars,.hcl,.yaml,.yml,.json"
+                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px dashed #475569; background: #0f172a; color: #e2e8f0;">
+                        <small style="color: #94a3b8; display: block; margin-top: 4px;">
+                            Supports Terraform, Terraform variables, HCL, CloudFormation YAML, and CloudFormation JSON.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Pasted File Name</label>
+                        <input type="text" id="iacPastedFilename" placeholder="main.tf or template.yaml"
+                            value="pasted-template.tf">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Paste Complete IaC File</label>
+                        <textarea id="iacPastedContent" rows="10"
+                            placeholder='resource "aws_security_group" "open" {&#10;  ingress {&#10;    from_port = 22&#10;    to_port = 22&#10;    cidr_blocks = ["0.0.0.0/0"]&#10;  }&#10;}'></textarea>
+                    </div>
+
+                    <div id="iacUploadResult" style="display: none; margin-bottom: 16px;"></div>
+
+                    <div class="form-actions">
+                        <button class="btn btn-secondary" onclick="clearIacUploadForm()">
+                            Clear
+                        </button>
+                        <button class="btn btn-primary" id="scanIacFilesBtn" onclick="scanUploadedIacFiles()">
+                            Scan Uploaded IaC Files
+                        </button>
+                        <button class="btn btn-primary" onclick="selectCredentiallessScanTarget('iac')">
+                            Select Repo IaC Scan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Saved Credentials Tab -->
             <div id="savedTab" class="tab-content">
                 <div class="form-section">
@@ -2817,6 +3270,42 @@
             font-size: 0.85rem;
         }
 
+        .scanner-ready-card {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(255, 255, 255, 0.045);
+            border-radius: 8px;
+        }
+
+        .scanner-ready-card strong {
+            display: block;
+            color: #f8fafc;
+            margin-bottom: 6px;
+        }
+
+        .scanner-ready-card p {
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.5;
+            font-size: 0.92rem;
+        }
+
+        .scanner-ready-mark {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 48px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            font-weight: 850;
+            font-size: 0.92rem;
+        }
+
         .alert {
             padding: 16px;
             border-radius: 12px;
@@ -2824,6 +3313,17 @@
             display: flex;
             align-items: center;
             gap: 12px;
+        }
+
+        .alert-label {
+            font-size: 0.72rem;
+            font-weight: 850;
+            letter-spacing: 0;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: currentColor;
         }
 
         .alert-success {
@@ -3036,7 +3536,7 @@
             <div class="permission-actions">
                 <button class="btn-cancel"
                     onclick="document.getElementById('permissionModal').style.display='none'">Cancel</button>
-                <button id="btnGrantPerm" class="btn-grant" onclick="grantPermissionAndScan()">✅ Grant & Retry
+                <button id="btnGrantPerm" class="btn-grant" onclick="grantPermissionAndScan()">Grant & Retry
                     Scan</button>
             </div>
         </div>
@@ -3082,7 +3582,7 @@
                 style="padding: 24px 32px; background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(148, 163, 184, 0.1);">
                 <button class="btn btn-secondary" onclick="closeIamCommandsModal()">Cancel</button>
                 <button class="btn btn-primary" id="confirmIamCommandsBtn"
-                    style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);">✅ I have run these commands</button>
+                    style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);">I have run these commands</button>
             </div>
         </div>
     </div>

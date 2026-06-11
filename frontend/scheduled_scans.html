@@ -366,6 +366,8 @@
             word-break: break-all;
         }
     </style>
+    <link rel="stylesheet" href="/cloudguard-theme.css">
+    <script src="/cloudguard-ui.js" defer></script>
 </head>
 
 <body>
@@ -373,17 +375,17 @@
         <!-- Header -->
         <div class="header">
             <div>
-                <div class="title">📅 Scheduled Scans</div>
+                <div class="title">Scheduled Scans</div>
                 <div style="color: #94a3b8; margin-top: 8px;">
                     Manage your automated security scans
                 </div>
             </div>
             <div style="display: flex; gap: 12px;">
                 <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">
-                    📊 Dashboard
+                    Dashboard
                 </button>
                 <button class="btn btn-primary" onclick="window.location.href='/'">
-                    ➕ Create Schedule
+                    Create Schedule
                 </button>
             </div>
         </div>
@@ -663,7 +665,7 @@
                 }
 
                 if (response.ok) {
-                    alert('Scan started! Refresh the page to see progress.');
+                    alert(result.job_id ? `Scan job queued: ${result.job_id}` : 'Scan job queued.');
                     loadSchedules();
                 } else {
                     throw new Error(result.detail || 'Failed to start scan');

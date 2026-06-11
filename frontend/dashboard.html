@@ -785,6 +785,8 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="/cloudguard-theme.css">
+    <script src="/cloudguard-ui.js" defer></script>
 </head>
 
 <body>
@@ -792,7 +794,7 @@
         <!-- Header -->
         <div class="header">
             <div class="logo">
-                🛡️ CloudGuard Security
+                CloudGuard Security
                 <div class="status-indicator">
                     <span class="live-badge">● LIVE</span>
                     <span id="last-updated">Loading...</span>
@@ -800,13 +802,13 @@
             </div>
             <div class="action-buttons">
                 <button class="btn btn-secondary" onclick="loadDashboard()">
-                    🔄 Refresh Dashboard
+                    Refresh Dashboard
                 </button>
-                <button class="btn btn-secondary" onclick="window.location.href='/schedules'">
-                    📅 Scheduled Scans
+                <button class="btn btn-secondary" onclick="window.location.href='/scheduled_scans'">
+                    Scheduled Scans
                 </button>
                 <button class="btn btn-primary" onclick="startNewScan()">
-                    🚀 New Security Scan
+                    New Security Scan
                 </button>
             </div>
         </div>
@@ -850,7 +852,7 @@
         <div class="charts-section">
             <div class="chart-container">
                 <div class="chart-header">
-                    <div class="chart-title">📈 Security Trend Over Time</div>
+                    <div class="chart-title">Security Trend Over Time</div>
                     <div class="chart-subtitle">Vulnerabilities found in the last 30 days</div>
                 </div>
                 <div class="chart-wrapper">
@@ -860,7 +862,7 @@
 
             <div class="chart-container">
                 <div class="chart-header">
-                    <div class="chart-title">☁️ Cloud Distribution</div>
+                    <div class="chart-title">Cloud Distribution</div>
                     <div class="chart-subtitle">Resources and findings by cloud platform</div>
                 </div>
                 <div class="chart-wrapper">
@@ -877,7 +879,7 @@
         <!-- Vulnerabilities Section -->
         <div class="vulnerabilities-section" id="vulnerabilities-section">
             <div class="section-header">
-                <div class="section-title">🔍 Security Findings with AI Remediation</div>
+                <div class="section-title">Security Findings with AI Remediation</div>
                 <div class="severity-filters">
                     <button class="severity-filter active" onclick="filterVulnerabilities('all')">All</button>
                     <button class="severity-filter" onclick="filterVulnerabilities('critical')">Critical</button>
@@ -895,7 +897,7 @@
     <!-- Scan Progress Modal -->
     <div class="scan-progress" id="scan-progress">
         <div class="progress-header">
-            <div class="progress-title">🔄 Scan in Progress</div>
+            <div class="progress-title">Scan in Progress</div>
             <button onclick="hideScanProgress()"
                 style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem;">✕</button>
         </div>

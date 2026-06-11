@@ -27,10 +27,7 @@ class AuditLogger:
         self.provider = provider
         self.start_time = time.time()
         self.timestamp = datetime.utcnow()
-        self.log_dir = os.path.join("logs", "audit")
-        
-        # Ensure log directory exists
-        os.makedirs(self.log_dir, exist_ok=True)
+        self.log_dir = self._resolve_log_dir()
         
         self.metadata = {
             "tool": tool_name,
@@ -43,6 +40,26 @@ class AuditLogger:
             "output": None,
             "error": None
         }
+
+    def _resolve_log_dir(self) -> Optional[str]:
+        """Use a writable audit directory, falling back to /tmp for serverless runtimes."""
+        candidates = [
+            os.getenv("AUDIT_LOG_DIR"),
+            os.path.join("logs", "audit"),
+            os.path.join("/tmp", "cloudguard-audit"),
+        ]
+
+        for candidate in candidates:
+            if not candidate:
+                continue
+            try:
+                os.makedirs(candidate, exist_ok=True)
+                return candidate
+            except OSError:
+                logger.debug("Audit log directory is not writable: %s", candidate)
+
+        logger.warning("Audit logging disabled because no writable directory is available")
+        return None
 
     def log_input(self, arguments: Dict[str, Any]):
         """Capture tool input arguments"""
@@ -72,6 +89,8 @@ class AuditLogger:
     def _finalize(self):
         """Calculate duration and save to disk"""
         self.metadata["duration_sec"] = round(time.time() - self.start_time, 3)
+        if not self.log_dir:
+            return
         
         filename = f"audit_{self.timestamp.strftime('%Y%md_%H%M%S')}_{self.tool_name.replace('/', '_')}.json"
         filepath = os.path.join(self.log_dir, filename)

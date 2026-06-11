@@ -1,10 +1,11 @@
-# Cloud Vulnerability Scanner
+# CloudGuard Security Scanner
 
-A comprehensive, containerized security scanning tool designed to identify vulnerabilities in cloud infrastructure (AWS) and web applications. It integrates multiple open-source security tools into a unified dashboard.
+A comprehensive, containerized security scanning platform designed to identify vulnerabilities across cloud, Kubernetes, infrastructure-as-code, and application assets. The platform can run on DigitalOcean infrastructure while still scanning AWS, GCP, Kubernetes, and IaC targets when users provide credentials or files.
 
 ## 🚀 Features
 
-- **Multi-Cloud Support**: Scans AWS environments (IAM, EC2, S3) and GCP Projects.
+- **Multi-Cloud Support**: Scans AWS, GCP, Kubernetes clusters, and IaC files.
+- **DigitalOcean-Friendly Runtime**: Deploy the platform on a DigitalOcean Droplet with PostgreSQL, Caddy, worker containers, and Spaces-compatible evidence storage.
 - **Web App Scanning**: Integrated OWASP ZAP and Nuclei for web vulnerability detection.
 - **Secret Scanning**: Detects hardcoded secrets using Gitleaks.
 - **Dependency Analysis**: Checks for vulnerable dependencies with Trivy and Safety.
@@ -41,17 +42,27 @@ REDIS_PASSWORD=redis_password
 SECRET_KEY=your-super-secret-key-change-this
 ENCRYPTION_KEY=your-encryption-key
 
-# AWS Configuration (Required for Cloud Scans)
-# You can also map your ~/.aws folder in docker-compose.yml
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
+# Worker / Queue
+QUEUE_BACKEND=postgres
+WORKER_TOKEN=your-worker-token
+SCAN_JOB_INLINE_WORKER=false
+
+# Evidence storage on DigitalOcean Spaces
+OBJECT_STORAGE_PROVIDER=digitalocean-spaces
+OBJECT_STORAGE_ENDPOINT_URL=https://blr1.digitaloceanspaces.com
+OBJECT_STORAGE_REGION=blr1
+OBJECT_STORAGE_BUCKET=cloudguard-evidence
+OBJECT_STORAGE_ACCESS_KEY_ID=your_spaces_key
+OBJECT_STORAGE_SECRET_ACCESS_KEY=your_spaces_secret
 
 # GCP Configuration (Optional)
 GCP_PROJECT_ID=your_project_id
 GCP_SERVICE_ACCOUNT_JSON=/app/config/gcp-service-account.json
 
-# AI Analysis (Optional)
+# AI Analysis (Optional OpenAI-compatible endpoint)
+AI_BASE_URL=http://your-model-host:11434/v1
+AI_MODEL=llama3.1
+AI_API_KEY=local-model
 OPENAI_API_KEY=your_openai_key
 
 # Public Deployment (HTTPS)
@@ -59,8 +70,8 @@ DOMAIN=your-domain.com
 CADDY_EMAIL=you@example.com
 ```
 
-### 3. Setup Cloud Permissions (AWS)
-To scan your AWS account, the scanner needs specific **Read-Only** permissions.
+### 3. Setup Cloud Permissions For Scan Targets
+To scan a cloud account, add read-only credentials in the UI. AWS scanning still uses IAM/CloudFormation for target account access, but CloudGuard itself does not need to be hosted on AWS.
 1. Navigate to the `infra/` folder.
 2. Use the provided CloudFormation template or `iam_permissions.json` to configure an IAM Role or User with the necessary permissions.
    - See `infra/README.md` for detailed instructions on deploying the permissions stack.
@@ -94,7 +105,7 @@ Open your browser and navigate to:
 - **Frontend**: HTML/JS Dashboard (served via Nginx)
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL (Findings storage)
-- **Queue**: Redis (Task management)
+- **Queue**: PostgreSQL-backed `scan_jobs`
 - **Tools**: Trivy, Gitleaks, Nuclei, CloudFox, OWASP ZAP
 
 ## 🛡️ Security Note
@@ -104,6 +115,13 @@ Open your browser and navigate to:
 ## 🌐 Deploy Online (Production + HTTPS)
 
 This project includes a production profile with Caddy reverse proxy (automatic HTTPS).
+
+For DigitalOcean, use the deployment guide in `deploy/digitalocean/README.md`:
+
+```bash
+cp .env.digitalocean.example .env
+docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env up -d --build
+```
 
 ### 1. DNS + Firewall
 - Point your domain `A` record to your server public IP.

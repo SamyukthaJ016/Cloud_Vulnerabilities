@@ -1,12 +1,29 @@
 # Python cache
 __pycache__/
-*.pyc
+*.py[cod]
 
 # Virtual env
 venv/
+.venv/
+.venv*/
+env/
+ENV/
 
 # Local env file (secrets)
 .env
+.env.*
+*.env
+.env.digitalocean.local
+
+# Terraform local state and secrets
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.auto.tfvars
+crash.log
+crash.*.log
 
 # Local SQL data / migrations (if you want to keep them out)
 sql/
@@ -15,15 +32,29 @@ sql/
 .vscode/
 gcp-service-account.json 
 .DS_Store
-*.env
 logs/
+logs/**
 
 # Test & Coverage
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
+htmlcov/
 
 # specific logs
 **/*.log
 
 # Project Reports
 reports/
+
+# Generated demo/submission artifacts
+Review2_CloudGuard_Presentation.pptx
+CloudGuard_Scanner_Flyer_A4.pdf
+CloudGuard_Scanner_Flyer_A4.png
+reference_flyer_page1.png
+
+# Secret scanner test data
+tests/test_secrets.txt
+.vercel/
+frontend/.vercel/

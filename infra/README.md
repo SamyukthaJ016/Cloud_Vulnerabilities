@@ -1,76 +1,96 @@
-# CloudFormation Template Upload
+# AWS Scan Target Setup
 
-## Automatic Upload to S3
+This folder is only for customers who want CloudGuard to scan an AWS account. It is not required for hosting CloudGuard on DigitalOcean.
 
-To automatically upload the enhanced CloudFormation template to your S3 bucket:
+## CloudFormation Template Upload
+
+The template can be uploaded to any public HTTPS location. AWS S3 is one option, but for a DigitalOcean-hosted platform you can also store the template in DigitalOcean Spaces or serve it from the app/static hosting.
+
+## Recommended DigitalOcean Hosting
+
+For a DigitalOcean deployment, place `enhanced-cloudformation-template.yaml` in a public DigitalOcean Space or serve it from the app/static hosting. The only requirement is a public HTTPS URL that AWS CloudFormation can fetch.
 
 ```bash
-# Run the upload script
-./scripts/upload-cfn-template.sh
+# Example with an S3-compatible CLI profile for DigitalOcean Spaces
+aws --endpoint-url https://blr1.digitaloceanspaces.com s3 cp \
+  infra/enhanced-cloudformation-template.yaml \
+  s3://cloudguard-assets/cloudformation/aws-readonly-role.yaml \
+  --content-type "text/yaml" \
+  --acl public-read
 ```
 
-This will:
-1. ✅ Validate the CloudFormation template syntax
-2. 📤 Upload to `s3://cloudguard-cfn-templates/cloudformation/aws-readonly-role.yaml`
-3. 🔓 Set public read permissions
-4. 📍 Display the public S3 URL
+The template URL will look like:
 
-## Manual Upload (Alternative)
+```text
+https://cloudguard-assets.blr1.digitaloceanspaces.com/cloudformation/aws-readonly-role.yaml
+```
 
-If you prefer to upload manually:
+## AWS S3 Alternative
+
+If you already have an AWS bucket for scan-target setup assets, the old S3 flow still works. This is optional and is not part of CloudGuard hosting.
 
 ```bash
-# Upload to S3
 aws s3 cp infra/enhanced-cloudformation-template.yaml \
   s3://cloudguard-cfn-templates/cloudformation/aws-readonly-role.yaml \
   --region eu-north-1 \
   --content-type "text/yaml" \
   --acl public-read
-
-# Verify upload
-aws s3 ls s3://cloudguard-cfn-templates/cloudformation/
 ```
 
 ## Template URL
 
-After upload, the template will be available at:
-```
-https://cloudguard-cfn-templates.s3.eu-north-1.amazonaws.com/cloudformation/aws-readonly-role.yaml
+Use the public template URL in the AWS scanner onboarding flow when creating a read-only role in the customer's AWS account.
+
+## Validation
+
+Validate the template before publishing:
+
+```bash
+aws cloudformation validate-template \
+  --template-body file://infra/enhanced-cloudformation-template.yaml
 ```
 
 ## CI/CD Integration
 
-Add to your deployment pipeline:
+DigitalOcean Spaces can be used from GitHub Actions with S3-compatible credentials:
 
 ```yaml
-# GitHub Actions example
 - name: Upload CloudFormation Template
-  run: ./scripts/upload-cfn-template.sh
+  run: |
+    aws --endpoint-url https://blr1.digitaloceanspaces.com s3 cp \
+      infra/enhanced-cloudformation-template.yaml \
+      s3://cloudguard-assets/cloudformation/aws-readonly-role.yaml \
+      --content-type "text/yaml" \
+      --acl public-read
   env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    AWS_DEFAULT_REGION: eu-north-1
+    AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_KEY }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET }}
+    AWS_DEFAULT_REGION: blr1
 ```
 
 ## Troubleshooting
 
-**Permission Denied**
+**Permission denied**
+
 ```bash
 chmod +x scripts/upload-cfn-template.sh
 ```
 
-**AWS Credentials Not Configured**
+**Spaces credentials not configured**
+
 ```bash
-aws configure
-# Enter your AWS Access Key ID, Secret Access Key, and region
+aws configure --profile digitalocean-spaces
 ```
 
-**S3 Bucket Doesn't Exist**
-```bash
-# Create the bucket
-aws s3 mb s3://cloudguard-cfn-templates --region eu-north-1
+**AWS S3 bucket does not exist**
 
-# Enable public access (if needed)
+```bash
+aws s3 mb s3://cloudguard-cfn-templates --region eu-north-1
+```
+
+**Public access blocked on an AWS S3 fallback bucket**
+
+```bash
 aws s3api put-public-access-block \
   --bucket cloudguard-cfn-templates \
   --public-access-block-configuration \

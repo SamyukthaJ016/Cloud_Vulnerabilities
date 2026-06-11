@@ -1,0 +1,61 @@
+services:
+  scan-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    command: ["python", "backend/scripts/local_scan_job_worker.py"]
+    healthcheck:
+      disable: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SCAN_WORKER_ID: ${SCAN_WORKER_ID:-e2e-scan-worker-1}
+      SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
+      SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-s3-compatible}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-e2e}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:-}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:-}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
+      APP_ENV: worker
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+    volumes:
+      - ./runtime/worker/reports:/app/reports
+      - ./runtime/worker/logs:/app/logs
+
+  evidence-connector:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    command: ["python", "backend/scripts/evidence_connector.py"]
+    healthcheck:
+      disable: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      CLOUDGUARD_BASE_URL: ${CLOUDGUARD_BASE_URL}
+      CONNECTOR_TOKEN: ${CONNECTOR_TOKEN}
+      CONNECTOR_USER_ID: ${CONNECTOR_USER_ID:-anonymous}
+      EVIDENCE_CONNECTOR_INBOX: /app/connectors/inbox
+      EVIDENCE_CONNECTOR_PROCESSED: /app/connectors/processed
+      EVIDENCE_CONNECTOR_FAILED: /app/connectors/failed
+      EVIDENCE_CONNECTOR_POLL_INTERVAL: ${EVIDENCE_CONNECTOR_POLL_INTERVAL:-10}
+      EVIDENCE_SOURCE_SYSTEM: ${EVIDENCE_SOURCE_SYSTEM:-e2e-file-connector}
+      EVIDENCE_SCANNER_TYPE: ${EVIDENCE_SCANNER_TYPE:-external}
+      EVIDENCE_ARTIFACT_TYPE: ${EVIDENCE_ARTIFACT_TYPE:-json}
+      PYTHONPATH: /app
+    volumes:
+      - ./runtime/connectors:/app/connectors

@@ -5,7 +5,7 @@ Analyzes security findings and generates intelligent remediation plans
 
 import json
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from dataclasses import asdict
 from openai import OpenAI
 from backend.mcp.mcp_base import ScanResult, SecurityFinding, Severity
@@ -24,8 +24,8 @@ class AIRecommendationEngine:
     5. Provide compliance guidance
     """
 
-    def __init__(self, api_key: str):
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, api_key: Optional[str]):
+        self.client = OpenAI(api_key=api_key) if api_key else None
         self.model = "gpt-4o-mini"
 
     async def analyze_scan_results(self, scan_results: List[ScanResult]) -> Dict[str, Any]:
@@ -137,6 +137,9 @@ Provide a comprehensive security analysis including:
 5. Recommended immediate actions (next 24 hours)
 """
 
+        if not self.client:
+            return "AI analysis unavailable because OPENAI_API_KEY is not configured. Review the severity summary and prioritized findings manually."
+
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -192,6 +195,13 @@ Prioritize by:
 3. Compliance requirements
 4. Ease of remediation
 """
+
+        if not self.client:
+            return {
+                "ai_enabled": False,
+                "message": "OPENAI_API_KEY is not configured; remediation plan generation was skipped.",
+                "priority_order": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+            }
 
         try:
             response = self.client.chat.completions.create(

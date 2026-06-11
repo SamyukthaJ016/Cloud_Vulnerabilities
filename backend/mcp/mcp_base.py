@@ -11,6 +11,9 @@ from typing import Dict, List, Any
 from dataclasses import dataclass
 from enum import Enum
 from backend.mcp_servers.base_server import MCPMessage,mcp_server_manager
+import logging
+
+logger = logging.getLogger("mcp_base")
 
 class Severity(Enum):
     """Risk severity levels"""
@@ -192,11 +195,15 @@ class MCPRegistry:
     """
     
     def __init__(self):
-        self._plugins: Dict[str, MCPPlugin] = {}
+        self._plugins: Dict[str, Any] = {}
     
     def register(self, provider: str, plugin: MCPPlugin):
         """Register a cloud provider plugin"""
         self._plugins[provider.lower()] = plugin
+
+    def unregister(self, provider: str) -> None:
+        """Remove a provider from the registry if present."""
+        self._plugins.pop(provider.lower(), None)
     
     def get_plugin(self, provider: str) -> MCPPlugin:
         """Get plugin for a specific provider"""

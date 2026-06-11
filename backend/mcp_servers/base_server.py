@@ -361,6 +361,12 @@ class MCPServerManager:
     def get_server(self, provider: str) -> Optional[BaseMCPServer]:
         """Get an MCP server by provider"""
         return self.servers.get(provider)
+
+    async def unregister_server(self, provider: str) -> None:
+        """Stop and remove a provider server if present."""
+        server = self.servers.pop(provider, None)
+        if server and server.running:
+            await server.stop()
     
     async def start_all(self) -> None:
         """Start all registered servers"""

@@ -1,0 +1,121 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-scanner_db}
+      POSTGRES_USER: ${POSTGRES_USER:-scanner_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../../db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scanner_user} -d ${POSTGRES_DB:-scanner_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      QUEUE_BACKEND: postgres
+      SCAN_JOB_INLINE_WORKER: "false"
+      WORKER_AUTH_REQUIRED: "true"
+      WORKER_TOKEN: ${WORKER_TOKEN}
+      SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-digitalocean-spaces}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-blr1}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+      AI_BASE_URL: ${AI_BASE_URL}
+      AI_MODEL: ${AI_MODEL}
+      AI_API_KEY: ${AI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
+      SECRET_KEY: ${SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://${DOMAIN:-localhost}}
+      APP_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+
+  scan-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    command: ["python", "backend/scripts/scan_job_worker.py"]
+    environment:
+      CLOUDGUARD_BASE_URL: http://backend:8000
+      WORKER_TOKEN: ${WORKER_TOKEN}
+      SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
+      SCAN_WORKER_REQUEST_TIMEOUT: ${SCAN_WORKER_REQUEST_TIMEOUT:-900}
+      PYTHONPATH: /app
+    depends_on:
+      - backend
+
+  scheduler-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: unless-stopped
+    command: ["python", "-m", "backend.scheduler_worker"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      WORKER_TOKEN: ${WORKER_TOKEN}
+      AI_BASE_URL: ${AI_BASE_URL}
+      AI_MODEL: ${AI_MODEL}
+      AI_API_KEY: ${AI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
+      APP_ENV: scheduler
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    volumes:
+      - ../../config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

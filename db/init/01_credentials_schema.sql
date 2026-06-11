@@ -47,6 +47,10 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
     azure_tenant_id TEXT,
     azure_subscription_id TEXT,
 
+    kubernetes_kubeconfig TEXT,
+    kubernetes_context VARCHAR(255),
+    kubernetes_cluster_name VARCHAR(255),
+
     is_default BOOLEAN DEFAULT FALSE,
     is_valid BOOLEAN DEFAULT TRUE,
     last_used TIMESTAMP,
@@ -59,7 +63,7 @@ CREATE TABLE IF NOT EXISTS cloud_credentials (
     updated_at TIMESTAMP DEFAULT NOW(),
 
     CONSTRAINT valid_cloud_provider
-        CHECK (cloud_provider IN ('aws','gcp','openai','azure')),
+        CHECK (cloud_provider IN ('aws','gcp','openai','azure','kubernetes','iac')),
 
     CONSTRAINT valid_validation_status
         CHECK (validation_status IN ('pending','valid','invalid')),
@@ -93,6 +97,7 @@ CREATE TABLE IF NOT EXISTS scan_sessions (
     gcp_credential_id INTEGER REFERENCES cloud_credentials(id),
     openai_credential_id INTEGER REFERENCES cloud_credentials(id),
     azure_credential_id INTEGER REFERENCES cloud_credentials(id),
+    kubernetes_credential_id INTEGER REFERENCES cloud_credentials(id),
 
     status VARCHAR(50) DEFAULT 'active',
     scan_config JSONB,
@@ -198,6 +203,7 @@ SELECT
     COUNT(*) FILTER (WHERE c.cloud_provider = 'gcp') AS gcp_credentials,
     COUNT(*) FILTER (WHERE c.cloud_provider = 'openai') AS openai_credentials,
     COUNT(*) FILTER (WHERE c.cloud_provider = 'azure') AS azure_credentials,
+    COUNT(*) FILTER (WHERE c.cloud_provider = 'kubernetes') AS kubernetes_credentials,
     COUNT(*) FILTER (WHERE c.is_valid) AS valid_credentials,
     MAX(c.last_used) AS last_used_credential
 FROM user_profiles u

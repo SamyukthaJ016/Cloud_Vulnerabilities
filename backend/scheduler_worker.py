@@ -2,11 +2,12 @@
 import asyncio
 import json
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from backend.database import get_conn
-from backend.main import run_multi_cloud_scan_internal
+from backend.main import MultiCloudScanRequest, create_scan_job, process_scan_job
 from backend.utils.email import send_scan_notification
 
 logging.basicConfig(level=logging.INFO)
@@ -57,16 +58,30 @@ async def run_due_schedules():
             logger.info(f"▶️ Running scheduled scan {schedule_id} for user={user_id} providers={providers}")
 
             try:
-                # Run the scan using the internal function
-                result_ctx = await run_multi_cloud_scan_internal(
+                scan_request = MultiCloudScanRequest(
                     providers=providers,
                     account_ids=account_ids,
                     deep_scan=deep_scan,
+                    offensive_scan=True,
                     user_id=user_id,
-                    credential_id=credential_id,  # NEW: Use saved credential
+                    credential_id=credential_id,
                 )
-                
-                scan_ids = result_ctx.get("scan_ids", [])
+                job = create_scan_job(user_id, scan_request)
+                if os.getenv("SCHEDULER_ENQUEUE_ONLY", "false").lower() == "true":
+                    processed_job = {
+                        "status": "queued",
+                        "job_id": job["job_id"],
+                        "scan_ids": [],
+                        "result": {"job_id": job["job_id"]},
+                    }
+                    logger.info(f"📬 Scheduled scan {schedule_id} enqueued as job {job['job_id']}")
+                else:
+                    processed_job = await process_scan_job(job["job_id"])
+                if processed_job.get("status") in ("failed", "dead_letter"):
+                    error_payload = processed_job.get("result") or processed_job.get("error")
+                    raise RuntimeError(json.dumps(error_payload, default=str))
+
+                scan_ids = processed_job.get("scan_ids") or processed_job.get("result", {}).get("scan_ids", [])
                 
                 # NEW: Email Notification logic
                 with conn.cursor() as cur:

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance - CloudGuard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #080b0e;
+            color: #edf3f8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 28px 24px 56px;
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 22px;
+            padding: 26px;
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(25, 36, 42, 0.94), rgba(13, 19, 23, 0.92));
+        }
+
+        .eyebrow {
+            color: #22d3b6;
+            font-size: 0.76rem;
+            font-weight: 850;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin-top: 4px;
+            font-size: clamp(2rem, 4vw, 3.8rem);
+            line-height: 1.04;
+        }
+
+        .subtitle {
+            max-width: 760px;
+            margin-top: 10px;
+            color: #aab8c3;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        select,
+        button {
+            min-height: 38px;
+            border-radius: 8px;
+            font: inherit;
+        }
+
+        select {
+            min-width: 190px;
+            padding: 8px 12px;
+            border: 1px solid rgba(199, 213, 224, 0.16);
+            background: #121a1f;
+            color: #edf3f8;
+        }
+
+        .btn {
+            padding: 9px 14px;
+            border: 1px solid rgba(199, 213, 224, 0.18);
+            background: rgba(255, 255, 255, 0.08);
+            color: #edf3f8;
+            font-weight: 760;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, #22d3b6, #61d394);
+            color: #06100f;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1.15fr repeat(5, minmax(130px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .stat {
+            min-height: 118px;
+            padding: 18px;
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            border-radius: 8px;
+            background: rgba(18, 26, 31, 0.9);
+        }
+
+        .score-stat {
+            background:
+                linear-gradient(135deg, rgba(34, 211, 182, 0.18), rgba(97, 211, 148, 0.07)),
+                rgba(18, 26, 31, 0.95);
+        }
+
+        .stat-label {
+            color: #94a3af;
+            font-size: 0.73rem;
+            font-weight: 850;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            margin-top: 7px;
+            font-size: 2rem;
+            font-weight: 880;
+        }
+
+        .score-stat .stat-value {
+            font-size: 2.8rem;
+        }
+
+        .stat-note {
+            margin-top: 5px;
+            color: #94a3af;
+            font-size: 0.84rem;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .panel {
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            border-radius: 8px;
+            background: rgba(18, 26, 31, 0.9);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(199, 213, 224, 0.1);
+        }
+
+        .panel-title {
+            font-weight: 850;
+        }
+
+        .muted {
+            color: #94a3af;
+            font-size: 0.9rem;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            min-width: 980px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(199, 213, 224, 0.1);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: #94a3af;
+            font-size: 0.72rem;
+            font-weight: 850;
+            text-transform: uppercase;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 24px;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 0.74rem;
+            font-weight: 850;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .compliant {
+            background: rgba(97, 211, 148, 0.16);
+            color: #94e6b8;
+        }
+
+        .partial {
+            background: rgba(245, 183, 75, 0.16);
+            color: #f5c777;
+        }
+
+        .non_compliant {
+            background: rgba(255, 102, 117, 0.18);
+            color: #ff9aa4;
+        }
+
+        .no_evidence {
+            background: rgba(148, 163, 175, 0.16);
+            color: #cbd5e1;
+        }
+
+        .mono {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+            font-size: 0.83rem;
+        }
+
+        .source-list,
+        .recent-list {
+            display: grid;
+            gap: 10px;
+            padding: 14px;
+        }
+
+        .source-item,
+        .recent-item {
+            padding: 12px;
+            border: 1px solid rgba(199, 213, 224, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.035);
+        }
+
+        .source-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .empty {
+            padding: 28px;
+            color: #94a3af;
+            text-align: center;
+        }
+
+        .drawer {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: stretch;
+            justify-content: flex-end;
+            background: rgba(0, 0, 0, 0.48);
+            z-index: 1000;
+        }
+
+        .drawer.open {
+            display: flex;
+        }
+
+        .drawer-panel {
+            width: min(620px, 100%);
+            height: 100%;
+            overflow-y: auto;
+            background: #0d1317;
+            border-left: 1px solid rgba(199, 213, 224, 0.16);
+            box-shadow: -18px 0 50px rgba(0, 0, 0, 0.35);
+        }
+
+        .drawer-header {
+            position: sticky;
+            top: 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 20px;
+            border-bottom: 1px solid rgba(199, 213, 224, 0.12);
+            background: rgba(13, 19, 23, 0.96);
+        }
+
+        .drawer-body {
+            padding: 16px;
+            display: grid;
+            gap: 12px;
+        }
+
+        pre {
+            max-height: 300px;
+            overflow: auto;
+            padding: 12px;
+            border-radius: 8px;
+            background: #070a0d;
+            color: #d8e3eb;
+            font-size: 0.78rem;
+            line-height: 1.45;
+        }
+
+        @media (max-width: 1180px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .header,
+            .toolbar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="/cloudguard-theme.css">
+    <script src="/cloudguard-ui.js" defer></script>
+</head>
+
+<body>
+    <main class="container">
+        <section class="header">
+            <div>
+                <div class="eyebrow">Compliance</div>
+                <h1>Control Evidence Dashboard</h1>
+                <p class="subtitle">Framework coverage, control status, connector evidence, and audit artifacts.</p>
+            </div>
+            <button class="btn btn-primary" onclick="loadCompliance()">Refresh</button>
+        </section>
+
+        <section class="toolbar">
+            <div class="toolbar-actions">
+                <label class="muted" for="frameworkSelect">Framework</label>
+                <select id="frameworkSelect" onchange="loadCompliance()">
+                    <option value="all">All frameworks</option>
+                </select>
+            </div>
+            <div class="muted" id="generatedAt">Waiting for compliance data</div>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat score-stat">
+                <div class="stat-label">Compliance score</div>
+                <div class="stat-value" id="scoreValue">0%</div>
+                <div class="stat-note" id="scoreNote">0 controls assessed</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Compliant</div>
+                <div class="stat-value" id="compliantValue">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Partial</div>
+                <div class="stat-value" id="partialValue">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Non-compliant</div>
+                <div class="stat-value" id="nonCompliantValue">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">No evidence</div>
+                <div class="stat-value" id="noEvidenceValue">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Evidence</div>
+                <div class="stat-value" id="evidenceValue">0</div>
+            </div>
+        </section>
+
+        <section class="layout">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <div class="panel-title">Controls</div>
+                        <div class="muted" id="controlCount">0 controls</div>
+                    </div>
+                    <button class="btn" onclick="exportControls()">Export CSV</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Control</th>
+                                <th>Framework</th>
+                                <th>Status</th>
+                                <th>Evidence</th>
+                                <th>Findings</th>
+                                <th>Sources</th>
+                                <th>Last seen</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="controlsBody"></tbody>
+                    </table>
+                </div>
+                <div id="controlsEmpty" class="empty" style="display: none;">No controls found.</div>
+            </div>
+
+            <aside>
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">Evidence Sources</div>
+                            <div class="muted">Connector coverage</div>
+                        </div>
+                    </div>
+                    <div class="source-list" id="sourceList"></div>
+                    <div id="sourceEmpty" class="empty" style="display: none;">No evidence sources found.</div>
+                </div>
+
+                <div class="panel" style="margin-top: 18px;">
+                    <div class="panel-header">
+                        <div>
+                            <div class="panel-title">Recent Evidence</div>
+                            <div class="muted">Latest artifacts</div>
+                        </div>
+                    </div>
+                    <div class="recent-list" id="recentList"></div>
+                    <div id="recentEmpty" class="empty" style="display: none;">No evidence artifacts found.</div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <section class="drawer" id="evidenceDrawer" onclick="closeDrawer(event)">
+        <div class="drawer-panel" onclick="event.stopPropagation()">
+            <div class="drawer-header">
+                <div>
+                    <div class="eyebrow">Evidence</div>
+                    <h2 id="drawerTitle">Control evidence</h2>
+                    <div class="muted mono" id="drawerSubtitle"></div>
+                </div>
+                <button class="btn" onclick="hideDrawer()">Close</button>
+            </div>
+            <div class="drawer-body" id="drawerBody"></div>
+        </div>
+    </section>
+
+    <script>
+        let currentControls = [];
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[char]));
+        }
+
+        function formatDate(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString();
+        }
+
+        function statusLabel(status) {
+            return String(status || 'no_evidence').replaceAll('_', ' ');
+        }
+
+        async function loadCompliance() {
+            const select = document.getElementById('frameworkSelect');
+            const framework = select.value || 'all';
+            const response = await fetch(`/api/compliance/summary?framework=${encodeURIComponent(framework)}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Failed to load compliance summary');
+            renderFrameworkOptions(data.frameworks || [], framework);
+            renderSummary(data);
+            currentControls = data.controls || [];
+            renderControls(currentControls);
+            renderSources(data.source_counts || {});
+            renderRecent(data.recent_evidence || []);
+        }
+
+        function renderFrameworkOptions(frameworks, selected) {
+            const select = document.getElementById('frameworkSelect');
+            const existing = Array.from(select.options).map(option => option.value).join('|');
+            const next = frameworks.join('|');
+            if (existing === next) return;
+            select.innerHTML = frameworks.map(item => `
+                <option value="${escapeHtml(item)}">${escapeHtml(item === 'all' ? 'All frameworks' : item)}</option>
+            `).join('');
+            select.value = selected;
+        }
+
+        function renderSummary(data) {
+            const counts = data.counts || {};
+            document.getElementById('scoreValue').textContent = `${data.score || 0}%`;
+            document.getElementById('scoreNote').textContent = `${counts.total_controls || 0} controls assessed`;
+            document.getElementById('compliantValue').textContent = counts.compliant || 0;
+            document.getElementById('partialValue').textContent = counts.partial || 0;
+            document.getElementById('nonCompliantValue').textContent = counts.non_compliant || 0;
+            document.getElementById('noEvidenceValue').textContent = counts.no_evidence || 0;
+            document.getElementById('evidenceValue').textContent = counts.evidence_artifacts || 0;
+            document.getElementById('controlCount').textContent = `${counts.total_controls || 0} controls`;
+            document.getElementById('generatedAt').textContent = `Updated ${formatDate(data.generated_at)}`;
+        }
+
+        function renderControls(controls) {
+            document.getElementById('controlsEmpty').style.display = controls.length ? 'none' : 'block';
+            document.getElementById('controlsBody').innerHTML = controls.map(control => `
+                <tr>
+                    <td>
+                        <div class="mono">${escapeHtml(control.control_id)}</div>
+                        <div class="muted">${escapeHtml(control.control_name)}</div>
+                    </td>
+                    <td>${escapeHtml(control.framework)}</td>
+                    <td><span class="pill ${escapeHtml(control.status)}">${escapeHtml(statusLabel(control.status))}</span></td>
+                    <td>${control.evidence_count || 0}</td>
+                    <td>
+                        <div>${control.finding_count || 0}</div>
+                        <div class="muted">H ${control.severity_counts?.high || 0} / C ${control.severity_counts?.critical || 0}</div>
+                    </td>
+                    <td>${(control.sources || []).map(escapeHtml).join(', ') || '<span class="muted">None</span>'}</td>
+                    <td>${escapeHtml(formatDate(control.latest_evidence_at))}</td>
+                    <td><button class="btn" onclick="openEvidence(decodeURIComponent('${encodeURIComponent(control.control_id)}'))">View</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderSources(sourceCounts) {
+            const entries = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]);
+            document.getElementById('sourceEmpty').style.display = entries.length ? 'none' : 'block';
+            document.getElementById('sourceList').innerHTML = entries.map(([source, count]) => `
+                <div class="source-item">
+                    <span>${escapeHtml(source)}</span>
+                    <strong>${count}</strong>
+                </div>
+            `).join('');
+        }
+
+        function renderRecent(items) {
+            document.getElementById('recentEmpty').style.display = items.length ? 'none' : 'block';
+            document.getElementById('recentList').innerHTML = items.slice(0, 8).map(item => `
+                <div class="recent-item">
+                    <div class="mono">${escapeHtml(item.control_id || item.evidence_id)}</div>
+                    <div>${escapeHtml(item.control_name || item.source_system || 'Evidence artifact')}</div>
+                    <div class="muted">${escapeHtml(item.source_system || '')} ${escapeHtml(formatDate(item.created_at))}</div>
+                </div>
+            `).join('');
+        }
+
+        async function openEvidence(controlId) {
+            const control = currentControls.find(item => item.control_id === controlId);
+            document.getElementById('drawerTitle').textContent = control?.control_name || controlId;
+            document.getElementById('drawerSubtitle').textContent = controlId;
+            document.getElementById('drawerBody').innerHTML = '<div class="empty">Loading evidence...</div>';
+            document.getElementById('evidenceDrawer').classList.add('open');
+
+            const response = await fetch(`/api/compliance/controls/${encodeURIComponent(controlId)}/evidence?limit=25`);
+            const data = await response.json();
+            if (!response.ok) {
+                document.getElementById('drawerBody').innerHTML = `<div class="empty">${escapeHtml(data.detail || 'Failed to load evidence')}</div>`;
+                return;
+            }
+            const evidence = data.evidence || [];
+            document.getElementById('drawerBody').innerHTML = evidence.length ? evidence.map(item => `
+                <article class="recent-item">
+                    <div class="mono">${escapeHtml(item.evidence_id)}</div>
+                    <div>${escapeHtml(item.source_system || 'Evidence')}</div>
+                    <div class="muted">${escapeHtml(item.artifact_type || '')} ${escapeHtml(formatDate(item.created_at))}</div>
+                    <pre>${escapeHtml(JSON.stringify(item.payload || {}, null, 2))}</pre>
+                </article>
+            `).join('') : '<div class="empty">No stored artifacts for this control yet.</div>';
+        }
+
+        function hideDrawer() {
+            document.getElementById('evidenceDrawer').classList.remove('open');
+        }
+
+        function closeDrawer(event) {
+            if (event.target.id === 'evidenceDrawer') hideDrawer();
+        }
+
+        function exportControls() {
+            const rows = [
+                ['Control ID', 'Control Name', 'Framework', 'Status', 'Evidence', 'Findings', 'Sources', 'Last Evidence'],
+                ...currentControls.map(control => [
+                    control.control_id,
+                    control.control_name,
+                    control.framework,
+                    control.status,
+                    control.evidence_count,
+                    control.finding_count,
+                    (control.sources || []).join('; '),
+                    control.latest_evidence_at || ''
+                ])
+            ];
+            const csv = rows.map(row => row.map(cell => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'cloudguard-compliance-controls.csv';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCompliance().catch(error => {
+                document.getElementById('controlsBody').innerHTML = '';
+                document.getElementById('controlsEmpty').style.display = 'block';
+                document.getElementById('controlsEmpty').textContent = error.message;
+            });
+        });
+    </script>
+</body>
+
+</html>

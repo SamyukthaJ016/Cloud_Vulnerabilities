@@ -12,6 +12,8 @@ pydantic==2.5.3                # Data validation using Python type hints
 # ============================================================================
 psycopg2-binary==2.9.9         # PostgreSQL adapter for Python
 python-dotenv==1.0.0           # Load environment variables from .env file
+PyYAML==6.0.2                  # Parse Kubernetes and CloudFormation YAML templates
+kubernetes>=30.1.0             # Connect to live Kubernetes clusters from kubeconfig
 
 # ============================================================================
 # AWS SDK

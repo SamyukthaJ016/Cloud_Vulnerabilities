@@ -121,6 +121,9 @@ WORKDIR /app
 # Copy application code
 COPY --chown=scanner:scanner backend/ /app/backend/
 COPY --chown=scanner:scanner frontend/ /app/frontend/
+COPY --chown=scanner:scanner db/ /app/db/
+COPY --chown=scanner:scanner infra/ /app/infra/
+COPY --chown=scanner:scanner config/ /app/config/
 
 ENV PYTHONPATH=/app
 
@@ -178,9 +181,12 @@ COPY --from=python-deps /usr/local/bin /usr/local/bin
 # Copy application code as scanner user
 COPY --chown=scanner:scanner backend/ /app/backend/
 COPY --chown=scanner:scanner frontend/ /app/frontend/
+COPY --chown=scanner:scanner db/ /app/db/
+COPY --chown=scanner:scanner infra/ /app/infra/
+COPY --chown=scanner:scanner config/ /app/config/
 
 # Fix permissions (run as root before switching user)
-RUN chmod -R 755 /app/backend /app/frontend
+RUN chmod -R 755 /app/backend /app/frontend /app/db /app/infra /app/config
 
 # Set PYTHONPATH
 ENV PYTHONPATH=/app

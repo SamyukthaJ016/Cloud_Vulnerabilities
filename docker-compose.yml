@@ -81,24 +81,42 @@ services:
       # Redis
       REDIS_URL: redis://:redis_password@redis:6379/0
 
-      # AWS
-      AWS_ASSUME_ROLE_ARN: arn:aws:iam::859561299880:role/cloud-vulnerabilities-scanner-role
+      # Queue and worker dispatch
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-postgres}
+      SCAN_JOB_INLINE_WORKER: ${SCAN_JOB_INLINE_WORKER:-true}
+      WORKER_AUTH_REQUIRED: ${WORKER_AUTH_REQUIRED:-false}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+
+      # Optional AWS scan-target fallback. Prefer adding cloud credentials in the UI.
+      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
 
+      # Optional S3-compatible evidence storage, including DigitalOcean Spaces.
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:-}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:-}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+
       # GCP
-      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-/app/config/gcp-service-account.json}
 
       # OpenAI
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_ORG_ID: ${OPENAI_ORG_ID}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ORG_ID: ${OPENAI_ORG_ID:-}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-gpt-4o-mini}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
 
       # Application
       APP_ENV: development
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
 
       # Security
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
@@ -116,7 +134,6 @@ services:
       - ./config:/app/config:ro
       - ./reports:/app/reports:rw
       - ./logs:/app/logs:rw
-      - ~/.aws:/home/scanner/.aws:ro
       - ./db/init:/app/db/init:ro
 
     ports:
@@ -157,27 +174,30 @@ services:
     environment:
       DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
       REDIS_URL: redis://:redis_password@redis:6379/0
-      AWS_ASSUME_ROLE_ARN: arn:aws:iam::859561299880:role/cloud-vulnerabilities-scanner-role
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-/app/config/gcp-service-account.json}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_ORG_ID: ${OPENAI_ORG_ID}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ORG_ID: ${OPENAI_ORG_ID:-}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-gpt-4o-mini}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
       APP_ENV: scheduler
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PYTHONPATH: /app
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
     volumes:
       - ./backend:/app/backend:rw
       - ./config:/app/config:ro
       - ./logs:/app/logs:rw
-      - ~/.aws:/home/scanner/.aws:ro
       - ./db/init:/app/db/init:ro
 
     networks:
@@ -200,19 +220,33 @@ services:
     environment:
       DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
       REDIS_URL: redis://:redis_password@redis:6379/0
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      QUEUE_BACKEND: ${QUEUE_BACKEND:-postgres}
+      SCAN_JOB_INLINE_WORKER: ${SCAN_JOB_INLINE_WORKER:-true}
+      WORKER_AUTH_REQUIRED: ${WORKER_AUTH_REQUIRED:-false}
+      WORKER_TOKEN: ${WORKER_TOKEN:-}
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:-}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:-}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
-      GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_ORG_ID: ${OPENAI_ORG_ID}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
+      GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ORG_ID: ${OPENAI_ORG_ID:-}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-gpt-4o-mini}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
       APP_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      SECRET_KEY: ${SECRET_KEY}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-      CORS_ORIGINS: ${CORS_ORIGINS}
+      SECRET_KEY: ${SECRET_KEY:-change-me}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
       ENABLE_DEEP_SCAN: ${ENABLE_DEEP_SCAN:-true}
       ENABLE_VULNERABILITY_SCAN: ${ENABLE_VULNERABILITY_SCAN:-true}
     volumes:
@@ -284,7 +318,7 @@ services:
           memory: 2G
 
   # ==========================================================================
-  # Scheduled Vulnerability Scanner
+  # Scheduled Vulnerability Scanner (legacy profile; prefer scheduler-worker)
   # ==========================================================================
   scheduled-scanner:
     build:
@@ -294,7 +328,7 @@ services:
     container_name: scheduled-scanner
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}
-      AWS_ASSUME_ROLE_ARN: arn:aws:iam::<ACCOUNT_ID>:role/cloud-vulnerabilities-scanner-role
+      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       SCAN_SCHEDULE: ${SCAN_SCHEDULE:-0 2 * * *}
     volumes:
@@ -311,7 +345,7 @@ services:
     command: ["python", "backend/scripts/scheduled_scan.py"]
 
   # ==========================================================================
-  # CloudFox (Cloud Enumeration)
+  # CloudFox (optional AWS scan-target enumeration)
   # ==========================================================================
   cloudfox:
     build:
@@ -320,19 +354,18 @@ services:
       target: production
     container_name: cloudfox
     environment:
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
-      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
-      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
-      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
-      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-/app/config/gcp-service-account.json}
     volumes:
       - ./config:/app/config:ro
       - ./reports:/app/reports:rw
       - ./logs:/app/logs:rw
-      - ~/.aws:/home/scanner/.aws:ro
     networks:
       - security-network
     restart: "no"

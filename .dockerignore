@@ -34,6 +34,8 @@ venv/
 ENV/
 env/
 .venv
+.venv/
+.venv*/
 
 # IDEs
 .vscode/
@@ -78,9 +80,11 @@ Dockerfile*
 Jenkinsfile
 
 # Reports and logs (keep structure but not content)
+reports/
 reports/*.html
 reports/*.json
 reports/*.pdf
+logs/
 logs/*.log
 logs/*.txt
 
@@ -100,7 +104,7 @@ logs/*.txt
 *.pfx
 
 # Database dumps
-*.sql
+*.dump
 *.db
 *.sqlite
 *.sqlite3
@@ -135,3 +139,10 @@ config/secrets/
 # Test data
 tests/fixtures/*.large
 tests/data/*.csv
+tests/test_secrets.txt
+
+# Generated demo/submission artifacts
+Review2_CloudGuard_Presentation.pptx
+CloudGuard_Scanner_Flyer_A4.pdf
+CloudGuard_Scanner_Flyer_A4.png
+reference_flyer_page1.png

@@ -447,6 +447,25 @@ Keep it executive-friendly: clear, actionable, business-focused.
             }
 
 
+class DisabledMultiAgentSecurityAnalyzer:
+    """Fallback analyzer used when OPENAI_API_KEY is not configured."""
+
+    async def analyze(self, scan_results: List[ScanResult]) -> Dict[str, Any]:
+        return {
+            "architecture": "multi-agent",
+            "ai_enabled": False,
+            "message": "OPENAI_API_KEY is not configured; multi-agent analysis was skipped.",
+            "providers": [result.provider for result in scan_results]
+        }
+
+    def get_agent_status(self) -> Dict[str, Any]:
+        return {
+            "available_agents": [],
+            "agent_details": {},
+            "ai_enabled": False
+        }
+
+
 class MultiAgentSecurityAnalyzer:
     """
     Main orchestrator for multi-agent security analysis
@@ -549,11 +568,15 @@ class MultiAgentSecurityAnalyzer:
 multi_agent_analyzer = None
 
 
-def get_multi_agent_analyzer(api_key: str) -> MultiAgentSecurityAnalyzer:
+def get_multi_agent_analyzer(api_key: Optional[str]):
     """Get or create singleton analyzer instance"""
     global multi_agent_analyzer
     if multi_agent_analyzer is None:
-        multi_agent_analyzer = MultiAgentSecurityAnalyzer(api_key)
+        if api_key:
+            multi_agent_analyzer = MultiAgentSecurityAnalyzer(api_key)
+        else:
+            logger.warning("OPENAI_API_KEY is not configured; multi-agent analysis is disabled.")
+            multi_agent_analyzer = DisabledMultiAgentSecurityAnalyzer()
     return multi_agent_analyzer
 
 

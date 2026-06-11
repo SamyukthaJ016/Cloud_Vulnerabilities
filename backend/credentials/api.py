@@ -70,6 +70,14 @@ class AzureCredentialRequest(CredentialBase):
     azure_subscription_id: Optional[str] = None
 
 
+class KubernetesCredentialRequest(CredentialBase):
+    """Kubernetes kubeconfig request model"""
+    cloud_provider: str = Field(default="kubernetes")
+    kubernetes_kubeconfig: str
+    kubernetes_context: Optional[str] = None
+    kubernetes_cluster_name: Optional[str] = None
+
+
 class CredentialResponse(BaseModel):
     """Credential response model"""
     id: int
@@ -84,6 +92,8 @@ class CredentialResponse(BaseModel):
     created_at: datetime
     aws_role_arn: Optional[str] = None
     aws_access_key_id: Optional[str] = None
+    kubernetes_context: Optional[str] = None
+    kubernetes_cluster_name: Optional[str] = None
 
 
 class ValidationRequest(BaseModel):
@@ -106,6 +116,7 @@ class ScanSessionRequest(BaseModel):
     gcp_credential_id: Optional[int] = None
     openai_credential_id: Optional[int] = None
     azure_credential_id: Optional[int] = None
+    kubernetes_credential_id: Optional[int] = None
     scan_config: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -154,6 +165,7 @@ async def save_aws_credential(
         
         # Save credential
         credential_id = credential_manager.save_credential(credential)
+        credential.id = credential_id
         
         # Validate in background
         bg_tasks.add_task(
@@ -200,6 +212,7 @@ async def save_openai_credential(
         )
         
         credential_id = credential_manager.save_credential(credential)
+        credential.id = credential_id
         
         bg_tasks.add_task(
             credential_manager.validate_credential,
@@ -253,13 +266,14 @@ async def save_gcp_credential(
         )
         
         credential_id = credential_manager.save_credential(credential)
+        credential.id = credential_id
         
         bg_tasks.add_task(
             credential_manager.validate_credential,
             credential
         )
         
-        logger.info(f"✅ Saved GCP credential {credential_id} for user {user_id} (default=True)")
+        logger.info(f"Saved GCP credential {credential_id} for user {user_id} (default=True)")
         
         return CredentialResponse(
             id=credential_id,
@@ -278,6 +292,123 @@ async def save_gcp_credential(
         raise
     except Exception as e:
         logger.error(f"Failed to save GCP credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/azure", response_model=CredentialResponse)
+async def save_azure_credential(
+    request: AzureCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save Azure credentials for AKS management API enrichment"""
+    try:
+        request.user_id = user_id
+
+        if not all([request.azure_client_id, request.azure_client_secret, request.azure_tenant_id]):
+            raise HTTPException(
+                status_code=400,
+                detail="Azure client ID, client secret, and tenant ID are required"
+            )
+
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            azure_client_id=request.azure_client_id,
+            azure_client_secret=request.azure_client_secret,
+            azure_tenant_id=request.azure_tenant_id,
+            azure_subscription_id=request.azure_subscription_id,
+            is_default=request.is_default
+        )
+
+        credential_id = credential_manager.save_credential(credential)
+        credential.id = credential_id
+
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow()
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save Azure credential: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/kubernetes", response_model=CredentialResponse)
+async def save_kubernetes_credential(
+    request: KubernetesCredentialRequest,
+    bg_tasks: BackgroundTasks,
+    user_id: str = Depends(get_user_id)
+):
+    """Save Kubernetes kubeconfig credentials for live cluster scanning"""
+    try:
+        request.user_id = user_id
+
+        try:
+            import yaml
+            parsed = yaml.safe_load(request.kubernetes_kubeconfig)
+            if not isinstance(parsed, dict) or "clusters" not in parsed or "users" not in parsed:
+                raise ValueError("kubeconfig must include clusters and users")
+            if not request.kubernetes_context:
+                request.kubernetes_context = parsed.get("current-context")
+            if not request.kubernetes_cluster_name and parsed.get("clusters"):
+                request.kubernetes_cluster_name = parsed["clusters"][0].get("name")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid kubeconfig: {exc}")
+
+        credential = CloudCredential(
+            user_id=request.user_id,
+            cloud_provider=request.cloud_provider,
+            credential_name=request.credential_name,
+            kubernetes_kubeconfig=request.kubernetes_kubeconfig,
+            kubernetes_context=request.kubernetes_context,
+            kubernetes_cluster_name=request.kubernetes_cluster_name,
+            is_default=request.is_default
+        )
+
+        credential_id = credential_manager.save_credential(credential)
+        credential.id = credential_id
+
+        bg_tasks.add_task(
+            credential_manager.validate_credential,
+            credential
+        )
+
+        return CredentialResponse(
+            id=credential_id,
+            user_id=credential.user_id,
+            cloud_provider=credential.cloud_provider,
+            credential_name=credential.credential_name,
+            is_default=credential.is_default,
+            is_valid=False,
+            validation_status="pending",
+            validation_message=None,
+            last_used=None,
+            created_at=datetime.utcnow(),
+            kubernetes_context=credential.kubernetes_context,
+            kubernetes_cluster_name=credential.kubernetes_cluster_name
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save Kubernetes credential: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/", response_model=List[CredentialResponse])
@@ -303,7 +434,9 @@ async def get_credentials(
                 last_used=cred.get('last_used'),
                 created_at=cred.get('created_at', datetime.utcnow()),
                 aws_role_arn=cred.get('aws_role_arn'),
-                aws_access_key_id=cred.get('aws_access_key_id')
+                aws_access_key_id=cred.get('aws_access_key_id'),
+                kubernetes_context=cred.get('kubernetes_context'),
+                kubernetes_cluster_name=cred.get('kubernetes_cluster_name')
             ))
         
         return response
@@ -410,6 +543,8 @@ async def create_scan_session(
             credential_ids['openai'] = request.openai_credential_id
         if request.azure_credential_id:
             credential_ids['azure'] = request.azure_credential_id
+        if request.kubernetes_credential_id:
+            credential_ids['kubernetes'] = request.kubernetes_credential_id
 
         session_id = credential_manager.create_session(
             request.user_id,
@@ -440,12 +575,14 @@ async def get_providers_status(user_id: str = Depends(get_user_id)):
             'aws': {'configured': False, 'valid': False, 'default_id': None},
             'gcp': {'configured': False, 'valid': False, 'default_id': None},
             'openai': {'configured': False, 'valid': False, 'default_id': None},
-            'azure': {'configured': False, 'valid': False, 'default_id': None}
+            'azure': {'configured': False, 'valid': False, 'default_id': None},
+            'kubernetes': {'configured': False, 'valid': False, 'default_id': None, 'credentialless': False},
+            'iac': {'configured': True, 'valid': True, 'default_id': None, 'credentialless': True}
         }
         
         for cred in credentials:
             provider = cred['cloud_provider']
-            if provider in providers:
+            if provider in providers and not providers[provider].get('credentialless'):
                 providers[provider]['configured'] = True
                 providers[provider]['valid'] = cred.get('is_valid', False)
                 if cred.get('is_default'):
