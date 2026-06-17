@@ -254,6 +254,8 @@ services:
       - ./reports:/app/reports:rw
       - ./logs:/app/logs:rw
       - ./db/init:/app/db/init:ro
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -264,36 +266,6 @@ services:
     restart: unless-stopped
     profiles:
       - prod
-
-  # ==========================================================================
-  # Caddy Reverse Proxy (automatic HTTPS)
-  # ==========================================================================
-  caddy:
-    image: caddy:2-alpine
-    container_name: security-scanner-caddy
-    environment:
-      DOMAIN: ${DOMAIN}
-      CADDY_EMAIL: ${CADDY_EMAIL}
-    volumes:
-      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-      - ./logs/caddy:/var/log/caddy
-    ports:
-      - "${FRONTEND_PORT:-80}:80"
-      - "${FRONTEND_SSL_PORT:-443}:443"
-    depends_on:
-      - backend
-    networks:
-      - security-network
-    restart: unless-stopped
-    profiles:
-      - prod
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
 
   # ==========================================================================
   # Trivy Server (for faster scanning)
@@ -490,8 +462,4 @@ volumes:
   prometheus_data:
     driver: local
   grafana_data:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
     driver: local

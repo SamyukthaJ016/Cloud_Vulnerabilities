@@ -4,11 +4,15 @@ This deployment keeps the CloudGuard portal/GRC layer separate from heavy scanne
 
 ## Target Layout
 
-- **Portal VM:** dashboard, GRC module, FastAPI API, PostgreSQL, scheduler in enqueue-only mode, Caddy, and optional MinIO object storage.
+- **Portal VM:** dashboard, GRC module, FastAPI API, PostgreSQL, scheduler in enqueue-only mode, and optional MinIO object storage. Public HTTPS/routing should be handled by Dokploy/Traefik or another external reverse proxy.
 - **Worker VM:** local scan workers that process queued jobs directly against the shared database.
 - **Connector VM/Service:** file/API connectors that normalize evidence and push it to `/api/evidence`.
 
 The portal does not execute scanner workloads in this model. It queues jobs and stores/display evidence.
+
+This compose file does not bind ports `80` or `443`; that avoids conflicts on a shared VM where Dokploy should own public domain routing and SSL.
+
+By default, the backend binds only to `127.0.0.1:8000`. A reverse proxy or tunnel can route public traffic to that local backend port without taking over `80/443`.
 
 ## 1. Portal VM
 

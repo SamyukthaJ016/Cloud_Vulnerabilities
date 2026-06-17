@@ -5,7 +5,7 @@ A comprehensive, containerized security scanning platform designed to identify v
 ## 🚀 Features
 
 - **Multi-Cloud Support**: Scans AWS, GCP, Kubernetes clusters, and IaC files.
-- **DigitalOcean-Friendly Runtime**: Deploy the platform on a DigitalOcean Droplet with PostgreSQL, Caddy, worker containers, and Spaces-compatible evidence storage.
+- **DigitalOcean/E2E-Friendly Runtime**: Deploy the platform with PostgreSQL, worker containers, and S3-compatible evidence storage. Public HTTPS/routing should be handled by Dokploy/Traefik or another external reverse proxy.
 - **Web App Scanning**: Integrated OWASP ZAP and Nuclei for web vulnerability detection.
 - **Secret Scanning**: Detects hardcoded secrets using Gitleaks.
 - **Dependency Analysis**: Checks for vulnerable dependencies with Trivy and Safety.
@@ -65,9 +65,8 @@ AI_MODEL=llama3.1
 AI_API_KEY=local-model
 OPENAI_API_KEY=your_openai_key
 
-# Public Deployment (HTTPS)
+# Public Deployment
 DOMAIN=your-domain.com
-CADDY_EMAIL=you@example.com
 ```
 
 ### 3. Setup Cloud Permissions For Scan Targets
@@ -87,7 +86,7 @@ docker compose up --build
 
 This will start:
 - **Backend API**: http://localhost:8000
-- **Frontend Dashboard**: http://localhost:80
+- **Frontend Dashboard**: http://localhost:8000
 - **Database & Redis**: Background services
 
 ### Access the Dashboard
@@ -114,7 +113,7 @@ Open your browser and navigate to:
 
 ## 🌐 Deploy Online (Production + HTTPS)
 
-This project includes a production profile with Caddy reverse proxy (automatic HTTPS).
+The production app no longer starts its own Caddy reverse proxy. Use the Dokploy deployment for public hosting, or put an external reverse proxy in front of the backend service.
 
 For DigitalOcean, use the deployment guide in `deploy/digitalocean/README.md`:
 
@@ -125,26 +124,28 @@ docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env up -d -
 
 ### 1. DNS + Firewall
 - Point your domain `A` record to your server public IP.
-- Open inbound ports: `80` and `443`.
+- Open inbound ports `80` and `443` only on the reverse proxy host, for example Dokploy/Traefik.
 
 ### 2. Set deployment env vars
 In your `.env` (or `.env.prod`) set:
 - `DOMAIN=your-domain.com`
-- `CADDY_EMAIL=you@example.com`
+- `BACKEND_BIND_ADDRESS=127.0.0.1`
+- `BACKEND_PORT=8000`
 - `SECRET_KEY`, `ENCRYPTION_KEY`, cloud credentials, DB/Redis passwords
 
 ### 3. Start production stack
 ```bash
-docker compose --profile prod up -d --build postgres redis backend caddy
+docker compose --profile prod up -d --build postgres redis backend
 ```
 
 ### 4. Verify
 ```bash
 docker compose --profile prod ps
-curl -I https://your-domain.com
+curl -I http://localhost:8000/health
 ```
 
 ### 5. Security defaults included
 - PostgreSQL port bound to localhost only.
 - Redis port bound to localhost only.
-- Backend is no longer exposed directly on host port in production.
+- Backend production port bound to localhost by default.
+- Public HTTPS and domain routing are expected to be handled by Dokploy/Traefik or another reverse proxy.

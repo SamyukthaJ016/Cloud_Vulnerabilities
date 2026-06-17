@@ -9,7 +9,7 @@ This deployment path moves the CloudGuard platform off AWS. AWS remains only an 
 - **Queue:** PostgreSQL-backed `scan_jobs`
 - **Worker:** `scan-worker` container polling CloudGuard jobs
 - **Evidence Storage:** DigitalOcean Spaces through the S3-compatible object storage settings
-- **TLS:** Caddy with automatic HTTPS
+- **TLS / Routing:** Dokploy/Traefik or another external reverse proxy. This compose file no longer starts Caddy or binds ports `80/443`.
 - **AI:** Optional OpenAI-compatible endpoint, including self-hosted models on Proxmox/E2E/DigitalOcean
 
 ## 1. Create DigitalOcean Resources
@@ -37,7 +37,7 @@ terraform output -raw ssh_target
 This creates:
 
 - Droplet
-- Firewall for SSH, HTTP, and HTTPS
+- Firewall for SSH, plus HTTP/HTTPS only if a reverse proxy such as Dokploy/Traefik is installed on the VM
 - Private DigitalOcean Space for evidence
 - Project grouping
 - Deploy user with Docker installed by cloud-init
@@ -47,7 +47,6 @@ Then return to the repo root and create the runtime env:
 ```bash
 cd ../../..
 DOMAIN=cloudguard.example.com \
-CADDY_EMAIL=security@example.com \
 OBJECT_STORAGE_BUCKET="$(cd deploy/digitalocean/terraform && terraform output -raw spaces_bucket)" \
 OBJECT_STORAGE_ACCESS_KEY_ID=replace-with-spaces-key \
 OBJECT_STORAGE_SECRET_ACCESS_KEY=replace-with-spaces-secret \
@@ -92,7 +91,8 @@ Important values:
 
 ```env
 DOMAIN=cloudguard.example.com
-CADDY_EMAIL=security@example.com
+BACKEND_BIND_ADDRESS=127.0.0.1
+BACKEND_PORT=8000
 POSTGRES_PASSWORD=strong-password
 WORKER_TOKEN=strong-worker-token
 
@@ -121,8 +121,10 @@ Check:
 
 ```bash
 docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env ps
-curl -f https://$DOMAIN/health
+docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env exec backend curl -f http://localhost:8000/health
 ```
+
+For public access, route your domain to the backend on `127.0.0.1:8000` through Dokploy/Traefik, Cloudflared, or another reverse proxy. Do not run a second service on ports `80` and `443` if Dokploy owns them.
 
 ## 4. Managed PostgreSQL Option
 
@@ -140,7 +142,7 @@ Then remove or ignore the `postgres` service and point `backend` and `scheduler-
 - Scan job queue
 - Worker execution
 - Evidence artifact storage
-- TLS and routing
+- TLS and routing when handled by Dokploy/Traefik or another non-AWS reverse proxy
 - Optional AI inference endpoint
 
 AWS-specific code remains only for scanning customer AWS accounts and generating AWS IAM setup templates.

@@ -53,6 +53,8 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
 
   scan-worker:
     build:
@@ -99,23 +101,5 @@ services:
       backend:
         condition: service_started
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    environment:
-      DOMAIN: ${DOMAIN:-localhost}
-      CADDY_EMAIL: ${CADDY_EMAIL}
-    volumes:
-      - ../../config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
-  caddy_data:
-  caddy_config:
