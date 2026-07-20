@@ -3,15 +3,51 @@ import asyncio
 import json
 import logging
 import os
+import threading
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from backend.database import get_conn
-from backend.main import MultiCloudScanRequest, create_scan_job, process_scan_job
+from backend.main import (
+    MultiCloudScanRequest,
+    create_scan_job,
+    process_scan_job,
+    record_scanner_worker_heartbeat,
+)
 from backend.utils.email import send_scan_notification
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("scheduler")
+SCHEDULER_WORKER_ID = os.getenv("SCHEDULER_WORKER_ID", "scheduler-worker")
+HEARTBEAT_INTERVAL_SECONDS = int(os.getenv("WORKER_HEARTBEAT_INTERVAL", "15"))
+
+
+def heartbeat(status: str = "online") -> None:
+    try:
+        record_scanner_worker_heartbeat(
+            SCHEDULER_WORKER_ID,
+            "scheduler",
+            status,
+            {
+                "mode": "scheduler",
+                "enqueue_only": os.getenv("SCHEDULER_ENQUEUE_ONLY", "false").lower() == "true",
+            },
+        )
+    except Exception as exc:
+        logger.warning(f"Scheduler heartbeat failed: {exc}")
+
+
+def start_heartbeat_thread() -> threading.Event:
+    stop_event = threading.Event()
+
+    def loop() -> None:
+        while not stop_event.is_set():
+            heartbeat("online")
+            stop_event.wait(HEARTBEAT_INTERVAL_SECONDS)
+
+    thread = threading.Thread(target=loop, name="scheduler-heartbeat", daemon=True)
+    thread.start()
+    return stop_event
 
 
 async def run_due_schedules():
@@ -262,7 +298,8 @@ def _mark_schedule_failed(schedule_id: int, error_message: str):
 
 async def main_loop():
     """Main scheduler loop"""
-    logger.info("🚀 Scheduler worker started")
+    logger.info(f"🚀 Scheduler worker started: {SCHEDULER_WORKER_ID}")
+    start_heartbeat_thread()
     
     while True:
         try:

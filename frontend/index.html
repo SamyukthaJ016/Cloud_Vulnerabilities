@@ -278,6 +278,101 @@
             font-size: 0.9rem;
         }
 
+        .demo-lab-panel {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(20, 184, 166, 0.1));
+            border: 1px solid rgba(45, 212, 191, 0.28);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .demo-lab-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .demo-lab-title {
+            color: #f8fafc;
+            font-size: 1.05rem;
+            font-weight: 750;
+            margin-bottom: 4px;
+        }
+
+        .demo-lab-copy {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            max-width: 560px;
+        }
+
+        .demo-lab-pill {
+            flex: 0 0 auto;
+            border: 1px solid rgba(45, 212, 191, 0.35);
+            border-radius: 999px;
+            color: #67e8f9;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            padding: 6px 10px;
+            text-transform: uppercase;
+        }
+
+        .demo-lab-actions {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .demo-lab-btn {
+            min-height: 54px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.55);
+            color: #e2e8f0;
+            cursor: pointer;
+            font-weight: 750;
+            transition: all 0.2s ease;
+        }
+
+        .demo-lab-btn:hover:not(:disabled) {
+            border-color: rgba(96, 165, 250, 0.65);
+            background: rgba(37, 99, 235, 0.18);
+            transform: translateY(-1px);
+        }
+
+        .demo-lab-btn:disabled {
+            cursor: not-allowed;
+            color: #64748b;
+            opacity: 0.72;
+        }
+
+        .demo-lab-status {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.55);
+            color: #cbd5e1;
+            font-size: 0.88rem;
+        }
+
+        .demo-lab-status.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .demo-lab-header {
+                flex-direction: column;
+            }
+
+            .demo-lab-actions {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
         /* Scheduled Scan */
         .schedule-form {
             display: flex;
@@ -854,6 +949,22 @@
                     </button>
                 </div>
 
+                <div class="demo-lab-panel">
+                    <div class="demo-lab-header">
+                        <div>
+                            <div class="demo-lab-title">Show Live Demo</div>
+                            <div class="demo-lab-copy">
+                                Launch a temporary vulnerable lab, run the scanner, capture evidence, and clean it up after the scan.
+                            </div>
+                        </div>
+                        <div class="demo-lab-pill">5 min TTL</div>
+                    </div>
+                    <div class="demo-lab-actions" id="demoLabActions">
+                        <button class="demo-lab-btn" disabled>Loading</button>
+                    </div>
+                    <div class="demo-lab-status" id="demoLabStatus"></div>
+                </div>
+
                 <div class="input-group">
                     <div class="input-label-row">
                         <div class="input-label">Select Scan Targets</div>
@@ -1140,6 +1251,9 @@
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
         let allCredentialsMap = {}; // Global map ID -> detail
+        let sandboxCatalog = [];
+        let activeDemoLabId = null;
+        let demoPollTimer = null;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
@@ -1157,6 +1271,9 @@
 
             // Load providers with credential status
             await loadProviders();
+
+            // Load sandbox demo buttons
+            await loadSandboxDemoCatalog();
 
             // Setup event listeners
             setupEventListeners();
@@ -1498,6 +1615,172 @@
 
             } catch (error) {
                 console.error('Failed to load recent scans:', error);
+            }
+        }
+
+        function demoProviderLabel(provider) {
+            const labels = {
+                iac: 'IaC Demo',
+                aws: 'AWS Demo',
+                gcp: 'GCP Demo',
+                kubernetes: 'Kubernetes Demo'
+            };
+            return labels[provider] || `${provider.toUpperCase()} Demo`;
+        }
+
+        function setDemoStatus(message, state = 'active') {
+            const panel = document.getElementById('demoLabStatus');
+            if (!panel) return;
+            panel.className = `demo-lab-status ${state ? 'active' : ''}`;
+            panel.textContent = message;
+        }
+
+        async function loadSandboxDemoCatalog() {
+            const actions = document.getElementById('demoLabActions');
+            if (!actions) return;
+
+            try {
+                const response = await fetch('/api/sandbox-labs/catalog');
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Could not load demo catalog');
+                }
+
+                sandboxCatalog = result.catalog || [];
+                const orderedProviders = ['iac', 'aws', 'gcp', 'kubernetes'];
+                const byProvider = Object.fromEntries(sandboxCatalog.map(item => [item.provider, item]));
+
+                actions.innerHTML = orderedProviders.map(provider => {
+                    const item = byProvider[provider] || { provider, enabled: false };
+                    const disabled = !item.enabled;
+                    const title = disabled
+                        ? (item.reason || 'Sandbox deployment is not ready for this provider yet')
+                        : `Start ${demoProviderLabel(provider)}`;
+                    return `
+                        <button class="demo-lab-btn" ${disabled ? 'disabled' : ''} title="${escapeHtml(title)}"
+                            onclick="startDemoSandboxScan('${provider}')">
+                            ${demoProviderLabel(provider)}
+                        </button>
+                    `;
+                }).join('');
+
+                const enabledCount = sandboxCatalog.filter(item => item.enabled).length;
+                if (!result.sandbox_labs_enabled) {
+                    setDemoStatus('Demo labs are disabled on this deployment.', 'active');
+                } else if (!enabledCount) {
+                    setDemoStatus('Demo labs are configured, but no provider is enabled yet.', 'active');
+                } else {
+                    setDemoStatus('Ready. Use IaC Demo for a safe zero-cost scanner demo.', '');
+                }
+            } catch (error) {
+                actions.innerHTML = '<button class="demo-lab-btn" disabled>Demo unavailable</button>';
+                setDemoStatus(`Demo catalog error: ${error.message}`, 'active');
+            }
+        }
+
+        function extractDemoScanIds(lab) {
+            const ids = [];
+            const proof = lab?.proof_payload || {};
+            const directScanId = proof.scan_id || proof.proof?.scan_id;
+            if (directScanId) ids.push(directScanId);
+
+            const nestedScanIds = proof.proof?.scan_result?.scan_ids || proof.scan_result?.scan_ids || [];
+            nestedScanIds.forEach(id => ids.push(id));
+
+            return [...new Set(ids.filter(Boolean))];
+        }
+
+        async function pollDemoSandboxLab(labId) {
+            if (demoPollTimer) {
+                clearTimeout(demoPollTimer);
+                demoPollTimer = null;
+            }
+
+            try {
+                const response = await fetch(`/api/sandbox-labs/${encodeURIComponent(labId)}`);
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Could not load demo status');
+                }
+
+                const lab = result.lab || {};
+                const status = lab.status || 'unknown';
+                const events = result.events || [];
+                const lastEvent = events.length ? events[events.length - 1].message : 'Waiting for worker';
+                setDemoStatus(`Demo ${status}: ${lastEvent}`, 'active');
+
+                if (['requested', 'provisioning', 'deployed', 'scanning', 'destroying'].includes(status)) {
+                    demoPollTimer = setTimeout(() => pollDemoSandboxLab(labId), 2500);
+                    return;
+                }
+
+                await loadRecentScans();
+                const scanIds = extractDemoScanIds(lab);
+                const dashboardUrl = scanIds.length
+                    ? `/dashboard?scanComplete=true&scanIds=${scanIds.join(',')}&labId=${encodeURIComponent(labId)}`
+                    : `/dashboard?labId=${encodeURIComponent(labId)}`;
+
+                if (status === 'destroyed' || status === 'scan_completed') {
+                    setDemoStatus('Demo scan completed and cleanup proof was captured. Opening dashboard...', 'active');
+                    setTimeout(() => {
+                        window.location.href = dashboardUrl;
+                    }, 900);
+                    return;
+                }
+
+                if (status === 'failed') {
+                    throw new Error(lab.error || 'Demo lab failed');
+                }
+            } catch (error) {
+                setDemoStatus(`Demo scan failed: ${error.message}`, 'active');
+                await loadSandboxDemoCatalog();
+            }
+        }
+
+        async function startDemoSandboxScan(provider = 'iac') {
+            const item = sandboxCatalog.find(entry => entry.provider === provider);
+            if (!item?.enabled) {
+                setDemoStatus(`${demoProviderLabel(provider)} is not enabled on this deployment yet.`, 'active');
+                return;
+            }
+
+            document.querySelectorAll('.demo-lab-btn').forEach(button => {
+                button.disabled = true;
+            });
+            setDemoStatus(`Starting ${demoProviderLabel(provider)}...`, 'active');
+
+            try {
+                const response = await fetch('/api/sandbox-labs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider,
+                        lab_type: item.lab_type || 'default',
+                        ttl_minutes: 5,
+                        scan_after_deploy: true,
+                        auto_destroy: true,
+                        requested_by: getUserId(),
+                        metadata: {
+                            source: 'home_demo_button'
+                        }
+                    })
+                });
+
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Could not start demo lab');
+                }
+
+                activeDemoLabId = result.lab?.lab_id;
+                if (!activeDemoLabId) {
+                    throw new Error('Demo lab was accepted but no lab ID was returned');
+                }
+
+                setDemoStatus(`Demo queued: ${activeDemoLabId}`, 'active');
+                await pollDemoSandboxLab(activeDemoLabId);
+            } catch (error) {
+                setDemoStatus(`Demo scan failed: ${error.message}`, 'active');
+                await loadSandboxDemoCatalog();
             }
         }
 
@@ -2093,6 +2376,7 @@
                 await loadSavedCredentials();
                 await checkCredentialsStatus();
                 await loadProviders();
+                await loadSandboxDemoCatalog();
 
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
@@ -2137,6 +2421,7 @@
                 await loadSavedCredentials();
                 await checkCredentialsStatus();
                 await loadProviders();
+                await loadSandboxDemoCatalog();
 
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
@@ -2183,6 +2468,7 @@
                 await loadSavedCredentials();
                 await checkCredentialsStatus();
                 await loadProviders();
+                await loadSandboxDemoCatalog();
 
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
@@ -2229,6 +2515,7 @@
                 await loadSavedCredentials();
                 await checkCredentialsStatus();
                 await loadProviders();
+                await loadSandboxDemoCatalog();
 
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
@@ -2459,6 +2746,7 @@
                     await loadSavedCredentials();
                     await checkCredentialsStatus();
                     await loadProviders();
+                    await loadSandboxDemoCatalog();
                 } else {
                     throw new Error('Failed to delete credential');
                 }
@@ -2599,6 +2887,7 @@
         window.testAzureCredentials = testAzureCredentials;
         window.testKubernetesCredentials = testKubernetesCredentials;
         window.selectCredentiallessScanTarget = selectCredentiallessScanTarget;
+        window.startDemoSandboxScan = startDemoSandboxScan;
         window.validateCredential = validateCredential;
         window.deleteCredential = deleteCredential;
         window.refreshCredentials = refreshCredentials;

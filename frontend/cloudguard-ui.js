@@ -6,6 +6,7 @@
         if (path.includes("history")) return "history";
         if (path.includes("operations")) return "operations";
         if (path.includes("compliance")) return "compliance";
+        if (path.includes("reason-act") || path.includes("reason_act")) return "reason";
         if (path.includes("dashboard") || title.includes("dashboard")) return "dashboard";
         return "home";
     }
@@ -19,7 +20,8 @@
                 schedules: "/scheduled_scans.html",
                 history: "/history.html",
                 operations: "/operations.html",
-                compliance: "/compliance.html"
+                compliance: "/compliance.html",
+                reason: "/reason_act.html"
             };
         }
         return {
@@ -28,7 +30,8 @@
             schedules: "/scheduled_scans",
             history: "/history",
             operations: "/operations",
-            compliance: "/compliance"
+            compliance: "/compliance",
+            reason: "/reason-act"
         };
     }
 
@@ -45,7 +48,8 @@
             ["schedules", "Schedules"],
             ["history", "History"],
             ["operations", "Operations"],
-            ["compliance", "Compliance"]
+            ["compliance", "Compliance"],
+            ["reason", "Reason & Act"]
         ];
 
         const shell = document.createElement("div");

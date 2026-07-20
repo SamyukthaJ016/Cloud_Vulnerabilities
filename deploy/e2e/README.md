@@ -6,9 +6,10 @@ This deployment keeps the CloudGuard portal/GRC layer separate from heavy scanne
 
 - **Portal VM:** dashboard, GRC module, FastAPI API, PostgreSQL, scheduler in enqueue-only mode, and optional MinIO object storage. Public HTTPS/routing should be handled by Dokploy/Traefik or another external reverse proxy.
 - **Worker VM:** local scan workers that process queued jobs directly against the shared database.
+- **Sandbox Worker:** provisions temporary vulnerable IaC/cloud/Kubernetes demo labs, stores validation proof, and destroys resources after scan completion or TTL expiry.
 - **Connector VM/Service:** file/API connectors that normalize evidence and push it to `/api/evidence`.
 
-The portal does not execute scanner workloads in this model. It queues jobs and stores/display evidence.
+The portal does not execute scanner or sandbox workloads in this model. It queues jobs and stores/displays evidence.
 
 This compose file does not bind ports `80` or `443`; that avoids conflicts on a shared VM where Dokploy should own public domain routing and SSL.
 
@@ -49,6 +50,7 @@ Important:
 - `DATABASE_URL` must point to the shared PostgreSQL database.
 - `CONNECTOR_TOKEN` must match the portal env.
 - Object storage settings should point to shared object storage. For separate VMs, prefer E2E object storage or MinIO exposed only on a private network.
+- Keep `SANDBOX_AWS_DEPLOY`, `SANDBOX_GCP_DEPLOY`, and `SANDBOX_KUBERNETES_DEPLOY` disabled until isolated sandbox accounts/projects/clusters are ready.
 
 Start manually:
 
@@ -60,6 +62,24 @@ Or deploy from your laptop:
 
 ```bash
 ./deploy/e2e/deploy.sh worker ubuntu@WORKER_VM_IP .env.e2e.worker
+```
+
+## Keep Scanner Workers Online
+
+Worker services use `restart: always` and continuously write heartbeats. The portal shows scanner availability at `/operations` and exposes the same data through `/api/workers/status`.
+
+After deployment or VM reboot, verify:
+
+```bash
+docker compose -f deploy/e2e/portal-compose.yml --env-file .env.e2e.portal ps
+docker compose -f deploy/e2e/worker-compose.yml --env-file .env.e2e.worker ps
+curl -fsS http://127.0.0.1:8000/api/workers/status
+```
+
+If scanner availability is offline, restart the worker VM stack:
+
+```bash
+docker compose -f deploy/e2e/worker-compose.yml --env-file .env.e2e.worker up -d --build scan-worker sandbox-lab-worker evidence-connector
 ```
 
 ## 3. Connector Contract

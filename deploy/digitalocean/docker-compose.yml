@@ -26,8 +26,16 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       QUEUE_BACKEND: postgres
       SCAN_JOB_INLINE_WORKER: "false"
+      SANDBOX_LAB_INLINE_WORKER: "false"
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
       WORKER_AUTH_REQUIRED: "true"
       WORKER_TOKEN: ${WORKER_TOKEN}
+      WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-digitalocean-spaces}
       OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL}
@@ -61,12 +69,14 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "backend/scripts/scan_job_worker.py"]
     environment:
       CLOUDGUARD_BASE_URL: http://backend:8000
       WORKER_TOKEN: ${WORKER_TOKEN}
+      SCAN_WORKER_ID: ${SCAN_WORKER_ID:-do-scan-worker-1}
       SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       SCAN_WORKER_REQUEST_TIMEOUT: ${SCAN_WORKER_REQUEST_TIMEOUT:-900}
       PYTHONPATH: /app
     depends_on:
@@ -77,11 +87,13 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "-m", "backend.scheduler_worker"]
     environment:
       DATABASE_URL: ${DATABASE_URL}
       WORKER_TOKEN: ${WORKER_TOKEN}
+      SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-do-scheduler-worker-1}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       AI_BASE_URL: ${AI_BASE_URL}
       AI_MODEL: ${AI_MODEL}
       AI_API_KEY: ${AI_API_KEY}
@@ -101,5 +113,47 @@ services:
       backend:
         condition: service_started
 
+  sandbox-lab-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    command: ["python", "backend/scripts/sandbox_lab_worker.py"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
+      SANDBOX_LAB_WORKER_ID: ${SANDBOX_LAB_WORKER_ID:-do-sandbox-lab-worker-1}
+      SANDBOX_LAB_WORKER_POLL_INTERVAL: ${SANDBOX_LAB_WORKER_POLL_INTERVAL:-10}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-digitalocean-spaces}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-blr1}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+      AI_BASE_URL: ${AI_BASE_URL}
+      AI_MODEL: ${AI_MODEL}
+      AI_API_KEY: ${AI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
+      APP_ENV: sandbox-worker
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+    volumes:
+      - sandbox_lab_data:/app/sandbox-labs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+
 volumes:
   postgres_data:
+  sandbox_lab_data:

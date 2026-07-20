@@ -1,11 +1,20 @@
-# CloudGuard Marp Project Deck
+# DeepTrustxAI Marp Workshop Decks
 
-This is a small project deck showing how CloudGuard workshop or status slides can be maintained in GitHub using Marp.
+This folder contains the DeepTrustxAI-branded cloud security workshop, a reusable logo-enabled Marp template, and the earlier CloudGuard project demo deck.
 
-The deck now contains actual CloudGuard project content: scanner coverage, evidence connector flow, queue-based scan jobs, GRC evidence mapping, Kubernetes/IaC scanner scope, deployment PoC, and the multi-tenant direction.
+The Cloud Security workshop is now organized in the corrected four-module flow: CCSP and cloud vulnerability concepts first, vulnerable app/deployment second, CloudGuard scanner usage third, and open-source tool usage fourth. The Kubernetes track remains a separate two-day track.
 
 ## Files
 
+- `deeptrustxai-cloud-security-2-day-workshop.md` - 40-slide participant-facing Cloud Security workshop deck
+- `deeptrustxai-cloud-security-module-wise-syllabus.md` - 26-slide module-wise review deck for the boss/sponsor discussion
+- `deeptrustxai-kubernetes-security-2-day-workshop.md` - 44-slide Kubernetes Security track
+- `../deeptrustxai-four-day-cloud-kubernetes-training-modules.md` - complete four-day module guide with CISSP/CCSP mapping
+- `deeptrustxai-cloud-attack-workshop.md` - canonical 48-slide Marp training deck
+- `deeptrustxai-marp-template.md` - reusable DeepTrustxAI presentation starter with logo already inserted
+- `themes/deeptrustxai.css` - DeepTrustxAI workshop theme
+- `images/deeptrustxai-logo.png` - official logo asset from `deeptrustxai.com`
+- `../deeptrustxai-cloud-security-workshop-modules.md` - instructor module guide
 - `cloudguard-workshop-demo.md` - editable Marp slide source with CloudGuard project data
 - `themes/cloudguard.css` - custom CloudGuard theme
 - `images/grc-evidence-flow.png` - sample architecture image used inside the deck
@@ -18,21 +27,46 @@ The deck now contains actual CloudGuard project content: scanner coverage, evide
 Install/run Marp through `npx`:
 
 ```bash
-npx --yes @marp-team/marp-cli workshop/marp-demo/cloudguard-workshop-demo.md --theme workshop/marp-demo/themes/cloudguard.css --html --allow-local-files --output workshop/marp-demo/exports/cloudguard-workshop-demo.html
+npx --yes @marp-team/marp-cli \
+  workshop/marp-demo/deeptrustxai-cloud-security-2-day-workshop.md \
+  --theme workshop/marp-demo/themes/deeptrustxai.css \
+  --html \
+  --allow-local-files \
+  --output workshop/marp-demo/exports/deeptrustxai-cloud-security-2-day-workshop.html
 ```
 
 Open:
 
 ```text
-workshop/marp-demo/exports/cloudguard-workshop-demo.html
+workshop/marp-demo/exports/deeptrustxai-cloud-security-2-day-workshop.html
 ```
 
 ## Export PDF And PPTX
 
 ```bash
-npx --yes @marp-team/marp-cli workshop/marp-demo/cloudguard-workshop-demo.md --theme workshop/marp-demo/themes/cloudguard.css --pdf --allow-local-files --output workshop/marp-demo/exports/cloudguard-workshop-demo.pdf
-npx --yes @marp-team/marp-cli workshop/marp-demo/cloudguard-workshop-demo.md --theme workshop/marp-demo/themes/cloudguard.css --pptx --allow-local-files --output workshop/marp-demo/exports/cloudguard-workshop-demo.pptx
+npx --yes @marp-team/marp-cli \
+  workshop/marp-demo/deeptrustxai-cloud-security-2-day-workshop.md \
+  --theme workshop/marp-demo/themes/deeptrustxai.css \
+  --pdf \
+  --allow-local-files \
+  --output workshop/marp-demo/exports/deeptrustxai-cloud-security-2-day-workshop.pdf
 ```
+
+Replace `cloud-security` with `kubernetes-security` in the source and output filenames to build the Kubernetes track.
+
+The checked workshop PPTX is generated as an editable PowerPoint mirror from the same Marp content. Use the Marp HTML/PDF for pixel-consistent delivery and the PPTX when instructors need to make last-minute PowerPoint edits.
+
+## Reuse The Branded Template
+
+Duplicate `deeptrustxai-marp-template.md`, change the title and slide content, and keep these frontmatter values:
+
+```yaml
+theme: deeptrustxai
+header: '![DeepTrustxAI](images/deeptrustxai-logo.png) **DeepTrustxAI**'
+footer: 'DeepTrustxAI | Cybersecurity Training'
+```
+
+The logo appears on ordinary slides through the header. Cover, module-divider, and closing slides include a larger brand lockup.
 
 ## GitHub Workflow Idea
 

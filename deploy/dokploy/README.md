@@ -9,6 +9,7 @@ The goal is to validate that Dokploy can host the Docker-heavy CloudGuard stack 
 - `minio`: internal S3-compatible evidence storage for the PoC
 - `scheduler-worker`: enqueues scheduled jobs
 - `scan-worker`: processes queued scan jobs separately from the portal
+- `sandbox-lab-worker`: provisions temporary vulnerable demo labs, records proof, and destroys them after scan completion or TTL expiry
 - `evidence-connector`: file-based connector that posts normalized evidence into `/api/evidence`
 
 ## Recommended PoC VM
@@ -119,16 +120,37 @@ Then validate in Dokploy:
 - `backend` is healthy.
 - `scheduler-worker` is running.
 - `scan-worker` is running.
+- `sandbox-lab-worker` is running.
 - `evidence-connector` is running.
 
 Functional checks:
 
 - Open `https://app.cloudscanner.example.com`.
+- Open `https://app.cloudscanner.example.com/operations` and confirm Worker Availability shows `online`.
 - Add test AWS/GCP/Kubernetes/IaC credentials or files through the UI.
 - Start one scan job.
 - Confirm the job moves from queued to running/completed.
+- Open `/reason-act`, create an IaC sandbox lab, and confirm it records validation/remediation/evidence and then destroys local lab artifacts.
 - Confirm evidence appears in the compliance/evidence pages.
 - Upload or drop one JSON evidence file into the connector inbox if testing file connectors.
+
+## Keep Scanner Workers Online
+
+The scanner-side services use `restart: always` and report heartbeats every 15 seconds. The backend marks the scanner pool offline only if no scan worker heartbeat is seen for 45 seconds.
+
+Use these checks after deployment or VM reboot:
+
+```bash
+docker compose -f deploy/dokploy/docker-compose.yml --env-file deploy/dokploy/env.example ps
+curl -fsS https://app.cloudscanner.example.com/api/workers/status
+curl -fsS https://app.cloudscanner.example.com/health
+```
+
+If Worker Availability is offline, restart only the worker services:
+
+```bash
+docker compose -f deploy/dokploy/docker-compose.yml --env-file deploy/dokploy/env.example up -d --build scan-worker scheduler-worker sandbox-lab-worker evidence-connector
+```
 
 ## What This PoC Proves
 
@@ -136,8 +158,10 @@ Functional checks:
 - Public traffic can use subdomain routing.
 - The dashboard and API can run behind Dokploy/Traefik.
 - Scan jobs can run separately from the portal.
+- Temporary sandbox demo labs can be created through the portal and cleaned automatically by a worker.
 - Evidence connectors can post into the backend without coupling to dashboard availability.
 - Named volumes persist database, evidence storage, worker logs, and connector inbox data.
+- The portal can act as the central reason-and-act layer for contextual prioritization, validation proof, remediation approvals, STRIDE threat models, and GRC evidence.
 
 ## What This PoC Does Not Prove Yet
 
@@ -152,4 +176,4 @@ Those should be the next phase after the single-VM Dokploy PoC is accepted.
 
 ## Boss Summary
 
-We prepared a Dokploy PoC where CloudGuard runs as a Docker Compose application with separate services for backend, Postgres, MinIO evidence storage, scheduler worker, scan worker, and evidence connector. Dokploy handles HTTPS and subdomain routing for `app`, `api`, and `ingest`, while the scanner jobs remain decoupled from the portal. This validates whether Dokploy is suitable for our Docker-heavy deployment before moving to a larger production architecture.
+We prepared a Dokploy PoC where CloudGuard runs as a Docker Compose application with separate services for backend, Postgres, MinIO evidence storage, scheduler worker, scan worker, sandbox lab worker, and evidence connector. Dokploy handles HTTPS and subdomain routing for `app`, `api`, and `ingest`, while scanner jobs and temporary vulnerable demo labs remain decoupled from the portal. This validates whether Dokploy is suitable for our Docker-heavy deployment before moving to a larger production architecture.

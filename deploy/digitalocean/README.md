@@ -101,6 +101,12 @@ OBJECT_STORAGE_REGION=blr1
 OBJECT_STORAGE_BUCKET=cloudguard-evidence
 OBJECT_STORAGE_ACCESS_KEY_ID=...
 OBJECT_STORAGE_SECRET_ACCESS_KEY=...
+
+SANDBOX_LABS_ENABLED=true
+SANDBOX_IAC_DEPLOY=true
+SANDBOX_AWS_DEPLOY=false
+SANDBOX_GCP_DEPLOY=false
+SANDBOX_KUBERNETES_DEPLOY=false
 ```
 
 For a Proxmox/self-hosted AI model:
@@ -122,9 +128,16 @@ Check:
 ```bash
 docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env ps
 docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env exec backend curl -f http://localhost:8000/health
+curl -fsS http://127.0.0.1:8000/api/workers/status
 ```
 
 For public access, route your domain to the backend on `127.0.0.1:8000` through Dokploy/Traefik, Cloudflared, or another reverse proxy. Do not run a second service on ports `80` and `443` if Dokploy owns them.
+
+Scanner-side services use `restart: always` and heartbeat every 15 seconds. In the UI, open `/operations` and confirm Worker Availability shows `online`. If it is offline, restart the worker services:
+
+```bash
+docker compose -f deploy/digitalocean/docker-compose.yml --env-file .env up -d --build scan-worker scheduler-worker sandbox-lab-worker
+```
 
 ## 4. Managed PostgreSQL Option
 

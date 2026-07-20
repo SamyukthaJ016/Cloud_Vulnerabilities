@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -24,9 +25,11 @@ INBOX_DIR = Path(os.getenv("EVIDENCE_CONNECTOR_INBOX", "/app/connectors/inbox"))
 PROCESSED_DIR = Path(os.getenv("EVIDENCE_CONNECTOR_PROCESSED", "/app/connectors/processed"))
 FAILED_DIR = Path(os.getenv("EVIDENCE_CONNECTOR_FAILED", "/app/connectors/failed"))
 POLL_INTERVAL_SECONDS = int(os.getenv("EVIDENCE_CONNECTOR_POLL_INTERVAL", "10"))
+HEARTBEAT_INTERVAL_SECONDS = int(os.getenv("WORKER_HEARTBEAT_INTERVAL", "15"))
 DEFAULT_SOURCE_SYSTEM = os.getenv("EVIDENCE_SOURCE_SYSTEM", "file-connector")
 DEFAULT_SCANNER_TYPE = os.getenv("EVIDENCE_SCANNER_TYPE", "external")
 DEFAULT_ARTIFACT_TYPE = os.getenv("EVIDENCE_ARTIFACT_TYPE", "json")
+CONNECTOR_ID = os.getenv("EVIDENCE_CONNECTOR_ID", DEFAULT_SOURCE_SYSTEM)
 
 
 def ensure_dirs() -> None:
@@ -78,6 +81,52 @@ def post_evidence(envelope: Dict[str, Any]) -> Dict[str, Any]:
         return json.loads(response.read().decode("utf-8"))
 
 
+def post_heartbeat(status: str = "online") -> None:
+    payload = {
+        "worker_id": CONNECTOR_ID,
+        "worker_type": "evidence",
+        "status": status,
+        "metadata": {
+            "mode": "file-connector",
+            "inbox": str(INBOX_DIR),
+            "poll_interval_seconds": POLL_INTERVAL_SECONDS,
+            "source_system": DEFAULT_SOURCE_SYSTEM,
+            "scanner_type": DEFAULT_SCANNER_TYPE,
+        },
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "x-cloudguard-user": CONNECTOR_USER_ID,
+    }
+    if CONNECTOR_TOKEN:
+        headers["x-connector-token"] = CONNECTOR_TOKEN
+
+    try:
+        request = urllib.request.Request(
+            f"{BASE_URL}/api/workers/heartbeat",
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=10) as response:
+            response.read()
+    except Exception as exc:
+        print(f"Evidence connector heartbeat failed: {exc}", file=sys.stderr)
+
+
+def start_heartbeat_thread() -> threading.Event:
+    stop_event = threading.Event()
+
+    def loop() -> None:
+        while not stop_event.is_set():
+            post_heartbeat("online")
+            stop_event.wait(HEARTBEAT_INTERVAL_SECONDS)
+
+    thread = threading.Thread(target=loop, name="evidence-connector-heartbeat", daemon=True)
+    thread.start()
+    return stop_event
+
+
 def process_file(path: Path) -> None:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
@@ -105,10 +154,12 @@ def run_once() -> None:
 
 def main() -> int:
     once = "--once" in sys.argv
-    print(f"Evidence connector posting to {BASE_URL}/api/evidence")
+    print(f"Evidence connector {CONNECTOR_ID} posting to {BASE_URL}/api/evidence")
+    heartbeat_stop = start_heartbeat_thread()
     while True:
         run_once()
         if once:
+            heartbeat_stop.set()
             return 0
         time.sleep(POLL_INTERVAL_SECONDS)
 

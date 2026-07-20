@@ -30,20 +30,43 @@ jobs:
         run: |
           mkdir -p public
           npx --yes @marp-team/marp-cli \
-            workshop/marp-demo/cloudguard-workshop-demo.md \
-            --theme workshop/marp-demo/themes/cloudguard.css \
+            workshop/marp-demo/deeptrustxai-cloud-security-2-day-workshop.md \
+            --theme workshop/marp-demo/themes/deeptrustxai.css \
             --html \
             --allow-local-files \
             --output public/index.html
 
+          npx --yes @marp-team/marp-cli \
+            workshop/marp-demo/deeptrustxai-kubernetes-security-2-day-workshop.md \
+            --theme workshop/marp-demo/themes/deeptrustxai.css \
+            --html \
+            --allow-local-files \
+            --output public/kubernetes.html
+
       - name: Build PDF export
         run: |
           npx --yes @marp-team/marp-cli \
-            workshop/marp-demo/cloudguard-workshop-demo.md \
-            --theme workshop/marp-demo/themes/cloudguard.css \
+            workshop/marp-demo/deeptrustxai-cloud-security-2-day-workshop.md \
+            --theme workshop/marp-demo/themes/deeptrustxai.css \
             --pdf \
             --allow-local-files \
-            --output public/cloudguard-workshop-demo.pdf
+            --output public/deeptrustxai-cloud-security-2-day-workshop.pdf
+
+          npx --yes @marp-team/marp-cli \
+            workshop/marp-demo/deeptrustxai-kubernetes-security-2-day-workshop.md \
+            --theme workshop/marp-demo/themes/deeptrustxai.css \
+            --pdf \
+            --allow-local-files \
+            --output public/deeptrustxai-kubernetes-security-2-day-workshop.pdf
+
+      - name: Publish editable PPTX
+        run: |
+          cp \
+            workshop/marp-demo/exports/deeptrustxai-cloud-security-2-day-workshop.pptx \
+            public/deeptrustxai-cloud-security-2-day-workshop.pptx
+          cp \
+            workshop/marp-demo/exports/deeptrustxai-kubernetes-security-2-day-workshop.pptx \
+            public/deeptrustxai-kubernetes-security-2-day-workshop.pptx
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

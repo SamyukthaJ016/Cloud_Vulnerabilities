@@ -105,6 +105,62 @@
             font-weight: 850;
         }
 
+        .worker-panel {
+            margin-bottom: 18px;
+            padding: 18px;
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            border-radius: 8px;
+            background: rgba(18, 26, 31, 0.9);
+        }
+
+        .worker-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .worker-title {
+            font-weight: 850;
+        }
+
+        .worker-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 12px;
+        }
+
+        .worker-card {
+            padding: 14px;
+            border: 1px solid rgba(199, 213, 224, 0.12);
+            border-radius: 8px;
+            background: rgba(8, 11, 14, 0.42);
+        }
+
+        .worker-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .worker-id {
+            word-break: break-word;
+            font-weight: 800;
+        }
+
+        .online {
+            background: rgba(97, 211, 148, 0.16);
+            color: #94e6b8;
+        }
+
+        .offline {
+            background: rgba(255, 102, 117, 0.18);
+            color: #ff9aa4;
+        }
+
         .tabs {
             display: flex;
             gap: 8px;
@@ -272,6 +328,19 @@
 
         <section class="stats-grid" id="statsGrid"></section>
 
+        <section class="worker-panel">
+            <div class="worker-panel-header">
+                <div>
+                    <div class="eyebrow">Worker Availability</div>
+                    <div class="worker-title">Scanner pipeline status</div>
+                </div>
+                <span id="overallWorkerStatus" class="pill offline">offline</span>
+            </div>
+            <div class="worker-grid" id="workerStatusGrid">
+                <div class="muted">Loading worker status...</div>
+            </div>
+        </section>
+
         <div class="tabs">
             <button class="tab active" data-panel="jobs" onclick="switchPanel('jobs')">Jobs</button>
             <button class="tab" data-panel="evidence" onclick="switchPanel('evidence')">Evidence</button>
@@ -377,6 +446,43 @@
             `).join('');
         }
 
+        async function loadWorkerStatus() {
+            const response = await fetch('/api/workers/status');
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Failed to load worker status');
+
+            const overall = document.getElementById('overallWorkerStatus');
+            const online = data.status === 'online';
+            overall.className = `pill ${online ? 'online' : 'offline'}`;
+            overall.textContent = online ? 'online' : 'offline';
+
+            const workers = data.workers || [];
+            const grid = document.getElementById('workerStatusGrid');
+            if (!workers.length) {
+                grid.innerHTML = '<div class="muted">No worker heartbeats yet. Start the worker containers to bring scanners online.</div>';
+                return;
+            }
+
+            grid.innerHTML = workers.map(worker => {
+                const isOnline = Boolean(worker.online);
+                const age = Number(worker.age_seconds || 0);
+                const ageText = age <= 1 ? 'just now' : `${age}s ago`;
+                return `
+                    <div class="worker-card">
+                        <div class="worker-card-top">
+                            <div>
+                                <div class="worker-id">${escapeHtml(worker.worker_id)}</div>
+                                <div class="muted">${escapeHtml(worker.worker_type)}</div>
+                            </div>
+                            <span class="pill ${isOnline ? 'online' : 'offline'}">${isOnline ? 'online' : 'offline'}</span>
+                        </div>
+                        <div class="muted">Last heartbeat: ${escapeHtml(ageText)}</div>
+                        <div class="muted">Status: ${escapeHtml(worker.status || '')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function loadJobs() {
             const status = document.getElementById('jobStatusFilter').value;
             const params = new URLSearchParams({ limit: '100' });
@@ -454,7 +560,7 @@
 
         async function refreshAll() {
             try {
-                await Promise.all([loadJobs(), loadEvidence()]);
+                await Promise.all([loadWorkerStatus(), loadJobs(), loadEvidence()]);
             } catch (error) {
                 alert(error.message);
             }

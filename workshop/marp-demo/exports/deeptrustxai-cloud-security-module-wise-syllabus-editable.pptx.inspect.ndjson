@@ -1,0 +1,460 @@
+{"kind":"deck","id":"pr/dlzqvf","name":"Deck"}
+{"kind":"layout","layoutId":"8463ba40-a2cb-440a-ba38-0b283baea592","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"0463f935-7ff4-4786-b279-4dcb821f6754","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/mhomc6","slide":1,"title":"DeepTrustxAI","textShapes":4}
+{"kind":"shape","id":"sh/i5sneloj","slide":1,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/0bi9s36h","slide":1,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[166,246,260,32]}
+{"kind":"textbox","id":"sh/7y1kre1w","slide":1,"text":"Cloud Security Workshop","textPreview":"Cloud Security Workshop","textChars":23,"textLines":1,"bbox":[72,340,920,70]}
+{"kind":"textbox","id":"sh/ed8v6psf","slide":1,"text":"Module-wise syllabus and delivery plan","textPreview":"Module-wise syllabus and delivery plan","textChars":38,"textLines":1,"bbox":[72,434,760,38]}
+{"kind":"textbox","id":"sh/p4r65wju","slide":1,"text":"2 days · cloud foundations · vulnerabilities · CloudGuard evidence and GRC","textPreview":"2 days · cloud foundations · vulnerabilities · CloudGuard evidence and GRC","textChars":74,"textLines":1,"bbox":[72,490,900,36]}
+{"kind":"image","id":"im/4zidonyd","slide":1,"name":"","alt":"DeepTrustxAI logo","bbox":[72,224,74,74]}
+{"kind":"notes","id":"nt/mhomc6","slide":1,"text":""}
+{"kind":"slide","id":"sl/3grsxa","slide":2,"title":"DeepTrustxAI","textShapes":9}
+{"kind":"shape","id":"sh/8jqh0fep","slide":2,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/qd4vmtwr","slide":2,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/xczed8v6","slide":2,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/8v6psfil","slide":2,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/fa9w3m94","slide":2,"text":"Two-Day Structure","textPreview":"Two-Day Structure","textChars":17,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/qpg3ex0n","slide":2,"bbox":[72,310,532,172]}
+{"kind":"shape","id":"sh/1gvy90je","slide":2,"bbox":[72,310,532,7]}
+{"kind":"textbox","id":"sh/8z25kb6x","slide":2,"text":"Day 1: Cloud foundations","textPreview":"Day 1: Cloud foundations","textChars":24,"textLines":1,"bbox":[88,334,500,32]}
+{"kind":"textbox","id":"sh/a9w3m94f","slide":2,"text":"Cloud models, shared responsibility, identity, network, compute, storage, data, IaC, logging and secure architecture.","textPreview":"Cloud models, shared responsibility, identity, network, compute, storage, data, IaC, logging and secure architecture.","textChars":117,"textLines":1,"bbox":[88,376,500,94]}
+{"kind":"shape","id":"sh/zupwb2hw","slide":2,"bbox":[676,310,532,172]}
+{"kind":"shape","id":"sh/sfil0rqd","slide":2,"bbox":[676,310,532,7]}
+{"kind":"textbox","id":"sh/h0fepkzu","slide":2,"text":"Day 2: Vulnerabilities and solution","textPreview":"Day 2: Vulnerabilities and solution","textChars":35,"textLines":1,"bbox":[692,334,500,32]}
+{"kind":"textbox","id":"sh/al87ed8b","slide":2,"text":"Vulnerability lifecycle, attack paths, provider equivalence, CloudGuard scanners, evidence connectors, GRC and capstone.","textPreview":"Vulnerability lifecycle, attack paths, provider equivalence, CloudGuard scanners, evidence connectors, GRC and capstone.","textChars":120,"textLines":1,"bbox":[692,376,500,94]}
+{"kind":"textbox","id":"sh/z61032ls","slide":2,"text":"Foundation → Vulnerability → Attack path → Scan → Evidence → GRC → Remediation proof","textPreview":"Foundation → Vulnerability → Attack path → Scan → Evidence → GRC → Remediation proof","textChars":84,"textLines":1,"bbox":[108,540,1064,36]}
+{"kind":"image","id":"im/al87ed8b","slide":2,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/3grsxa","slide":2,"text":""}
+{"kind":"slide","id":"sl/p4mwku","slide":3,"title":"DeepTrustxAI","textShapes":22}
+{"kind":"shape","id":"sh/29gr2p8n","slide":3,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/kf6dcbul","slide":3,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":3,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/2lszqtcj","slide":3,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/d8bat47y","slide":3,"text":"Module Map","textPreview":"Module Map","textChars":10,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/knih4byh","slide":3,"bbox":[72,310,330,42]}
+{"kind":"textbox","id":"sh/val87ed8","slide":3,"text":"Module","textPreview":"Module","textChars":6,"textLines":1,"bbox":[82,318,310,30]}
+{"kind":"shape","id":"sh/6psfil0r","slide":3,"bbox":[402,310,110,42]}
+{"kind":"textbox","id":"sh/4r65wjud","slide":3,"text":"Duration","textPreview":"Duration","textChars":8,"textLines":1,"bbox":[412,318,90,30]}
+{"kind":"shape","id":"sh/xc3ylc7u","slide":3,"bbox":[512,310,470,42]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":3,"text":"Main outcome","textPreview":"Main outcome","textChars":12,"textLines":1,"bbox":[522,318,450,30]}
+{"kind":"shape","id":"sh/f6dcbulw","slide":3,"bbox":[72,352,330,42]}
+{"kind":"textbox","id":"sh/4zidonyd","slide":3,"text":"M0 Orientation and lab setup","textPreview":"M0 Orientation and lab setup","textChars":28,"textLines":1,"bbox":[82,360,310,30]}
+{"kind":"shape","id":"sh/xkf6dcbu","slide":3,"bbox":[402,352,110,42]}
+{"kind":"textbox","id":"sh/mtwra5gb","slide":3,"text":"30 min","textPreview":"30 min","textChars":6,"textLines":1,"bbox":[412,360,90,30]}
+{"kind":"shape","id":"sh/fepkzupw","slide":3,"bbox":[512,352,470,42]}
+{"kind":"textbox","id":"sh/83itgfml","slide":3,"text":"Confirm scope, tenant and evidence flow","textPreview":"Confirm scope, tenant and evidence flow","textChars":39,"textLines":1,"bbox":[522,360,450,30]}
+{"kind":"shape","id":"sh/xobm58z2","slide":3,"bbox":[72,394,330,42]}
+{"kind":"textbox","id":"sh/lszqtcj6","slide":3,"text":"M1 Cloud foundations","textPreview":"M1 Cloud foundations","textChars":20,"textLines":1,"bbox":[82,402,310,30]}
+{"kind":"shape","id":"sh/s72x4nap","slide":3,"bbox":[402,394,110,42]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":3,"text":"75 min","textPreview":"75 min","textChars":6,"textLines":1,"bbox":[412,402,90,30]}
+{"kind":"shape","id":"sh/a5gbq1or","slide":3,"bbox":[512,394,470,42]}
+{"kind":"textbox","id":"sh/h4byhgn2","slide":3,"text":"Explain models, planes and responsibility","textPreview":"Explain models, planes and responsibility","textChars":41,"textLines":1,"bbox":[522,402,450,30]}
+{"kind":"shape","id":"sh/sji5snel","slide":3,"bbox":[72,436,330,42]}
+{"kind":"textbox","id":"sh/3ylc7u54","slide":3,"text":"M2 Identity and access","textPreview":"M2 Identity and access","textChars":22,"textLines":1,"bbox":[82,444,310,30]}
+{"kind":"shape","id":"sh/adsji5sn","slide":3,"bbox":[402,436,110,42]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":3,"text":"75 min","textPreview":"75 min","textChars":6,"textLines":1,"bbox":[412,444,90,30]}
+{"kind":"shape","id":"sh/svu9knih","slide":3,"bbox":[512,436,470,42]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":3,"text":"Review identities, trust and least privilege","textPreview":"Review identities, trust and least privilege","textChars":44,"textLines":1,"bbox":[522,444,450,30]}
+{"kind":"shape","id":"sh/val87ed8","slide":3,"bbox":[72,478,330,42]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":3,"text":"M3 Network, compute, storage and data","textPreview":"M3 Network, compute, storage and data","textChars":37,"textLines":1,"bbox":[82,486,310,30]}
+{"kind":"shape","id":"sh/dcbulwva","slide":3,"bbox":[402,478,110,42]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":3,"text":"90 min","textPreview":"90 min","textChars":6,"textLines":1,"bbox":[412,486,90,30]}
+{"kind":"shape","id":"sh/vixczed8","slide":3,"bbox":[512,478,470,42]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":3,"text":"Draw trust boundaries and exposure paths","textPreview":"Draw trust boundaries and exposure paths","textChars":40,"textLines":1,"bbox":[522,486,450,30]}
+{"kind":"shape","id":"sh/donyd0z6","slide":3,"bbox":[72,520,330,42]}
+{"kind":"textbox","id":"sh/29gr2p8n","slide":3,"text":"M4 Secure architecture, IaC and logging","textPreview":"M4 Secure architecture, IaC and logging","textChars":39,"textLines":1,"bbox":[82,528,310,30]}
+{"kind":"shape","id":"sh/vu9knih4","slide":3,"bbox":[402,520,110,42]}
+{"kind":"textbox","id":"sh/vmtwra5g","slide":3,"text":"90 min","textPreview":"90 min","textChars":6,"textLines":1,"bbox":[412,528,90,30]}
+{"kind":"shape","id":"sh/61032lsz","slide":3,"bbox":[512,520,470,42]}
+{"kind":"textbox","id":"sh/dsji5sne","slide":3,"text":"Connect landing zones, guardrails and evidence","textPreview":"Connect landing zones, guardrails and evidence","textChars":46,"textLines":1,"bbox":[522,528,450,30]}
+{"kind":"image","id":"im/cbulwval","slide":3,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/p4mwku","slide":3,"text":""}
+{"kind":"slide","id":"sl/m1cref","slide":4,"title":"DeepTrustxAI","textShapes":22}
+{"kind":"shape","id":"sh/yhgn29gr","slide":4,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":4,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":4,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/y90je9cv","slide":4,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/5wjudg7a","slide":4,"text":"Module Map Continued","textPreview":"Module Map Continued","textChars":20,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/gbq1oryt","slide":4,"bbox":[72,310,330,42]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":4,"text":"Module","textPreview":"Module","textChars":6,"textLines":1,"bbox":[82,318,310,30]}
+{"kind":"shape","id":"sh/u54zidon","slide":4,"bbox":[402,310,110,42]}
+{"kind":"textbox","id":"sh/cbulwval","slide":4,"text":"Duration","textPreview":"Duration","textChars":8,"textLines":1,"bbox":[412,318,90,30]}
+{"kind":"shape","id":"sh/5sneloj2","slide":4,"bbox":[512,310,470,42]}
+{"kind":"textbox","id":"sh/u54zidon","slide":4,"text":"Main outcome","textPreview":"Main outcome","textChars":12,"textLines":1,"bbox":[522,318,450,30]}
+{"kind":"shape","id":"sh/nqxs72x4","slide":4,"bbox":[72,352,330,42]}
+{"kind":"textbox","id":"sh/czed8v6p","slide":4,"text":"M5 Vulnerability lifecycle","textPreview":"M5 Vulnerability lifecycle","textChars":26,"textLines":1,"bbox":[82,360,310,30]}
+{"kind":"shape","id":"sh/5kb6xkf6","slide":4,"bbox":[402,352,110,42]}
+{"kind":"textbox","id":"sh/ytsvu9kn","slide":4,"text":"60 min","textPreview":"60 min","textChars":6,"textLines":1,"bbox":[412,360,90,30]}
+{"kind":"shape","id":"sh/neloj2t8","slide":4,"bbox":[512,352,470,42]}
+{"kind":"textbox","id":"sh/gn29gr2p","slide":4,"text":"Explain how weaknesses enter and persist","textPreview":"Explain how weaknesses enter and persist","textChars":40,"textLines":1,"bbox":[522,360,450,30]}
+{"kind":"shape","id":"sh/58z25kb6","slide":4,"bbox":[72,394,330,42]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":4,"text":"M6 Attack paths and provider equivalence","textPreview":"M6 Attack paths and provider equivalence","textChars":40,"textLines":1,"bbox":[82,402,310,30]}
+{"kind":"shape","id":"sh/0rqd4vmt","slide":4,"bbox":[402,394,110,42]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":4,"text":"75 min","textPreview":"75 min","textChars":6,"textLines":1,"bbox":[412,402,90,30]}
+{"kind":"shape","id":"sh/il0rqd4v","slide":4,"bbox":[512,394,470,42]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":4,"text":"Connect exposure, identity, privilege and impact","textPreview":"Connect exposure, identity, privilege and impact","textChars":48,"textLines":1,"bbox":[522,402,450,30]}
+{"kind":"shape","id":"sh/0je9cvix","slide":4,"bbox":[72,436,330,42]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":4,"text":"M7 CloudGuard scanners and jobs","textPreview":"M7 CloudGuard scanners and jobs","textChars":31,"textLines":1,"bbox":[82,444,310,30]}
+{"kind":"shape","id":"sh/idonyd0z","slide":4,"bbox":[402,436,110,42]}
+{"kind":"textbox","id":"sh/p0bi9s36","slide":4,"text":"90 min","textPreview":"90 min","textChars":6,"textLines":1,"bbox":[412,444,90,30]}
+{"kind":"shape","id":"sh/0fepkzup","slide":4,"bbox":[512,436,470,42]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":4,"text":"Run decoupled scanner workflows","textPreview":"Run decoupled scanner workflows","textChars":31,"textLines":1,"bbox":[522,444,450,30]}
+{"kind":"shape","id":"sh/3q5o7qpg","slide":4,"bbox":[72,478,330,42]}
+{"kind":"textbox","id":"sh/wb2hwfyx","slide":4,"text":"M8 Evidence, GRC and reason-and-act","textPreview":"M8 Evidence, GRC and reason-and-act","textChars":35,"textLines":1,"bbox":[82,486,310,30]}
+{"kind":"shape","id":"sh/lwval87e","slide":4,"bbox":[402,478,110,42]}
+{"kind":"textbox","id":"sh/ex0nuxc3","slide":4,"text":"75 min","textPreview":"75 min","textChars":6,"textLines":1,"bbox":[412,486,90,30]}
+{"kind":"shape","id":"sh/3itgfmlk","slide":4,"bbox":[512,478,470,42]}
+{"kind":"textbox","id":"sh/w3m94fu1","slide":4,"text":"Map evidence to controls, proof and approvals","textPreview":"Map evidence to controls, proof and approvals","textChars":45,"textLines":1,"bbox":[522,486,450,30]}
+{"kind":"shape","id":"sh/loj2t83i","slide":4,"bbox":[72,520,330,42]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":4,"text":"M9 Capstone and briefing","textPreview":"M9 Capstone and briefing","textChars":24,"textLines":1,"bbox":[82,528,310,30]}
+{"kind":"shape","id":"sh/3ex0nuxc","slide":4,"bbox":[402,520,110,42]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":4,"text":"90 min","textPreview":"90 min","textChars":6,"textLines":1,"bbox":[412,528,90,30]}
+{"kind":"shape","id":"sh/upwb2hwf","slide":4,"bbox":[512,520,470,42]}
+{"kind":"textbox","id":"sh/5gbq1ory","slide":4,"text":"Investigate, prioritize and present risk story","textPreview":"Investigate, prioritize and present risk story","textChars":46,"textLines":1,"bbox":[522,528,450,30]}
+{"kind":"image","id":"im/4nap4r65","slide":4,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/m1cref","slide":4,"text":""}
+{"kind":"slide","id":"sl/fyo96a","slide":5,"title":"DeepTrustxAI","textShapes":12}
+{"kind":"shape","id":"sh/ed8v6psf","slide":5,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/wjudg7ad","slide":5,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/7qpg3ex0","slide":5,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/i5sneloj","slide":5,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/pwb2hwfy","slide":5,"text":"Day 1 Modules","textPreview":"Day 1 Modules","textChars":13,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/0bi9s36h","slide":5,"bbox":[72,302,532,112]}
+{"kind":"shape","id":"sh/7ed8bat4","slide":5,"bbox":[72,302,532,7]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":5,"text":"M0 · Orientation","textPreview":"M0 · Orientation","textChars":16,"textLines":1,"bbox":[88,326,500,32]}
+{"kind":"textbox","id":"sh/cvixczed","slide":5,"text":"Rules of engagement, assigned tenants, disposable labs, credential references and evidence quality.","textPreview":"Rules of engagement, assigned tenants, disposable labs, credential references and evidence quality.","textChars":99,"textLines":1,"bbox":[88,368,500,34]}
+{"kind":"shape","id":"sh/5gbq1ory","slide":5,"bbox":[676,302,532,112]}
+{"kind":"shape","id":"sh/upwb2hwf","slide":5,"bbox":[676,302,532,7]}
+{"kind":"textbox","id":"sh/nap4r65w","slide":5,"text":"M1 · Cloud Foundations","textPreview":"M1 · Cloud Foundations","textChars":22,"textLines":1,"bbox":[692,326,500,32]}
+{"kind":"textbox","id":"sh/cj6tovah","slide":5,"text":"IaaS, PaaS, SaaS, serverless, deployment models, shared responsibility and cloud planes.","textPreview":"IaaS, PaaS, SaaS, serverless, deployment models, shared responsibility and cloud planes.","textChars":88,"textLines":1,"bbox":[692,368,500,34]}
+{"kind":"shape","id":"sh/54zidony","slide":5,"bbox":[72,446,532,112]}
+{"kind":"shape","id":"sh/udg7adsj","slide":5,"bbox":[72,446,532,7]}
+{"kind":"textbox","id":"sh/nyd0z610","slide":5,"text":"M2 · Identity","textPreview":"M2 · Identity","textChars":13,"textLines":1,"bbox":[88,470,500,32]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":5,"text":"Users, roles, service accounts, trust relationships, temporary sessions and least privilege.","textPreview":"Users, roles, service accounts, trust relationships, temporary sessions and least privilege.","textChars":92,"textLines":1,"bbox":[88,512,500,34]}
+{"kind":"shape","id":"sh/1032lszq","slide":5,"bbox":[676,446,532,112]}
+{"kind":"shape","id":"sh/5sneloj2","slide":5,"bbox":[676,446,532,7]}
+{"kind":"textbox","id":"sh/cbulwval","slide":5,"text":"M3 · Core Building Blocks","textPreview":"M3 · Core Building Blocks","textChars":25,"textLines":1,"bbox":[692,470,500,32]}
+{"kind":"textbox","id":"sh/nqxs72x4","slide":5,"text":"Network, compute, storage, data lifecycle, encryption, backup and recovery proof.","textPreview":"Network, compute, storage, data lifecycle, encryption, backup and recovery proof.","textChars":81,"textLines":1,"bbox":[692,512,500,34]}
+{"kind":"image","id":"im/szqtcj6t","slide":5,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/fyo96a","slide":5,"text":""}
+{"kind":"slide","id":"sl/2fp1ln","slide":6,"title":"DeepTrustxAI","textShapes":22}
+{"kind":"shape","id":"sh/psfil0rq","slide":6,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/7mp0bi9s","slide":6,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/wval87ed","slide":6,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/pg3ex0nu","slide":6,"text":"6","textPreview":"6","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/epkzupwb","slide":6,"text":"Day 1 Practical Outputs","textPreview":"Day 1 Practical Outputs","textChars":23,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/7adsji5s","slide":6,"bbox":[72,304,240,42]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":6,"text":"Exercise","textPreview":"Exercise","textChars":8,"textLines":1,"bbox":[82,312,220,30]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":6,"bbox":[312,304,360,42]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":6,"text":"Participant output","textPreview":"Participant output","textChars":18,"textLines":1,"bbox":[322,312,340,30]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":6,"bbox":[672,304,280,42]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":6,"text":"Evidence","textPreview":"Evidence","textChars":8,"textLines":1,"bbox":[682,312,260,30]}
+{"kind":"shape","id":"sh/25kb6xkf","slide":6,"bbox":[72,346,240,42]}
+{"kind":"textbox","id":"sh/9knih4by","slide":6,"text":"Tenant and dry-run setup","textPreview":"Tenant and dry-run setup","textChars":24,"textLines":1,"bbox":[82,354,220,30]}
+{"kind":"shape","id":"sh/kzupwb2h","slide":6,"bbox":[312,346,360,42]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":6,"text":"Confirm assigned tenant and lab scope","textPreview":"Confirm assigned tenant and lab scope","textChars":37,"textLines":1,"bbox":[322,354,340,30]}
+{"kind":"shape","id":"sh/2t83itgf","slide":6,"bbox":[672,346,280,42]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":6,"text":"Job ID and evidence ID","textPreview":"Job ID and evidence ID","textChars":22,"textLines":1,"bbox":[682,354,260,30]}
+{"kind":"shape","id":"sh/gvy90je9","slide":6,"bbox":[72,388,240,42]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":6,"text":"Shared responsibility review","textPreview":"Shared responsibility review","textChars":28,"textLines":1,"bbox":[82,396,220,30]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":6,"bbox":[312,388,360,42]}
+{"kind":"textbox","id":"sh/eloj2t83","slide":6,"text":"Classify provider/customer/shared controls","textPreview":"Classify provider/customer/shared controls","textChars":42,"textLines":1,"bbox":[322,396,340,30]}
+{"kind":"shape","id":"sh/36hcrmhk","slide":6,"bbox":[672,388,280,42]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":6,"text":"Ownership table","textPreview":"Ownership table","textChars":15,"textLines":1,"bbox":[682,396,260,30]}
+{"kind":"shape","id":"sh/l0rqd4vm","slide":6,"bbox":[72,430,240,42]}
+{"kind":"textbox","id":"sh/ed8bat47","slide":6,"text":"IAM review","textPreview":"IAM review","textChars":10,"textLines":1,"bbox":[82,438,220,30]}
+{"kind":"shape","id":"sh/7u54zido","slide":6,"bbox":[312,430,360,42]}
+{"kind":"textbox","id":"sh/w7mp0bi9","slide":6,"text":"Identify over-permission and stale access","textPreview":"Identify over-permission and stale access","textChars":41,"textLines":1,"bbox":[322,438,340,30]}
+{"kind":"shape","id":"sh/psfil0rq","slide":6,"bbox":[672,430,280,42]}
+{"kind":"textbox","id":"sh/fil0rqd4","slide":6,"text":"Least-privilege notes","textPreview":"Least-privilege notes","textChars":21,"textLines":1,"bbox":[682,438,260,30]}
+{"kind":"shape","id":"sh/qxs72x4n","slide":6,"bbox":[72,472,240,42]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":6,"text":"Trust-boundary drawing","textPreview":"Trust-boundary drawing","textChars":22,"textLines":1,"bbox":[82,480,220,30]}
+{"kind":"shape","id":"sh/83itgfml","slide":6,"bbox":[312,472,360,42]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":6,"text":"Mark internet, admin, data and logging paths","textPreview":"Mark internet, admin, data and logging paths","textChars":44,"textLines":1,"bbox":[322,480,340,30]}
+{"kind":"shape","id":"sh/m94fu18j","slide":6,"bbox":[672,472,280,42]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":6,"text":"Architecture notes","textPreview":"Architecture notes","textChars":18,"textLines":1,"bbox":[682,480,260,30]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":6,"bbox":[72,514,240,42]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":6,"text":"IaC review","textPreview":"IaC review","textChars":10,"textLines":1,"bbox":[82,522,220,30]}
+{"kind":"shape","id":"sh/mlkjm1cf","slide":6,"bbox":[312,514,360,42]}
+{"kind":"textbox","id":"sh/ixczed8v","slide":6,"text":"Upload vulnerable IaC and map controls","textPreview":"Upload vulnerable IaC and map controls","textChars":38,"textLines":1,"bbox":[322,522,340,30]}
+{"kind":"shape","id":"sh/bi9s36hc","slide":6,"bbox":[672,514,280,42]}
+{"kind":"textbox","id":"sh/032lszqt","slide":6,"text":"IaC finding and control mapping","textPreview":"IaC finding and control mapping","textChars":31,"textLines":1,"bbox":[682,522,260,30]}
+{"kind":"image","id":"im/32lszqtc","slide":6,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/2fp1ln","slide":6,"text":""}
+{"kind":"slide","id":"sl/7jtfw9","slide":7,"title":"DeepTrustxAI","textShapes":12}
+{"kind":"shape","id":"sh/7ed8bat4","slide":7,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/pkzupwb2","slide":7,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/ih4byhgn","slide":7,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/72x4nap4","slide":7,"text":"7","textPreview":"7","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":7,"text":"Day 2 Modules","textPreview":"Day 2 Modules","textChars":13,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/p8nqxs72","slide":7,"bbox":[72,302,532,112]}
+{"kind":"shape","id":"sh/ed8v6psf","slide":7,"bbox":[72,302,532,7]}
+{"kind":"textbox","id":"sh/7y1kre1w","slide":7,"text":"M5 · Vulnerability Lifecycle","textPreview":"M5 · Vulnerability Lifecycle","textChars":28,"textLines":1,"bbox":[88,326,500,32]}
+{"kind":"textbox","id":"sh/rmhk3q5o","slide":7,"text":"Design gaps, unsafe IaC, broad roles, public rules, drift, stale assets and missing logs.","textPreview":"Design gaps, unsafe IaC, broad roles, public rules, drift, stale assets and missing logs.","textChars":89,"textLines":1,"bbox":[88,368,500,34]}
+{"kind":"shape","id":"sh/y1kre1w7","slide":7,"bbox":[676,302,532,112]}
+{"kind":"shape","id":"sh/9s36hcrm","slide":7,"bbox":[676,302,532,7]}
+{"kind":"textbox","id":"sh/g7adsji5","slide":7,"text":"M6 · Attack Paths","textPreview":"M6 · Attack Paths","textChars":17,"textLines":1,"bbox":[692,326,500,32]}
+{"kind":"textbox","id":"sh/rytsvu9k","slide":7,"text":"Exposure, identity, privilege, target and impact across AWS, GCP, Azure and DigitalOcean.","textPreview":"Exposure, identity, privilege, target and impact across AWS, GCP, Azure and DigitalOcean.","textChars":89,"textLines":1,"bbox":[692,368,500,34]}
+{"kind":"shape","id":"sh/yd0z6103","slide":7,"bbox":[72,446,532,112]}
+{"kind":"shape","id":"sh/90je9cvi","slide":7,"bbox":[72,446,532,7]}
+{"kind":"textbox","id":"sh/gfmlkjm1","slide":7,"text":"M7 · CloudGuard Scanners","textPreview":"M7 · CloudGuard Scanners","textChars":24,"textLines":1,"bbox":[88,470,500,32]}
+{"kind":"textbox","id":"sh/r65wjudg","slide":7,"text":"Portal/API, PostgreSQL scan jobs, scanner workers, retries and multi-stream coverage.","textPreview":"Portal/API, PostgreSQL scan jobs, scanner workers, retries and multi-stream coverage.","textChars":85,"textLines":1,"bbox":[88,512,500,34]}
+{"kind":"shape","id":"sh/ylc7u54z","slide":7,"bbox":[676,446,532,112]}
+{"kind":"shape","id":"sh/6tovahoz","slide":7,"bbox":[676,446,532,7]}
+{"kind":"textbox","id":"sh/vahoza1g","slide":7,"text":"M8 · Evidence and GRC","textPreview":"M8 · Evidence and GRC","textChars":21,"textLines":1,"bbox":[692,470,500,32]}
+{"kind":"textbox","id":"sh/ovahoza1","slide":7,"text":"Connectors, tenant IDs, checksums, control mapping, validation proof and remediation approval.","textPreview":"Connectors, tenant IDs, checksums, control mapping, validation proof and remediation approval.","textChars":94,"textLines":1,"bbox":[692,512,500,34]}
+{"kind":"image","id":"im/lc7u54zi","slide":7,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/7jtfw9","slide":7,"text":""}
+{"kind":"slide","id":"sl/rqa4an","slide":8,"title":"DeepTrustxAI","textShapes":22}
+{"kind":"shape","id":"sh/72x4nap4","slide":8,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/p8nqxs72","slide":8,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":8,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/7ed8bat4","slide":8,"text":"8","textPreview":"8","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/0z61032l","slide":8,"text":"Day 2 Practical Outputs","textPreview":"Day 2 Practical Outputs","textChars":23,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/pkzupwb2","slide":8,"bbox":[72,304,240,42]}
+{"kind":"textbox","id":"sh/i5sneloj","slide":8,"text":"Exercise","textPreview":"Exercise","textChars":8,"textLines":1,"bbox":[82,312,220,30]}
+{"kind":"shape","id":"sh/7qpg3ex0","slide":8,"bbox":[312,304,360,42]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":8,"text":"Participant output","textPreview":"Participant output","textChars":18,"textLines":1,"bbox":[322,312,340,30]}
+{"kind":"shape","id":"sh/m94fu18j","slide":8,"bbox":[672,304,280,42]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":8,"text":"Evidence","textPreview":"Evidence","textChars":8,"textLines":1,"bbox":[682,312,260,30]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":8,"bbox":[72,346,240,42]}
+{"kind":"textbox","id":"sh/fil0rqd4","slide":8,"text":"Vulnerability lifecycle","textPreview":"Vulnerability lifecycle","textChars":23,"textLines":1,"bbox":[82,354,220,30]}
+{"kind":"shape","id":"sh/qxs72x4n","slide":8,"bbox":[312,346,360,42]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":8,"text":"Trace one weakness from design to closure","textPreview":"Trace one weakness from design to closure","textChars":41,"textLines":1,"bbox":[322,354,340,30]}
+{"kind":"shape","id":"sh/83itgfml","slide":8,"bbox":[672,346,280,42]}
+{"kind":"textbox","id":"sh/fepkzupw","slide":8,"text":"Lifecycle map","textPreview":"Lifecycle map","textChars":13,"textLines":1,"bbox":[682,354,260,30]}
+{"kind":"shape","id":"sh/mtwra5gb","slide":8,"bbox":[72,388,240,42]}
+{"kind":"textbox","id":"sh/u18jqh0f","slide":8,"text":"Attack-path build","textPreview":"Attack-path build","textChars":17,"textLines":1,"bbox":[82,396,220,30]}
+{"kind":"shape","id":"sh/jm1cfa9w","slide":8,"bbox":[312,388,360,42]}
+{"kind":"textbox","id":"sh/c7u54zid","slide":8,"text":"Identify highest-risk connected path","textPreview":"Identify highest-risk connected path","textChars":36,"textLines":1,"bbox":[322,396,340,30]}
+{"kind":"shape","id":"sh/1orytsvu","slide":8,"bbox":[672,388,280,42]}
+{"kind":"textbox","id":"sh/u9knih4b","slide":8,"text":"Prioritized risk story","textPreview":"Prioritized risk story","textChars":22,"textLines":1,"bbox":[682,396,260,30]}
+{"kind":"shape","id":"sh/judg7ads","slide":8,"bbox":[72,430,240,42]}
+{"kind":"textbox","id":"sh/cfa9w3m9","slide":8,"text":"Scanner run","textPreview":"Scanner run","textChars":11,"textLines":1,"bbox":[82,438,220,30]}
+{"kind":"shape","id":"sh/1032lszq","slide":8,"bbox":[312,430,360,42]}
+{"kind":"textbox","id":"sh/udg7adsj","slide":8,"text":"Queue and observe authorized scan","textPreview":"Queue and observe authorized scan","textChars":33,"textLines":1,"bbox":[322,438,340,30]}
+{"kind":"shape","id":"sh/nyd0z610","slide":8,"bbox":[672,430,280,42]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":8,"text":"Job status and finding output","textPreview":"Job status and finding output","textChars":29,"textLines":1,"bbox":[682,438,260,30]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":8,"bbox":[72,472,240,42]}
+{"kind":"textbox","id":"sh/r2p8nqxs","slide":8,"text":"Connector submission","textPreview":"Connector submission","textChars":20,"textLines":1,"bbox":[82,480,220,30]}
+{"kind":"shape","id":"sh/2hwfyxob","slide":8,"bbox":[312,472,360,42]}
+{"kind":"textbox","id":"sh/9gr2p8nq","slide":8,"text":"Normalize external scanner evidence","textPreview":"Normalize external scanner evidence","textChars":35,"textLines":1,"bbox":[322,480,340,30]}
+{"kind":"shape","id":"sh/gvy90je9","slide":8,"bbox":[672,472,280,42]}
+{"kind":"textbox","id":"sh/ra5gbq1o","slide":8,"text":"Accepted evidence artifact","textPreview":"Accepted evidence artifact","textChars":26,"textLines":1,"bbox":[682,480,260,30]}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":8,"bbox":[72,514,240,42]}
+{"kind":"textbox","id":"sh/9knih4by","slide":8,"text":"STRIDE/reason-and-act","textPreview":"STRIDE/reason-and-act","textChars":21,"textLines":1,"bbox":[82,522,220,30]}
+{"kind":"shape","id":"sh/kzupwb2h","slide":8,"bbox":[312,514,360,42]}
+{"kind":"textbox","id":"sh/8v6psfil","slide":8,"text":"Create threat model and remediation workflow","textPreview":"Create threat model and remediation workflow","textChars":44,"textLines":1,"bbox":[322,522,340,30]}
+{"kind":"shape","id":"sh/xczed8v6","slide":8,"bbox":[672,514,280,42]}
+{"kind":"textbox","id":"sh/qpg3ex0n","slide":8,"text":"Proof, owner and approval record","textPreview":"Proof, owner and approval record","textChars":32,"textLines":1,"bbox":[682,522,260,30]}
+{"kind":"image","id":"im/lc7u54zi","slide":8,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/rqa4an","slide":8,"text":""}
+{"kind":"slide","id":"sl/7v1d88","slide":9,"title":"DeepTrustxAI","textShapes":18}
+{"kind":"shape","id":"sh/2p8nqxs7","slide":9,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/gvy90je9","slide":9,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/r2p8nqxs","slide":9,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/2hwfyxob","slide":9,"text":"9","textPreview":"9","textChars":1,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/94fu18jq","slide":9,"text":"CloudGuard Role in the Workshop","textPreview":"CloudGuard Role in the Workshop","textChars":31,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/kjm1cfa9","slide":9,"bbox":[72,330,208,170]}
+{"kind":"shape","id":"sh/rqd4vmtw","slide":9,"bbox":[72,330,208,7]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":9,"text":"Portal","textPreview":"Portal","textChars":6,"textLines":1,"bbox":[88,354,176,32]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":9,"text":"Scope, tenant, credential reference and scan config","textPreview":"Scope, tenant, credential reference and scan config","textChars":51,"textLines":1,"bbox":[88,396,176,92]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":9,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[280,392,26,28]}
+{"kind":"shape","id":"sh/m94fu18j","slide":9,"bbox":[304,330,208,170]}
+{"kind":"shape","id":"sh/fu18jqh0","slide":9,"bbox":[304,330,208,7]}
+{"kind":"textbox","id":"sh/83itgfml","slide":9,"text":"Queue","textPreview":"Queue","textChars":5,"textLines":1,"bbox":[320,354,176,32]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":9,"text":"PostgreSQL scan jobs, status, retries and cancellation","textPreview":"PostgreSQL scan jobs, status, retries and cancellation","textChars":54,"textLines":1,"bbox":[320,396,176,92]}
+{"kind":"textbox","id":"sh/qxs72x4n","slide":9,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[512,392,26,28]}
+{"kind":"shape","id":"sh/fil0rqd4","slide":9,"bbox":[536,330,208,170]}
+{"kind":"shape","id":"sh/4zidonyd","slide":9,"bbox":[536,330,208,7]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":9,"text":"Workers","textPreview":"Workers","textChars":7,"textLines":1,"bbox":[552,354,176,32]}
+{"kind":"textbox","id":"sh/xczed8v6","slide":9,"text":"AWS, GCP, Kubernetes, IaC, web, secret and dependency scans","textPreview":"AWS, GCP, Kubernetes, IaC, web, secret and dependency scans","textChars":59,"textLines":1,"bbox":[552,396,176,92]}
+{"kind":"textbox","id":"sh/8v6psfil","slide":9,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[744,392,26,28]}
+{"kind":"shape","id":"sh/fa9w3m94","slide":9,"bbox":[768,330,208,170]}
+{"kind":"shape","id":"sh/qpg3ex0n","slide":9,"bbox":[768,330,208,7]}
+{"kind":"textbox","id":"sh/x4nap4r6","slide":9,"text":"Connectors","textPreview":"Connectors","textChars":10,"textLines":1,"bbox":[784,354,176,32]}
+{"kind":"textbox","id":"sh/8jqh0fep","slide":9,"text":"Normalize evidence with tenant and source context","textPreview":"Normalize evidence with tenant and source context","textChars":49,"textLines":1,"bbox":[784,396,176,92]}
+{"kind":"textbox","id":"sh/fyxobm58","slide":9,"text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[976,392,26,28]}
+{"kind":"shape","id":"sh/qd4vmtwr","slide":9,"bbox":[1000,330,208,170]}
+{"kind":"shape","id":"sh/xs72x4na","slide":9,"bbox":[1000,330,208,7]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":9,"text":"GRC","textPreview":"GRC","textChars":3,"textLines":1,"bbox":[1016,354,176,32]}
+{"kind":"textbox","id":"sh/2p8nqxs7","slide":9,"text":"Controls, owners, validation and remediation proof","textPreview":"Controls, owners, validation and remediation proof","textChars":50,"textLines":1,"bbox":[1016,396,176,92]}
+{"kind":"image","id":"im/oza1gvy9","slide":9,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/7v1d88","slide":9,"text":""}
+{"kind":"slide","id":"sl/qstptt","slide":10,"title":"DeepTrustxAI","textShapes":22}
+{"kind":"shape","id":"sh/il0rqd4v","slide":10,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":10,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":10,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":10,"text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":10,"text":"Reason-and-Act Workflow","textPreview":"Reason-and-Act Workflow","textChars":23,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/0je9cvix","slide":10,"bbox":[72,300,150,45]}
+{"kind":"textbox","id":"sh/bulwval8","slide":10,"text":"Step","textPreview":"Step","textChars":4,"textLines":1,"bbox":[82,308,130,33]}
+{"kind":"shape","id":"sh/i9s36hcr","slide":10,"bbox":[222,300,455,45]}
+{"kind":"textbox","id":"sh/0fepkzup","slide":10,"text":"What participants learn","textPreview":"What participants learn","textChars":23,"textLines":1,"bbox":[232,308,435,33]}
+{"kind":"shape","id":"sh/p0bi9s36","slide":10,"bbox":[677,300,330,45]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":10,"text":"CloudGuard output","textPreview":"CloudGuard output","textChars":17,"textLines":1,"bbox":[687,308,310,33]}
+{"kind":"shape","id":"sh/bulwval8","slide":10,"bbox":[72,345,150,45]}
+{"kind":"textbox","id":"sh/032lszqt","slide":10,"text":"Discover","textPreview":"Discover","textChars":8,"textLines":1,"bbox":[82,353,130,33]}
+{"kind":"shape","id":"sh/tovahoza","slide":10,"bbox":[222,345,455,45]}
+{"kind":"textbox","id":"sh/ixczed8v","slide":10,"text":"Findings come from scanner jobs and connectors","textPreview":"Findings come from scanner jobs and connectors","textChars":46,"textLines":1,"bbox":[232,353,435,33]}
+{"kind":"shape","id":"sh/bi9s36hc","slide":10,"bbox":[677,345,330,45]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":10,"text":"Evidence artifact","textPreview":"Evidence artifact","textChars":17,"textLines":1,"bbox":[687,353,310,33]}
+{"kind":"shape","id":"sh/tcj6tova","slide":10,"bbox":[72,390,150,45]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":10,"text":"Prioritize","textPreview":"Prioritize","textChars":10,"textLines":1,"bbox":[82,398,130,33]}
+{"kind":"shape","id":"sh/4fu18jqh","slide":10,"bbox":[222,390,455,45]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":10,"text":"Context changes severity into business risk","textPreview":"Context changes severity into business risk","textChars":43,"textLines":1,"bbox":[232,398,435,33]}
+{"kind":"shape","id":"sh/m94fu18j","slide":10,"bbox":[677,390,330,45]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":10,"text":"Risk score and priority","textPreview":"Risk score and priority","textChars":23,"textLines":1,"bbox":[687,398,310,33]}
+{"kind":"shape","id":"sh/83itgfml","slide":10,"bbox":[72,435,150,45]}
+{"kind":"textbox","id":"sh/fil0rqd4","slide":10,"text":"Validate","textPreview":"Validate","textChars":8,"textLines":1,"bbox":[82,443,130,33]}
+{"kind":"shape","id":"sh/qxs72x4n","slide":10,"bbox":[222,435,455,45]}
+{"kind":"textbox","id":"sh/xkf6dcbu","slide":10,"text":"Proof must be safe and reproducible","textPreview":"Proof must be safe and reproducible","textChars":35,"textLines":1,"bbox":[232,443,435,33]}
+{"kind":"shape","id":"sh/4zidonyd","slide":10,"bbox":[677,435,330,45]}
+{"kind":"textbox","id":"sh/itgfmlkj","slide":10,"text":"Validation job","textPreview":"Validation job","textChars":14,"textLines":1,"bbox":[687,443,310,33]}
+{"kind":"shape","id":"sh/7ed8bat4","slide":10,"bbox":[72,480,150,45]}
+{"kind":"textbox","id":"sh/0z61032l","slide":10,"text":"Approve","textPreview":"Approve","textChars":7,"textLines":1,"bbox":[82,488,130,33]}
+{"kind":"shape","id":"sh/pkzupwb2","slide":10,"bbox":[222,480,455,45]}
+{"kind":"textbox","id":"sh/ih4byhgn","slide":10,"text":"Remediation needs owner and rollback path","textPreview":"Remediation needs owner and rollback path","textChars":41,"textLines":1,"bbox":[232,488,435,33]}
+{"kind":"shape","id":"sh/72x4nap4","slide":10,"bbox":[677,480,330,45]}
+{"kind":"textbox","id":"sh/0nuxc3yl","slide":10,"text":"Action in learn/approve/enforce mode","textPreview":"Action in learn/approve/enforce mode","textChars":36,"textLines":1,"bbox":[687,488,310,33]}
+{"kind":"shape","id":"sh/p8nqxs72","slide":10,"bbox":[72,525,150,45]}
+{"kind":"textbox","id":"sh/ed8v6psf","slide":10,"text":"Govern","textPreview":"Govern","textChars":6,"textLines":1,"bbox":[82,533,130,33]}
+{"kind":"shape","id":"sh/7y1kre1w","slide":10,"bbox":[222,525,455,45]}
+{"kind":"textbox","id":"sh/rytsvu9k","slide":10,"text":"Closure must map to controls","textPreview":"Closure must map to controls","textChars":28,"textLines":1,"bbox":[232,533,435,33]}
+{"kind":"shape","id":"sh/yd0z6103","slide":10,"bbox":[677,525,330,45]}
+{"kind":"textbox","id":"sh/90je9cvi","slide":10,"text":"GRC status and audit proof","textPreview":"GRC status and audit proof","textChars":26,"textLines":1,"bbox":[687,533,310,33]}
+{"kind":"image","id":"im/o7qpg3ex","slide":10,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/qstptt","slide":10,"text":""}
+{"kind":"slide","id":"sl/9ajkcr","slide":11,"title":"DeepTrustxAI","textShapes":28}
+{"kind":"shape","id":"sh/6xkf6dcb","slide":11,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/oza1gvy9","slide":11,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/zqtcj6to","slide":11,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/65wjudg7","slide":11,"text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/hwfyxobm","slide":11,"text":"CISSP and CCSP Mapping","textPreview":"CISSP and CCSP Mapping","textChars":22,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/obm58z25","slide":11,"bbox":[72,298,370,41]}
+{"kind":"textbox","id":"sh/zupwb2hw","slide":11,"text":"Workshop area","textPreview":"Workshop area","textChars":13,"textLines":1,"bbox":[82,306,350,29]}
+{"kind":"shape","id":"sh/a9w3m94f","slide":11,"bbox":[442,298,250,41]}
+{"kind":"textbox","id":"sh/8bat47y1","slide":11,"text":"CISSP alignment","textPreview":"CISSP alignment","textChars":15,"textLines":1,"bbox":[452,306,230,29]}
+{"kind":"shape","id":"sh/1w7mp0bi","slide":11,"bbox":[692,298,250,41]}
+{"kind":"textbox","id":"sh/q5o7qpg3","slide":11,"text":"CCSP alignment","textPreview":"CCSP alignment","textChars":14,"textLines":1,"bbox":[702,306,230,29]}
+{"kind":"shape","id":"sh/jqh0fepk","slide":11,"bbox":[72,339,370,41]}
+{"kind":"textbox","id":"sh/8nqxs72x","slide":11,"text":"Governance, scope and risk","textPreview":"Governance, scope and risk","textChars":26,"textLines":1,"bbox":[82,347,350,29]}
+{"kind":"shape","id":"sh/18jqh0fe","slide":11,"bbox":[442,339,250,41]}
+{"kind":"textbox","id":"sh/qh0fepkz","slide":11,"text":"D1","textPreview":"D1","textChars":2,"textLines":1,"bbox":[452,347,230,29]}
+{"kind":"shape","id":"sh/j2t83itg","slide":11,"bbox":[692,339,250,41]}
+{"kind":"textbox","id":"sh/crmhk3q5","slide":11,"text":"D1, D6","textPreview":"D1, D6","textChars":6,"textLines":1,"bbox":[702,347,230,29]}
+{"kind":"shape","id":"sh/1cfa9w3m","slide":11,"bbox":[72,380,370,41]}
+{"kind":"textbox","id":"sh/5wjudg7a","slide":11,"text":"Asset and data protection","textPreview":"Asset and data protection","textChars":25,"textLines":1,"bbox":[82,388,350,29]}
+{"kind":"shape","id":"sh/gbq1oryt","slide":11,"bbox":[442,380,250,41]}
+{"kind":"textbox","id":"sh/nuxc3ylc","slide":11,"text":"D2, D3","textPreview":"D2, D3","textChars":6,"textLines":1,"bbox":[452,388,230,29]}
+{"kind":"shape","id":"sh/y90je9cv","slide":11,"bbox":[692,380,250,41]}
+{"kind":"textbox","id":"sh/58z25kb6","slide":11,"text":"D2, D3","textPreview":"D2, D3","textChars":6,"textLines":1,"bbox":[702,388,230,29]}
+{"kind":"shape","id":"sh/gn29gr2p","slide":11,"bbox":[72,421,370,41]}
+{"kind":"textbox","id":"sh/n29gr2p8","slide":11,"text":"Cloud architecture and network","textPreview":"Cloud architecture and network","textChars":30,"textLines":1,"bbox":[82,429,350,29]}
+{"kind":"shape","id":"sh/yhgn29gr","slide":11,"bbox":[442,421,250,41]}
+{"kind":"textbox","id":"sh/5kb6xkf6","slide":11,"text":"D3, D4","textPreview":"D3, D4","textChars":6,"textLines":1,"bbox":[452,429,230,29]}
+{"kind":"shape","id":"sh/czed8v6p","slide":11,"bbox":[692,421,250,41]}
+{"kind":"textbox","id":"sh/qtcj6tov","slide":11,"text":"D1, D3","textPreview":"D1, D3","textChars":6,"textLines":1,"bbox":[702,429,230,29]}
+{"kind":"shape","id":"sh/je9cvixc","slide":11,"bbox":[72,462,370,41]}
+{"kind":"textbox","id":"sh/8z25kb6x","slide":11,"text":"Identity and access","textPreview":"Identity and access","textChars":19,"textLines":1,"bbox":[82,470,350,29]}
+{"kind":"shape","id":"sh/1gvy90je","slide":11,"bbox":[442,462,250,41]}
+{"kind":"textbox","id":"sh/q1orytsv","slide":11,"text":"D5","textPreview":"D5","textChars":2,"textLines":1,"bbox":[452,470,230,29]}
+{"kind":"shape","id":"sh/fmlkjm1c","slide":11,"bbox":[692,462,250,41]}
+{"kind":"textbox","id":"sh/87ed8bat","slide":11,"text":"D1, D3, D5","textPreview":"D1, D3, D5","textChars":10,"textLines":1,"bbox":[702,470,230,29]}
+{"kind":"shape","id":"sh/xs72x4na","slide":11,"bbox":[72,503,370,41]}
+{"kind":"textbox","id":"sh/qd4vmtwr","slide":11,"text":"Security assessment and scanning","textPreview":"Security assessment and scanning","textChars":32,"textLines":1,"bbox":[82,511,350,29]}
+{"kind":"shape","id":"sh/fyxobm58","slide":11,"bbox":[442,503,250,41]}
+{"kind":"textbox","id":"sh/za1gvy90","slide":11,"text":"D6","textPreview":"D6","textChars":2,"textLines":1,"bbox":[452,511,230,29]}
+{"kind":"shape","id":"sh/ap4r65wj","slide":11,"bbox":[692,503,250,41]}
+{"kind":"textbox","id":"sh/hgn29gr2","slide":11,"text":"D5","textPreview":"D5","textChars":2,"textLines":1,"bbox":[702,511,230,29]}
+{"kind":"shape","id":"sh/svu9knih","slide":11,"bbox":[72,544,370,41]}
+{"kind":"textbox","id":"sh/zidonyd0","slide":11,"text":"Operations, monitoring and evidence","textPreview":"Operations, monitoring and evidence","textChars":35,"textLines":1,"bbox":[82,552,350,29]}
+{"kind":"shape","id":"sh/a1gvy90j","slide":11,"bbox":[442,544,250,41]}
+{"kind":"textbox","id":"sh/hoza1gvy","slide":11,"text":"D7","textPreview":"D7","textChars":2,"textLines":1,"bbox":[452,552,230,29]}
+{"kind":"shape","id":"sh/s36hcrmh","slide":11,"bbox":[692,544,250,41]}
+{"kind":"textbox","id":"sh/3m94fu18","slide":11,"text":"D5, D6","textPreview":"D5, D6","textChars":6,"textLines":1,"bbox":[702,552,230,29]}
+{"kind":"shape","id":"sh/a5gbq1or","slide":11,"bbox":[72,585,370,41]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":11,"text":"IaC, CI/CD and application security","textPreview":"IaC, CI/CD and application security","textChars":35,"textLines":1,"bbox":[82,593,350,29]}
+{"kind":"shape","id":"sh/donyd0z6","slide":11,"bbox":[442,585,250,41]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":11,"text":"D8","textPreview":"D8","textChars":2,"textLines":1,"bbox":[452,593,230,29]}
+{"kind":"shape","id":"sh/vixczed8","slide":11,"bbox":[692,585,250,41]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":11,"text":"D4","textPreview":"D4","textChars":2,"textLines":1,"bbox":[702,593,230,29]}
+{"kind":"image","id":"im/gbq1oryt","slide":11,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/9ajkcr","slide":11,"text":""}
+{"kind":"slide","id":"sl/iig14s","slide":12,"title":"DeepTrustxAI","textShapes":16}
+{"kind":"shape","id":"sh/fil0rqd4","slide":12,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/xobm58z2","slide":12,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/m94fu18j","slide":12,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/fu18jqh0","slide":12,"text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/4fu18jqh","slide":12,"text":"Lab and Setup Requirements","textPreview":"Lab and Setup Requirements","textChars":26,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"textbox","id":"sh/x0nuxc3y","slide":12,"text":"1.","textPreview":"1.","textChars":2,"textLines":1,"bbox":[86,318,32,30]}
+{"kind":"textbox","id":"sh/mlkjm1cf","slide":12,"text":"Disposable cloud/IaC/Kubernetes lab targets or prepared fallback evidence.","textPreview":"Disposable cloud/IaC/Kubernetes lab targets or prepared fallback evidence.","textChars":74,"textLines":1,"bbox":[122,318,984,34]}
+{"kind":"textbox","id":"sh/f6dcbulw","slide":12,"text":"2.","textPreview":"2.","textChars":2,"textLines":1,"bbox":[86,360,32,30]}
+{"kind":"textbox","id":"sh/vixczed8","slide":12,"text":"CloudGuard portal with scanner worker service running separately.","textPreview":"CloudGuard portal with scanner worker service running separately.","textChars":65,"textLines":1,"bbox":[122,360,984,34]}
+{"kind":"textbox","id":"sh/2x4nap4r","slide":12,"text":"3.","textPreview":"3.","textChars":2,"textLines":1,"bbox":[86,402,32,30]}
+{"kind":"textbox","id":"sh/donyd0z6","slide":12,"text":"Evidence connector token and sample connector payloads.","textPreview":"Evidence connector token and sample connector payloads.","textChars":55,"textLines":1,"bbox":[122,402,984,34]}
+{"kind":"textbox","id":"sh/k3q5o7qp","slide":12,"text":"4.","textPreview":"4.","textChars":2,"textLines":1,"bbox":[86,444,32,30]}
+{"kind":"textbox","id":"sh/val87ed8","slide":12,"text":"Assigned tenant IDs for each participant/team.","textPreview":"Assigned tenant IDs for each participant/team.","textChars":46,"textLines":1,"bbox":[122,444,984,34]}
+{"kind":"textbox","id":"sh/6psfil0r","slide":12,"text":"5.","textPreview":"5.","textChars":2,"textLines":1,"bbox":[86,486,32,30]}
+{"kind":"textbox","id":"sh/dcbulwva","slide":12,"text":"Vulnerable IaC files and sample scanner findings.","textPreview":"Vulnerable IaC files and sample scanner findings.","textChars":49,"textLines":1,"bbox":[122,486,984,34]}
+{"kind":"textbox","id":"sh/kre1w7mp","slide":12,"text":"6.","textPreview":"6.","textChars":2,"textLines":1,"bbox":[86,528,32,30]}
+{"kind":"textbox","id":"sh/v6psfil0","slide":12,"text":"Budget alerts, TTL tags and cleanup plan for live labs.","textPreview":"Budget alerts, TTL tags and cleanup plan for live labs.","textChars":55,"textLines":1,"bbox":[122,528,984,34]}
+{"kind":"image","id":"im/58z25kb6","slide":12,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/iig14s","slide":12,"text":""}
+{"kind":"slide","id":"sl/zjyidl","slide":13,"title":"DeepTrustxAI","textShapes":16}
+{"kind":"shape","id":"sh/wb2hwfyx","slide":13,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/e9cvixcz","slide":13,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/loj2t83i","slide":13,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/w3m94fu1","slide":13,"text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/3itgfmlk","slide":13,"text":"Capstone","textPreview":"Capstone","textChars":8,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"textbox","id":"sh/ex0nuxc3","slide":13,"text":"Participants work in teams to:","textPreview":"Participants work in teams to:","textChars":30,"textLines":1,"bbox":[72,294,640,34]}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":13,"text":"1.","textPreview":"1.","textChars":2,"textLines":1,"bbox":[86,345,32,30]}
+{"kind":"textbox","id":"sh/szqtcj6t","slide":13,"text":"Identify the highest-risk connected attack path.","textPreview":"Identify the highest-risk connected attack path.","textChars":48,"textLines":1,"bbox":[122,345,814,34]}
+{"kind":"textbox","id":"sh/il0rqd4v","slide":13,"text":"2.","textPreview":"2.","textChars":2,"textLines":1,"bbox":[86,381,32,30]}
+{"kind":"textbox","id":"sh/b6xkf6dc","slide":13,"text":"Run the relevant authorized scanner workflow.","textPreview":"Run the relevant authorized scanner workflow.","textChars":45,"textLines":1,"bbox":[122,381,814,34]}
+{"kind":"textbox","id":"sh/0rqd4vmt","slide":13,"text":"3.","textPreview":"3.","textChars":2,"textLines":1,"bbox":[86,417,32,30]}
+{"kind":"textbox","id":"sh/tcj6tova","slide":13,"text":"Reconcile scanner findings with manual review.","textPreview":"Reconcile scanner findings with manual review.","textChars":46,"textLines":1,"bbox":[122,417,814,34]}
+{"kind":"textbox","id":"sh/idonyd0z","slide":13,"text":"4.","textPreview":"4.","textChars":2,"textLines":1,"bbox":[86,453,32,30]}
+{"kind":"textbox","id":"sh/byhgn29g","slide":13,"text":"Map evidence to controls, owners and deadlines.","textPreview":"Map evidence to controls, owners and deadlines.","textChars":47,"textLines":1,"bbox":[122,453,814,34]}
+{"kind":"textbox","id":"sh/0je9cvix","slide":13,"text":"5.","textPreview":"5.","textChars":2,"textLines":1,"bbox":[86,489,32,30]}
+{"kind":"textbox","id":"sh/t47y1kre","slide":13,"text":"Deliver a five-minute executive risk briefing.","textPreview":"Deliver a five-minute executive risk briefing.","textChars":46,"textLines":1,"bbox":[122,489,814,34]}
+{"kind":"textbox","id":"sh/i9s36hcr","slide":13,"text":"Final output: evidence bundle, control map, prioritized remediation and executive summary.","textPreview":"Final output: evidence bundle, control map, prioritized remediation and executive summary.","textChars":90,"textLines":1,"bbox":[72,552,980,34]}
+{"kind":"image","id":"im/25kb6xkf","slide":13,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/zjyidl","slide":13,"text":""}
+{"kind":"slide","id":"sl/vomitc","slide":14,"title":"DeepTrustxAI","textShapes":15}
+{"kind":"shape","id":"sh/ahoza1gv","slide":14,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/sneloj2t","slide":14,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[1154,31,110,32]}
+{"kind":"textbox","id":"sh/3ex0nuxc","slide":14,"text":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textPreview":"DeepTrustxAI | Cloud Security Module-Wise Syllabus","textChars":50,"textLines":1,"bbox":[72,682,480,22]}
+{"kind":"textbox","id":"sh/at47y1kr","slide":14,"text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1184,682,64,22]}
+{"kind":"textbox","id":"sh/lkjm1cfa","slide":14,"text":"Deliverables","textPreview":"Deliverables","textChars":12,"textLines":1,"bbox":[72,214,900,58]}
+{"kind":"shape","id":"sh/szqtcj6t","slide":14,"bbox":[72,316,310,48]}
+{"kind":"textbox","id":"sh/3itgfmlk","slide":14,"text":"Deliverable","textPreview":"Deliverable","textChars":11,"textLines":1,"bbox":[82,324,290,36]}
+{"kind":"shape","id":"sh/ex0nuxc3","slide":14,"bbox":[382,316,570,48]}
+{"kind":"textbox","id":"sh/wfyxobm5","slide":14,"text":"Purpose","textPreview":"Purpose","textChars":7,"textLines":1,"bbox":[392,324,550,36]}
+{"kind":"shape","id":"sh/l0rqd4vm","slide":14,"bbox":[72,364,310,48]}
+{"kind":"textbox","id":"sh/ed8bat47","slide":14,"text":"Module-wise PPT","textPreview":"Module-wise PPT","textChars":15,"textLines":1,"bbox":[82,372,290,36]}
+{"kind":"shape","id":"sh/7u54zido","slide":14,"bbox":[382,364,570,48]}
+{"kind":"textbox","id":"sh/wra5gbq1","slide":14,"text":"Review and delivery flow","textPreview":"Review and delivery flow","textChars":24,"textLines":1,"bbox":[392,372,550,36]}
+{"kind":"shape","id":"sh/lc7u54zi","slide":14,"bbox":[72,412,310,48]}
+{"kind":"textbox","id":"sh/eloj2t83","slide":14,"text":"Detailed syllabus","textPreview":"Detailed syllabus","textChars":17,"textLines":1,"bbox":[82,420,290,36]}
+{"kind":"shape","id":"sh/36hcrmhk","slide":14,"bbox":[382,412,570,48]}
+{"kind":"textbox","id":"sh/wval87ed","slide":14,"text":"Instructor depth and preparation","textPreview":"Instructor depth and preparation","textChars":32,"textLines":1,"bbox":[392,420,550,36]}
+{"kind":"shape","id":"sh/pg3ex0nu","slide":14,"bbox":[72,460,310,48]}
+{"kind":"textbox","id":"sh/9knih4by","slide":14,"text":"Lab evidence bundle","textPreview":"Lab evidence bundle","textChars":19,"textLines":1,"bbox":[82,468,290,36]}
+{"kind":"shape","id":"sh/kzupwb2h","slide":14,"bbox":[382,460,570,48]}
+{"kind":"textbox","id":"sh/re1w7mp0","slide":14,"text":"Proof for scanner/GRC demonstration","textPreview":"Proof for scanner/GRC demonstration","textChars":35,"textLines":1,"bbox":[392,468,550,36]}
+{"kind":"shape","id":"sh/2t83itgf","slide":14,"bbox":[72,508,310,48]}
+{"kind":"textbox","id":"sh/9w3m94fu","slide":14,"text":"Capstone briefing format","textPreview":"Capstone briefing format","textChars":24,"textLines":1,"bbox":[82,516,290,36]}
+{"kind":"shape","id":"sh/kb6xkf6d","slide":14,"bbox":[382,508,570,48]}
+{"kind":"textbox","id":"sh/rqd4vmtw","slide":14,"text":"Sponsor-friendly final output","textPreview":"Sponsor-friendly final output","textChars":29,"textLines":1,"bbox":[392,516,550,36]}
+{"kind":"textbox","id":"sh/25kb6xkf","slide":14,"text":"The PPT stays short. The syllabus carries the details.","textPreview":"The PPT stays short. The syllabus carries the details.","textChars":54,"textLines":1,"bbox":[72,570,760,34]}
+{"kind":"image","id":"im/83itgfml","slide":14,"name":"","alt":"DeepTrustxAI logo","bbox":[1120,28,28,28]}
+{"kind":"notes","id":"nt/vomitc","slide":14,"text":""}
+{"kind":"slide","id":"sl/7cdg9x","slide":15,"title":"DeepTrustxAI","textShapes":3}
+{"kind":"shape","id":"sh/svu9knih","slide":15,"bbox":[0,0,1280,8]}
+{"kind":"textbox","id":"sh/ap4r65wj","slide":15,"text":"DeepTrustxAI","textPreview":"DeepTrustxAI","textChars":12,"textLines":1,"bbox":[166,246,260,32]}
+{"kind":"textbox","id":"sh/hoza1gvy","slide":15,"text":"Module-wise. Evidence-driven. CloudGuard-backed.","textPreview":"Module-wise. Evidence-driven. CloudGuard-backed.","textChars":48,"textLines":1,"bbox":[72,344,1040,72]}
+{"kind":"textbox","id":"sh/s36hcrmh","slide":15,"text":"Ready for review, then ready for delivery.","textPreview":"Ready for review, then ready for delivery.","textChars":42,"textLines":1,"bbox":[72,500,800,40]}
+{"kind":"image","id":"im/il0rqd4v","slide":15,"name":"","alt":"DeepTrustxAI logo","bbox":[72,224,74,74]}
+{"kind":"notes","id":"nt/7cdg9x","slide":15,"text":""}

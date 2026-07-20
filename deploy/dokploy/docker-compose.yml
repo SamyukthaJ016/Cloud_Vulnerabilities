@@ -57,8 +57,16 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
       QUEUE_BACKEND: postgres
       SCAN_JOB_INLINE_WORKER: "false"
+      SANDBOX_LAB_INLINE_WORKER: "false"
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
       WORKER_AUTH_REQUIRED: "true"
       WORKER_TOKEN: ${WORKER_TOKEN:?WORKER_TOKEN is required}
+      WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
       CONNECTOR_AUTH_REQUIRED: "true"
       CONNECTOR_TOKEN: ${CONNECTOR_TOKEN:?CONNECTOR_TOKEN is required}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
@@ -100,12 +108,14 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "-m", "backend.scheduler_worker"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
       SCHEDULER_ENQUEUE_ONLY: "true"
       WORKER_TOKEN: ${WORKER_TOKEN:?WORKER_TOKEN is required}
+      SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-dokploy-scheduler-worker-1}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       APP_ENV: scheduler
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PYTHONPATH: /app
@@ -127,12 +137,13 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "backend/scripts/local_scan_job_worker.py"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
       SCAN_WORKER_ID: ${SCAN_WORKER_ID:-dokploy-scan-worker-1}
       SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-minio}
       OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-http://minio:9000}
@@ -160,17 +171,65 @@ services:
     healthcheck:
       disable: true
 
+  sandbox-lab-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    command: ["python", "backend/scripts/sandbox_lab_worker.py"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
+      SANDBOX_LAB_WORKER_ID: ${SANDBOX_LAB_WORKER_ID:-dokploy-sandbox-lab-worker-1}
+      SANDBOX_LAB_WORKER_POLL_INTERVAL: ${SANDBOX_LAB_WORKER_POLL_INTERVAL:-10}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
+      SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-minio}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-http://minio:9000}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-dokploy}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:?OBJECT_STORAGE_BUCKET is required}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:?OBJECT_STORAGE_ACCESS_KEY_ID is required}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:?OBJECT_STORAGE_SECRET_ACCESS_KEY is required}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
+      APP_ENV: sandbox-worker
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+    volumes:
+      - sandbox_lab_data:/app/sandbox-labs
+      - scan_worker_reports:/app/reports
+      - scan_worker_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
   evidence-connector:
     build:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "backend/scripts/evidence_connector.py"]
     environment:
       CLOUDGUARD_BASE_URL: http://backend:8000
       CONNECTOR_TOKEN: ${CONNECTOR_TOKEN:?CONNECTOR_TOKEN is required}
       CONNECTOR_USER_ID: ${CONNECTOR_USER_ID:-anonymous}
+      EVIDENCE_CONNECTOR_ID: ${EVIDENCE_CONNECTOR_ID:-dokploy-evidence-connector-1}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       EVIDENCE_CONNECTOR_INBOX: /app/connectors/inbox
       EVIDENCE_CONNECTOR_PROCESSED: /app/connectors/processed
       EVIDENCE_CONNECTOR_FAILED: /app/connectors/failed
@@ -192,4 +251,5 @@ volumes:
   minio_data:
   scan_worker_reports:
   scan_worker_logs:
+  sandbox_lab_data:
   evidence_connector_data:

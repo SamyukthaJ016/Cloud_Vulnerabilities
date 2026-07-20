@@ -84,8 +84,16 @@ services:
       # Queue and worker dispatch
       QUEUE_BACKEND: ${QUEUE_BACKEND:-postgres}
       SCAN_JOB_INLINE_WORKER: ${SCAN_JOB_INLINE_WORKER:-true}
+      SANDBOX_LAB_INLINE_WORKER: ${SANDBOX_LAB_INLINE_WORKER:-true}
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/tmp/cloudguard-sandbox-labs}
       WORKER_AUTH_REQUIRED: ${WORKER_AUTH_REQUIRED:-false}
       WORKER_TOKEN: ${WORKER_TOKEN:-}
+      WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
 
       # Optional AWS scan-target fallback. Prefer adding cloud credentials in the UI.
       AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
@@ -175,6 +183,8 @@ services:
       DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
       REDIS_URL: redis://:redis_password@redis:6379/0
       WORKER_TOKEN: ${WORKER_TOKEN:-}
+      SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-local-scheduler-worker-1}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
@@ -202,7 +212,7 @@ services:
 
     networks:
       - security-network
-    restart: unless-stopped
+    restart: always
     profiles:
       - dev
 
@@ -222,8 +232,16 @@ services:
       REDIS_URL: redis://:redis_password@redis:6379/0
       QUEUE_BACKEND: ${QUEUE_BACKEND:-postgres}
       SCAN_JOB_INLINE_WORKER: ${SCAN_JOB_INLINE_WORKER:-true}
+      SANDBOX_LAB_INLINE_WORKER: ${SANDBOX_LAB_INLINE_WORKER:-true}
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/tmp/cloudguard-sandbox-labs}
       WORKER_AUTH_REQUIRED: ${WORKER_AUTH_REQUIRED:-false}
       WORKER_TOKEN: ${WORKER_TOKEN:-}
+      WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
       OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-}
       OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-}

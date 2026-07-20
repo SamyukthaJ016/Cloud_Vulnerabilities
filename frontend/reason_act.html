@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reason & Act - CloudGuard</title>
+    <link rel="stylesheet" href="/cloudguard-theme.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #080b0e;
+            color: #edf3f8;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 28px 24px 56px;
+        }
+
+        .header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 24px;
+            padding: 26px;
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            border-radius: 8px;
+            background: linear-gradient(180deg, rgba(25, 36, 42, 0.94), rgba(13, 19, 23, 0.92));
+        }
+
+        .eyebrow {
+            color: #22d3b6;
+            font-size: 0.76rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin-top: 4px;
+            font-size: clamp(2rem, 4vw, 3.7rem);
+            line-height: 1.04;
+        }
+
+        .subtitle {
+            max-width: 780px;
+            margin-top: 10px;
+            color: #aab8c3;
+        }
+
+        .btn {
+            min-height: 38px;
+            padding: 9px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(199, 213, 224, 0.18);
+            background: rgba(255, 255, 255, 0.08);
+            color: #edf3f8;
+            font-weight: 750;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, #22d3b6, #61d394);
+            color: #06100f;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(150px, 1fr));
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .stat,
+        .panel,
+        .lane {
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            border-radius: 8px;
+            background: rgba(18, 26, 31, 0.9);
+        }
+
+        .stat {
+            padding: 18px;
+        }
+
+        .stat-label {
+            color: #94a3af;
+            font-size: 0.74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            margin-top: 7px;
+            font-size: 2rem;
+            font-weight: 850;
+        }
+
+        .workflow {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(150px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .lane {
+            min-height: 132px;
+            padding: 16px;
+        }
+
+        .lane-index {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #22d3b6, #61d394);
+            color: #06100f;
+            font-weight: 900;
+            margin-bottom: 12px;
+        }
+
+        .lane-title {
+            font-weight: 850;
+            color: #ffffff;
+        }
+
+        .lane-copy {
+            margin-top: 6px;
+            color: #aab8c3;
+            font-size: 0.9rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(360px, 0.9fr);
+            gap: 16px;
+        }
+
+        .panel {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-bottom: 1px solid rgba(199, 213, 224, 0.1);
+        }
+
+        .panel-title {
+            font-weight: 850;
+            color: #ffffff;
+        }
+
+        .panel-body {
+            padding: 16px;
+        }
+
+        .stack {
+            display: grid;
+            gap: 16px;
+        }
+
+        table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 13px;
+            border-bottom: 1px solid rgba(199, 213, 224, 0.1);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: #94a3af;
+            font-size: 0.72rem;
+            font-weight: 850;
+            text-transform: uppercase;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 26px;
+            padding: 4px 9px;
+            border-radius: 8px;
+            border: 1px solid rgba(199, 213, 224, 0.14);
+            color: #dce7ef;
+            background: rgba(255, 255, 255, 0.06);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: capitalize;
+        }
+
+        .pill.high,
+        .pill.critical,
+        .pill.failed,
+        .pill.unsafe {
+            color: #ffb3ba;
+            border-color: rgba(255, 102, 117, 0.28);
+            background: rgba(255, 102, 117, 0.08);
+        }
+
+        .pill.validated,
+        .pill.approved,
+        .pill.completed,
+        .pill.generated {
+            color: #abf3d5;
+            border-color: rgba(97, 211, 148, 0.28);
+            background: rgba(97, 211, 148, 0.08);
+        }
+
+        .empty {
+            padding: 22px;
+            color: #94a3af;
+            text-align: center;
+        }
+
+        .mini-form {
+            display: grid;
+            gap: 10px;
+        }
+
+        textarea,
+        input,
+        select {
+            width: 100%;
+            min-height: 38px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(199, 213, 224, 0.16);
+            background: #0d1317;
+            color: #edf3f8;
+            font: inherit;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .hint {
+            color: #94a3af;
+            font-size: 0.86rem;
+        }
+
+        .threat-item {
+            padding: 0 0 14px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid rgba(199, 213, 224, 0.1);
+        }
+
+        .threat-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: 0;
+        }
+
+        .lab-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .lab-item {
+            padding: 12px;
+            border: 1px solid rgba(199, 213, 224, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        @media (max-width: 1100px) {
+            .stats-grid,
+            .workflow,
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .header,
+            .panel-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .stats-grid,
+            .workflow,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <section class="header">
+            <div>
+                <div class="eyebrow">Reason and act layer</div>
+                <h1>Prioritize, prove, approve, and govern findings.</h1>
+                <p class="subtitle">A tenant-scoped control plane for scanner evidence, risk context, sandbox validation, remediation approvals, and STRIDE threat models.</p>
+            </div>
+            <button class="btn btn-primary" onclick="loadAll()">Refresh</button>
+        </section>
+
+        <section class="stats-grid">
+            <div class="stat">
+                <div class="stat-label">Asset contexts</div>
+                <div class="stat-value" id="contextCount">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Validation jobs</div>
+                <div class="stat-value" id="validationCount">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Remediation actions</div>
+                <div class="stat-value" id="remediationCount">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Threat models</div>
+                <div class="stat-value" id="threatModelCount">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">Sandbox labs</div>
+                <div class="stat-value" id="sandboxLabCount">0</div>
+            </div>
+        </section>
+
+        <section class="workflow" aria-label="Workflow">
+            <div class="lane">
+                <div class="lane-index">1</div>
+                <div class="lane-title">Discover</div>
+                <div class="lane-copy">Scanners and connectors push normalized evidence into the portal.</div>
+            </div>
+            <div class="lane">
+                <div class="lane-index">2</div>
+                <div class="lane-title">Prioritize</div>
+                <div class="lane-copy">Findings are ranked using severity, exposure, IAM, data, and business context.</div>
+            </div>
+            <div class="lane">
+                <div class="lane-index">3</div>
+                <div class="lane-title">Validate</div>
+                <div class="lane-copy">Sandbox jobs attach reproducible proof without mutating production.</div>
+            </div>
+            <div class="lane">
+                <div class="lane-index">4</div>
+                <div class="lane-title">Approve</div>
+                <div class="lane-copy">Remediation moves from learn mode to approval before execution.</div>
+            </div>
+            <div class="lane">
+                <div class="lane-index">5</div>
+                <div class="lane-title">Govern</div>
+                <div class="lane-copy">Proof, actions, and reports become GRC evidence.</div>
+            </div>
+        </section>
+
+        <section class="grid">
+            <div class="stack">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">Validation Jobs</div>
+                    </div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Finding</th>
+                                    <th>Asset</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Expires</th>
+                                </tr>
+                            </thead>
+                            <tbody id="validationRows"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty" id="validationEmpty">No validation jobs found.</div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">Remediation Actions</div>
+                    </div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Action</th>
+                                    <th>Mode</th>
+                                    <th>Priority</th>
+                                    <th>Score</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="remediationRows"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty" id="remediationEmpty">No remediation actions found.</div>
+                </section>
+            </div>
+
+            <div class="stack">
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">Live Sandbox Demo</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="mini-form">
+                            <div class="form-row">
+                                <select id="sandboxProvider">
+                                    <option value="iac">IaC file lab</option>
+                                    <option value="aws">AWS lab</option>
+                                    <option value="gcp">GCP lab</option>
+                                    <option value="kubernetes">Kubernetes lab</option>
+                                </select>
+                                <input id="sandboxTtl" type="number" min="1" max="240" value="5" aria-label="TTL minutes">
+                            </div>
+                            <div class="form-row">
+                                <input id="sandboxCredentialId" placeholder="Credential ID for cloud labs">
+                                <input id="sandboxRegion" placeholder="Region or namespace">
+                            </div>
+                            <div class="action-row">
+                                <button class="btn btn-primary" onclick="createSandboxLab()">Deploy and Scan</button>
+                                <button class="btn" onclick="loadAll()">Refresh Labs</button>
+                            </div>
+                            <div class="hint" id="sandboxMessage">IaC lab runs locally. Cloud and Kubernetes labs require sandbox env flags and credentials.</div>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="lab-list" id="sandboxLabs"></div>
+                        <div class="empty" id="sandboxEmpty">No sandbox labs found.</div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">Create STRIDE Threat Model</div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="mini-form">
+                            <input id="strideScope" value="CloudGuard decoupled scanner portal with evidence connectors and worker jobs">
+                            <textarea id="strideArtifacts">[{"component":"Evidence connector","flow":"external scanners to /api/evidence"},{"component":"Scan worker","flow":"queued scan jobs to proof artifacts"},{"component":"Credential vault","flow":"tenant scoped scanner credentials"}]</textarea>
+                            <button class="btn btn-primary" onclick="createStrideModel()">Generate STRIDE</button>
+                            <div class="hint" id="strideMessage">Generated models are stored with tenant_id and can be used as GRC evidence.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-head">
+                        <div class="panel-title">Threat Models</div>
+                    </div>
+                    <div class="panel-body" id="threatModels"></div>
+                    <div class="empty" id="threatModelEmpty">No threat models found.</div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script src="/cloudguard-ui.js"></script>
+    <script>
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function formatDate(value) {
+            if (!value) return '-';
+            try {
+                return new Date(value).toLocaleString();
+            } catch {
+                return value;
+            }
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, {
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options
+            });
+            if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.detail || `Request failed: ${response.status}`);
+            }
+            return response.json();
+        }
+
+        function renderRows(id, emptyId, rows, renderer) {
+            const body = document.getElementById(id);
+            const empty = document.getElementById(emptyId);
+            body.innerHTML = rows.length ? rows.map(renderer).join('') : '';
+            empty.style.display = rows.length ? 'none' : 'block';
+        }
+
+        async function loadAll() {
+            const [contexts, validations, remediations, threats, sandboxLabs] = await Promise.all([
+                fetchJson('/api/risk/context'),
+                fetchJson('/api/validation/jobs'),
+                fetchJson('/api/remediation/actions'),
+                fetchJson('/api/threat-models'),
+                fetchJson('/api/sandbox-labs')
+            ]);
+
+            const contextRows = contexts.contexts || [];
+            const validationRows = validations.validation_jobs || [];
+            const remediationRows = remediations.remediation_actions || [];
+            const threatRows = threats.threat_models || [];
+            const sandboxRows = sandboxLabs.labs || [];
+
+            document.getElementById('contextCount').textContent = contextRows.length;
+            document.getElementById('validationCount').textContent = validationRows.length;
+            document.getElementById('remediationCount').textContent = remediationRows.length;
+            document.getElementById('threatModelCount').textContent = threatRows.length;
+            document.getElementById('sandboxLabCount').textContent = sandboxRows.length;
+
+            renderRows('validationRows', 'validationEmpty', validationRows, item => `
+                <tr>
+                    <td>${escapeHtml(item.finding_ref)}</td>
+                    <td>${escapeHtml(item.asset_ref || '-')}</td>
+                    <td>${escapeHtml(item.validation_type)}</td>
+                    <td><span class="pill ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></td>
+                    <td>${escapeHtml(formatDate(item.expires_at))}</td>
+                </tr>
+            `);
+
+            renderRows('remediationRows', 'remediationEmpty', remediationRows, item => `
+                <tr>
+                    <td>${escapeHtml(item.title)}</td>
+                    <td>${escapeHtml(item.mode)}</td>
+                    <td><span class="pill ${escapeHtml(item.priority)}">${escapeHtml(item.priority)}</span></td>
+                    <td>${escapeHtml(item.risk_score)}</td>
+                    <td><span class="pill ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></td>
+                </tr>
+            `);
+
+            const threatWrap = document.getElementById('threatModels');
+            const threatEmpty = document.getElementById('threatModelEmpty');
+            threatWrap.innerHTML = threatRows.length ? threatRows.map(item => `
+                <div class="threat-item">
+                    <div class="lane-title">${escapeHtml(item.scope)}</div>
+                    <div class="lane-copy">${escapeHtml((item.summary || {}).total_findings || 0)} findings across ${escapeHtml(((item.summary || {}).categories || []).join(', ') || 'STRIDE')}</div>
+                    <div style="margin-top: 10px;"><span class="pill ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span></div>
+                </div>
+            `).join('') : '';
+            threatEmpty.style.display = threatRows.length ? 'none' : 'block';
+
+            const labWrap = document.getElementById('sandboxLabs');
+            const labEmpty = document.getElementById('sandboxEmpty');
+            labWrap.innerHTML = sandboxRows.length ? sandboxRows.map(item => `
+                <div class="lab-item">
+                    <div class="lane-title">${escapeHtml(item.provider)} / ${escapeHtml(item.lab_type)}</div>
+                    <div class="lane-copy">${escapeHtml(item.lab_id)} · expires ${escapeHtml(formatDate(item.expires_at))}</div>
+                    <div style="margin-top: 10px;" class="action-row">
+                        <span class="pill ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+                        ${item.status !== 'destroyed' && item.status !== 'cancelled' ? `<button class="btn" onclick="destroySandboxLab('${escapeHtml(item.lab_id)}')">Destroy</button>` : ''}
+                    </div>
+                </div>
+            `).join('') : '';
+            labEmpty.style.display = sandboxRows.length ? 'none' : 'block';
+        }
+
+        async function createSandboxLab() {
+            const message = document.getElementById('sandboxMessage');
+            const provider = document.getElementById('sandboxProvider').value;
+            const credentialValue = document.getElementById('sandboxCredentialId').value.trim();
+            const regionValue = document.getElementById('sandboxRegion').value.trim();
+            const payload = {
+                provider,
+                lab_type: provider === 'iac' ? 'misconfigured_iac' : 'default',
+                ttl_minutes: Number(document.getElementById('sandboxTtl').value || 5),
+                scan_after_deploy: true,
+                auto_destroy: true
+            };
+            if (credentialValue) payload.credential_id = Number(credentialValue);
+            if (regionValue && provider === 'kubernetes') payload.namespace = regionValue;
+            if (regionValue && provider !== 'kubernetes') payload.region = regionValue;
+
+            try {
+                const result = await fetchJson('/api/sandbox-labs', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                message.textContent = `Queued ${result.lab.lab_id}`;
+                await loadAll();
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        }
+
+        async function destroySandboxLab(labId) {
+            const message = document.getElementById('sandboxMessage');
+            try {
+                await fetchJson(`/api/sandbox-labs/${encodeURIComponent(labId)}/destroy`, {
+                    method: 'POST',
+                    body: JSON.stringify({ reason: 'manual_ui_destroy' })
+                });
+                message.textContent = `Destroy requested for ${labId}`;
+                await loadAll();
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        }
+
+        async function createStrideModel() {
+            const message = document.getElementById('strideMessage');
+            try {
+                const input = JSON.parse(document.getElementById('strideArtifacts').value || '[]');
+                const payload = {
+                    scope: document.getElementById('strideScope').value,
+                    source_type: 'portal',
+                    input_artifacts: Array.isArray(input) ? input : [input]
+                };
+                const result = await fetchJson('/api/threat-models/stride', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                message.textContent = `Created ${result.threat_model.threat_model_id}`;
+                await loadAll();
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAll().catch(error => {
+                document.getElementById('strideMessage').textContent = error.message;
+            });
+        });
+    </script>
+</body>
+
+</html>

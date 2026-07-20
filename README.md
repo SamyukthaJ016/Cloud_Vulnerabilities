@@ -10,6 +10,9 @@ A comprehensive, containerized security scanning platform designed to identify v
 - **Secret Scanning**: Detects hardcoded secrets using Gitleaks.
 - **Dependency Analysis**: Checks for vulnerable dependencies with Trivy and Safety.
 - **Unified Dashboard**: View all findings in a single, easy-to-use web interface.
+- **Reason-and-Act Workflow**: Adds tenant-scoped risk context, contextual prioritization, sandbox validation proof, remediation approval modes, and STRIDE threat models without depending on one cloud provider.
+- **Temporary Sandbox Labs**: Creates short-lived vulnerable IaC/AWS/GCP/Kubernetes demo labs inside isolated sandbox environments, records proof as GRC evidence, queues scans, and auto-destroys resources after scan completion or TTL expiry.
+- **GRC Evidence Ingestion**: Accepts normalized evidence from decoupled scanners/connectors and maps it back to compliance controls.
 - **Dockerized**: Fully containerized for easy deployment.
 
 ## 📋 Prerequisites
@@ -46,6 +49,14 @@ ENCRYPTION_KEY=your-encryption-key
 QUEUE_BACKEND=postgres
 WORKER_TOKEN=your-worker-token
 SCAN_JOB_INLINE_WORKER=false
+
+# Temporary sandbox labs
+SANDBOX_LABS_ENABLED=true
+SANDBOX_LAB_INLINE_WORKER=false
+SANDBOX_IAC_DEPLOY=true
+SANDBOX_AWS_DEPLOY=false
+SANDBOX_GCP_DEPLOY=false
+SANDBOX_KUBERNETES_DEPLOY=false
 
 # Evidence storage on DigitalOcean Spaces
 OBJECT_STORAGE_PROVIDER=digitalocean-spaces
@@ -105,7 +116,12 @@ Open your browser and navigate to:
 - **Backend**: FastAPI (Python)
 - **Database**: PostgreSQL (Findings storage)
 - **Queue**: PostgreSQL-backed `scan_jobs`
+- **Evidence/GRC Layer**: `/api/evidence`, `/api/compliance/*`, `/api/risk/*`, `/api/validation/*`, `/api/remediation/*`, and `/api/threat-models/*`
+- **Sandbox Lab Layer**: `/api/sandbox-labs/*` plus `sandbox-lab-worker` for temporary vulnerable lab deployment, scan proof, and cleanup.
+- **Reason & Act UI**: `/reason-act` for validation jobs, remediation actions, threat models, and workflow visibility.
 - **Tools**: Trivy, Gitleaks, Nuclei, CloudFox, OWASP ZAP
+
+See `docs/vendor-neutral-reason-act-architecture.md` for the workflow that maps discovery, prioritization, validation, remediation, and threat modeling into the decoupled scanner architecture. See `docs/sandbox-lab-workflow.md` for the temporary vulnerable lab setup.
 
 ## 🛡️ Security Note
 

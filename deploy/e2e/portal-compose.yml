@@ -58,8 +58,16 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       QUEUE_BACKEND: postgres
       SCAN_JOB_INLINE_WORKER: "false"
+      SANDBOX_LAB_INLINE_WORKER: "false"
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
       WORKER_AUTH_REQUIRED: "true"
       WORKER_TOKEN: ${WORKER_TOKEN}
+      WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
       CONNECTOR_AUTH_REQUIRED: "true"
       CONNECTOR_TOKEN: ${CONNECTOR_TOKEN}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
@@ -91,13 +99,29 @@ services:
       - "8000"
     ports:
       - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    networks:
+      - default
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.cloudguard-e2e-web.entrypoints=web"
+      - "traefik.http.routers.cloudguard-e2e-web.rule=Host(`cloudscanner.sc.deeptrustxai.com`)"
+      - "traefik.http.routers.cloudguard-e2e-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.cloudguard-e2e-web.service=cloudguard-e2e-web"
+      - "traefik.http.routers.cloudguard-e2e-websecure.entrypoints=websecure"
+      - "traefik.http.routers.cloudguard-e2e-websecure.rule=Host(`cloudscanner.sc.deeptrustxai.com`)"
+      - "traefik.http.routers.cloudguard-e2e-websecure.service=cloudguard-e2e-websecure"
+      - "traefik.http.routers.cloudguard-e2e-websecure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cloudguard-e2e-web.loadbalancer.server.port=8000"
+      - "traefik.http.services.cloudguard-e2e-websecure.loadbalancer.server.port=8000"
 
   scheduler-worker:
     build:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "-m", "backend.scheduler_worker"]
     healthcheck:
       disable: true
@@ -105,6 +129,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SCHEDULER_ENQUEUE_ONLY: "true"
       WORKER_TOKEN: ${WORKER_TOKEN}
+      SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-e2e-scheduler-worker-1}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       APP_ENV: scheduler
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PYTHONPATH: /app
@@ -120,3 +146,7 @@ services:
 volumes:
   postgres_data:
   minio_data:
+
+networks:
+  dokploy-network:
+    external: true

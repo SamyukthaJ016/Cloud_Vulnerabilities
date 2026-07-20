@@ -1,0 +1,392 @@
+/*
+@theme deeptrustxai
+*/
+
+@import 'default';
+
+:root {
+  --bg: #f7fafc;
+  --panel: #ffffff;
+  --ink: #14202a;
+  --muted: #5d6b76;
+  --cyan: #00bfe8;
+  --cyan-dark: #007f9f;
+  --cyan-soft: #e2f8fc;
+  --violet: #6556d9;
+  --violet-soft: #eeeafd;
+  --amber: #b7791f;
+  --amber-soft: #fff2d5;
+  --red: #b83b36;
+  --red-soft: #ffe9e7;
+  --green: #17864b;
+  --green-soft: #e5f6ea;
+  --line: #cfdae0;
+  --dark: #071219;
+}
+
+section {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Aptos", "Inter", "Segoe UI", Arial, sans-serif;
+  padding: 64px 72px 58px;
+  border-top: 8px solid var(--cyan);
+  letter-spacing: 0;
+}
+
+header {
+  align-items: center;
+  color: var(--cyan-dark);
+  display: flex;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: flex-end;
+  left: auto;
+  right: 38px;
+  top: 18px;
+  width: 260px;
+}
+
+header img {
+  display: inline-block;
+  height: 28px;
+  margin: 0;
+  width: 28px;
+}
+
+footer {
+  bottom: 22px;
+  color: var(--muted);
+  font-size: 12px;
+  left: 72px;
+}
+
+section::after {
+  bottom: 20px;
+  color: var(--muted);
+  font-size: 12px;
+  right: 38px;
+}
+
+h1,
+h2,
+h3,
+p,
+li,
+td,
+th {
+  letter-spacing: 0;
+}
+
+h1 {
+  color: var(--ink);
+  font-size: 40px;
+  line-height: 1.08;
+  margin: 0 0 22px;
+}
+
+h2 {
+  color: var(--cyan-dark);
+  font-size: 25px;
+  margin: 0 0 16px;
+}
+
+h3 {
+  color: var(--violet);
+  font-size: 21px;
+  margin: 12px 0 8px;
+}
+
+p,
+li,
+td,
+th {
+  font-size: 20px;
+  line-height: 1.32;
+}
+
+ul,
+ol {
+  margin: 12px 0 0;
+  padding-left: 29px;
+}
+
+li {
+  margin: 8px 0;
+}
+
+li::marker {
+  color: var(--cyan-dark);
+}
+
+strong {
+  color: var(--cyan-dark);
+}
+
+code {
+  background: #eaf0f3;
+  border-radius: 4px;
+  color: #0c5567;
+  font-family: "Aptos Mono", "SFMono-Regular", Consolas, monospace;
+  padding: 1px 5px;
+}
+
+pre {
+  background: var(--dark);
+  border-left: 6px solid var(--cyan);
+  border-radius: 6px;
+  color: #dcfaff;
+  font-size: 17px;
+  line-height: 1.25;
+  padding: 17px 20px;
+}
+
+pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+
+table {
+  border-collapse: collapse;
+  margin-top: 16px;
+  width: 100%;
+}
+
+th {
+  background: var(--dark);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 9px 12px;
+  text-align: left;
+}
+
+td {
+  border: 1px solid var(--line);
+  font-size: 16px;
+  padding: 9px 12px;
+  vertical-align: top;
+}
+
+tr:nth-child(even) td {
+  background: #eef4f6;
+}
+
+blockquote {
+  background: var(--cyan-soft);
+  border-left: 7px solid var(--cyan-dark);
+  margin: 22px 0;
+  padding: 15px 20px;
+}
+
+blockquote p {
+  margin: 0;
+}
+
+.brand-lockup {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.brand-lockup img {
+  height: 82px;
+  margin: 0;
+  width: 82px;
+}
+
+.brand-name {
+  color: #ffffff;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.eyebrow {
+  color: var(--cyan-dark);
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.grid-2,
+.grid-3,
+.grid-4 {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 7px solid var(--cyan-dark);
+  border-radius: 6px;
+  min-height: 126px;
+  padding: 16px 18px;
+}
+
+.card h3 {
+  color: var(--ink);
+  font-size: 19px;
+  margin: 0 0 9px;
+}
+
+.card p,
+.card li {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.28;
+}
+
+.card p {
+  margin: 0;
+}
+
+.card.cyan { border-left-color: var(--cyan-dark); }
+.card.violet { border-left-color: var(--violet); }
+.card.amber { border-left-color: var(--amber); }
+.card.red { border-left-color: var(--red); }
+.card.green { border-left-color: var(--green); }
+
+.metric {
+  color: var(--cyan-dark);
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.small,
+.small li,
+.small p {
+  font-size: 16px;
+}
+
+.tiny,
+.tiny li,
+.tiny p,
+.tiny td,
+.tiny th {
+  font-size: 14px;
+}
+
+.flow {
+  align-items: stretch;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 34px;
+}
+
+.flow .step {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-top: 6px solid var(--cyan-dark);
+  border-radius: 6px;
+  min-height: 146px;
+  padding: 16px;
+  position: relative;
+}
+
+.flow .step:not(:last-child)::after {
+  color: var(--cyan-dark);
+  content: "→";
+  font-size: 28px;
+  font-weight: 700;
+  position: absolute;
+  right: -20px;
+  top: 52px;
+}
+
+.flow .step strong {
+  display: block;
+  font-size: 17px;
+  margin-bottom: 9px;
+}
+
+.flow .step span {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+section.lead,
+section.module,
+section.closing {
+  background: var(--dark);
+  border-top-color: var(--cyan);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+section.lead h1,
+section.module h1,
+section.closing h1 {
+  color: #ffffff;
+  font-size: 54px;
+  max-width: 1000px;
+}
+
+section.lead h2,
+section.module h2,
+section.closing h2 {
+  color: #79e8ff;
+}
+
+section.lead p,
+section.module p,
+section.closing p {
+  color: #c8d8df;
+  max-width: 980px;
+}
+
+section.lead header,
+section.module header,
+section.closing header {
+  color: #79e8ff;
+}
+
+section.module {
+  border-top-color: var(--violet);
+}
+
+section.module .module-number {
+  color: #79e8ff;
+  font-size: 88px;
+  font-weight: 800;
+  line-height: 0.9;
+  margin-bottom: 18px;
+}
+
+section.exercise {
+  border-top-color: var(--amber);
+}
+
+section.exercise h1 {
+  color: #7b4b00;
+}
+
+section.safety {
+  border-top-color: var(--red);
+}
+
+section.safety h1,
+section.safety strong {
+  color: var(--red);
+}
+
+section.closing {
+  border-top-color: var(--green);
+}
+
+section.closing h2 {
+  color: #92edb4;
+}

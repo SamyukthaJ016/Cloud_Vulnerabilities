@@ -4,7 +4,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "backend/scripts/local_scan_job_worker.py"]
     healthcheck:
       disable: true
@@ -14,6 +14,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SCAN_WORKER_ID: ${SCAN_WORKER_ID:-e2e-scan-worker-1}
       SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-s3-compatible}
       OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-}
@@ -39,7 +40,7 @@ services:
       context: ../..
       dockerfile: Dockerfile
       target: production
-    restart: unless-stopped
+    restart: always
     command: ["python", "backend/scripts/evidence_connector.py"]
     healthcheck:
       disable: true
@@ -49,6 +50,8 @@ services:
       CLOUDGUARD_BASE_URL: ${CLOUDGUARD_BASE_URL}
       CONNECTOR_TOKEN: ${CONNECTOR_TOKEN}
       CONNECTOR_USER_ID: ${CONNECTOR_USER_ID:-anonymous}
+      EVIDENCE_CONNECTOR_ID: ${EVIDENCE_CONNECTOR_ID:-e2e-evidence-connector-1}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       EVIDENCE_CONNECTOR_INBOX: /app/connectors/inbox
       EVIDENCE_CONNECTOR_PROCESSED: /app/connectors/processed
       EVIDENCE_CONNECTOR_FAILED: /app/connectors/failed
@@ -59,3 +62,45 @@ services:
       PYTHONPATH: /app
     volumes:
       - ./runtime/connectors:/app/connectors
+
+  sandbox-lab-worker:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    command: ["python", "backend/scripts/sandbox_lab_worker.py"]
+    healthcheck:
+      disable: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
+      SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
+      SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
+      SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
+      SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
+      SANDBOX_LAB_WORKER_ID: ${SANDBOX_LAB_WORKER_ID:-e2e-sandbox-lab-worker-1}
+      SANDBOX_LAB_WORKER_POLL_INTERVAL: ${SANDBOX_LAB_WORKER_POLL_INTERVAL:-10}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-s3-compatible}
+      OBJECT_STORAGE_ENDPOINT_URL: ${OBJECT_STORAGE_ENDPOINT_URL:-}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-e2e}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY_ID:-}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_ACCESS_KEY:-}
+      OBJECT_STORAGE_PREFIX: ${OBJECT_STORAGE_PREFIX:-cloudguard/evidence}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
+      APP_ENV: sandbox-worker
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app
+    volumes:
+      - ./runtime/sandbox-labs:/app/sandbox-labs
+      - ./runtime/worker/reports:/app/reports
+      - ./runtime/worker/logs:/app/logs
