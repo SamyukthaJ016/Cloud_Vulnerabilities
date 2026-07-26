@@ -206,7 +206,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PYTHONPATH: /app
     volumes:
-      - sandbox_lab_data:/app/sandbox-labs
+      - sandbox_lab_data_v2:/app/sandbox-labs
       - scan_worker_reports:/app/reports
       - scan_worker_logs:/app/logs
     depends_on:
@@ -251,5 +251,5 @@ volumes:
   minio_data:
   scan_worker_reports:
   scan_worker_logs:
-  sandbox_lab_data:
+  sandbox_lab_data_v2:
   evidence_connector_data_v2:

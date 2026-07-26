@@ -106,6 +106,7 @@ FROM python-deps AS development
 # Create non-root user
 RUN useradd -m -u 1000 -s /bin/bash scanner \
     && mkdir -p /app/logs /app/reports /app/config \
+        /app/sandbox-labs \
         /app/connectors/inbox /app/connectors/processed /app/connectors/failed \
     && chown -R scanner:scanner /app
 
@@ -156,6 +157,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create non-root user
 RUN useradd -m -u 1000 -s /bin/bash scanner \
     && mkdir -p /app/logs /app/reports /app/config \
+        /app/sandbox-labs \
         /app/connectors/inbox /app/connectors/processed /app/connectors/failed \
     && chown -R scanner:scanner /app
 
