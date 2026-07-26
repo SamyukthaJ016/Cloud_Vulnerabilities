@@ -1357,7 +1357,7 @@
         async function loadCredentialSelector() {
             try {
                 const userId = getUserId();
-                const response = await fetch(`/api/credentials?user_id=${userId}`);
+                const response = await fetch(`/api/credentials/?user_id=${userId}`);
                 if (!response.ok) return;
 
                 const credentials = await response.json();
@@ -2641,7 +2641,7 @@
             container.innerHTML = '<div class="loading">Loading your credentials...</div>';
 
             try {
-                const response = await fetch('/api/credentials');
+                const response = await fetch('/api/credentials/');
                 if (!response.ok) throw new Error('Failed to load credentials');
 
                 const credentials = await response.json();

@@ -411,6 +411,7 @@ async def save_kubernetes_credential(
         logger.error(f"Failed to save Kubernetes credential: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("", response_model=List[CredentialResponse], include_in_schema=False)
 @router.get("/", response_model=List[CredentialResponse])
 async def get_credentials(
     user_id: str = Depends(get_user_id),
