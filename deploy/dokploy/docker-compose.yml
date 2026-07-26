@@ -239,7 +239,7 @@ services:
       EVIDENCE_ARTIFACT_TYPE: ${EVIDENCE_ARTIFACT_TYPE:-json}
       PYTHONPATH: /app
     volumes:
-      - evidence_connector_data:/app/connectors
+      - evidence_connector_data_v2:/app/connectors
     depends_on:
       backend:
         condition: service_healthy
@@ -252,4 +252,4 @@ volumes:
   scan_worker_reports:
   scan_worker_logs:
   sandbox_lab_data:
-  evidence_connector_data:
+  evidence_connector_data_v2:
