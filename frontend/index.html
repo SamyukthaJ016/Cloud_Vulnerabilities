@@ -2357,6 +2357,12 @@
         }
 
         function getUserId() {
+            const params = new URLSearchParams(window.location.search);
+            const demoSession = params.get('demo_session');
+            if (demoSession && /^[a-zA-Z0-9_-]{3,80}$/.test(demoSession)) {
+                sessionStorage.setItem('cloudguard_user_id', demoSession);
+            }
+
             let userId = sessionStorage.getItem('cloudguard_user_id');
             if (!userId) {
                 // Generate new consistent user ID
