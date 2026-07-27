@@ -2115,9 +2115,16 @@ def _sandbox_provider_readiness(provider: str, user_id: Optional[str], credentia
     flag_enabled = _sandbox_provider_deploy_enabled(provider)
     credential_status = _sandbox_credential_ready(provider, user_id, credential_id)
     enabled = flag_enabled and credential_status["ready"]
-    reason = credential_status["reason"] if flag_enabled else (
-        "Sandbox deployment is disabled for this provider. Enable the provider flag only for isolated testing accounts."
-    )
+    blockers: List[str] = []
+    if not flag_enabled:
+        blockers.append(
+            f"Set SANDBOX_{provider.upper()}_DEPLOY=true for an isolated testing account."
+            if provider != "iac"
+            else "Set SANDBOX_IAC_DEPLOY=true."
+        )
+    if not credential_status["ready"]:
+        blockers.append(credential_status["reason"])
+    reason = credential_status["reason"] if enabled else " ".join(blockers)
     return {
         "enabled": enabled,
         "deployment_flag_enabled": flag_enabled,
@@ -2966,6 +2973,8 @@ def _create_kubernetes_object(core_api, rbac_api, namespace: str, obj: Dict[str,
             rbac_api.create_namespaced_role(namespace=metadata.get("namespace") or namespace, body=obj)
         elif kind == "RoleBinding":
             rbac_api.create_namespaced_role_binding(namespace=metadata.get("namespace") or namespace, body=obj)
+        elif kind == "Secret":
+            core_api.create_namespaced_secret(namespace=metadata.get("namespace") or namespace, body=obj)
         else:
             raise RuntimeError(f"Unsupported Kubernetes sandbox object kind: {kind}")
     except ApiException as exc:
@@ -2975,24 +2984,27 @@ def _create_kubernetes_object(core_api, rbac_api, namespace: str, obj: Dict[str,
         raise
 
 
+def _kubernetes_sandbox_objects(namespace: str) -> List[Dict[str, Any]]:
+    manifest = _sandbox_iac_files(namespace)[3]["content"]
+    data = json.loads(manifest)
+    objects = data.get("items", []) if isinstance(data, dict) and data.get("kind") == "List" else [data]
+    # Keep the live lab namespace-scoped so a demo kubeconfig does not need cluster-admin.
+    return [obj for obj in objects if obj.get("kind") != "ClusterRole"]
+
+
 async def _deploy_kubernetes_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
     _api_client, core_api, rbac_api = _kube_clients_for_lab(lab)
     namespace = (lab.get("namespace") or lab["resource_prefix"]).lower()
-    manifest = _sandbox_iac_files(namespace)[1]["content"]
-    try:
-        import yaml
-    except ImportError as exc:
-        raise RuntimeError("PyYAML is required for Kubernetes sandbox labs.") from exc
-
-    for obj in yaml.safe_load_all(manifest):
-        if obj:
-            _create_kubernetes_object(core_api, rbac_api, namespace, obj)
+    for obj in _kubernetes_sandbox_objects(namespace):
+        _create_kubernetes_object(core_api, rbac_api, namespace, obj)
 
     resources = [
         {"type": "namespace", "name": namespace},
         {"type": "pod", "name": "privileged-demo", "namespace": namespace},
         {"type": "role", "name": "wildcard-role", "namespace": namespace},
         {"type": "service", "name": "exposed-nodeport", "namespace": namespace},
+        {"type": "service", "name": "public-load-balancer", "namespace": namespace},
+        {"type": "secret", "name": "hardcoded-demo-secret", "namespace": namespace},
     ]
     findings = [
         {

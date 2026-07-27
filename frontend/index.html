@@ -325,6 +325,12 @@
             gap: 10px;
         }
 
+        .demo-lab-card {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
         .demo-lab-btn {
             min-height: 54px;
             padding: 10px 12px;
@@ -347,6 +353,21 @@
             cursor: not-allowed;
             color: #64748b;
             opacity: 0.72;
+        }
+
+        .demo-lab-readiness {
+            min-height: 34px;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            line-height: 1.25;
+        }
+
+        .demo-lab-readiness.ready {
+            color: #5eead4;
+        }
+
+        .demo-lab-readiness.blocked {
+            color: #fbbf24;
         }
 
         .demo-lab-status {
@@ -1635,6 +1656,19 @@
             panel.textContent = message;
         }
 
+        function demoReadinessText(item) {
+            if (item?.enabled) {
+                return item.deploys_real_cloud_resources
+                    ? 'Ready: temporary cloud resources will be created and cleaned up.'
+                    : 'Ready: generated local vulnerable files, no cloud cost.';
+            }
+
+            const needs = [];
+            if (!item?.deployment_flag_enabled) needs.push('enable deploy flag');
+            if (!item?.credential_ready) needs.push('add credential');
+            return needs.length ? `Needs ${needs.join(' + ')}` : (item?.reason || 'Not ready yet');
+        }
+
         async function loadSandboxDemoCatalog() {
             const actions = document.getElementById('demoLabActions');
             if (!actions) return;
@@ -1656,11 +1690,17 @@
                     const title = disabled
                         ? (item.reason || 'Sandbox deployment is not ready for this provider yet')
                         : `Start ${demoProviderLabel(provider)}`;
+                    const readinessClass = disabled ? 'blocked' : 'ready';
                     return `
-                        <button class="demo-lab-btn" ${disabled ? 'disabled' : ''} title="${escapeHtml(title)}"
-                            onclick="startDemoSandboxScan('${provider}')">
-                            ${demoProviderLabel(provider)}
-                        </button>
+                        <div class="demo-lab-card">
+                            <button class="demo-lab-btn" ${disabled ? 'disabled' : ''} title="${escapeHtml(title)}"
+                                onclick="startDemoSandboxScan('${provider}')">
+                                ${demoProviderLabel(provider)}
+                            </button>
+                            <div class="demo-lab-readiness ${readinessClass}" title="${escapeHtml(title)}">
+                                ${escapeHtml(demoReadinessText(item))}
+                            </div>
+                        </div>
                     `;
                 }).join('');
 
@@ -1673,7 +1713,7 @@
                     setDemoStatus('Ready. Use IaC Demo for a safe zero-cost scanner demo.', '');
                 }
             } catch (error) {
-                actions.innerHTML = '<button class="demo-lab-btn" disabled>Demo unavailable</button>';
+                actions.innerHTML = '<div class="demo-lab-card"><button class="demo-lab-btn" disabled>Demo unavailable</button><div class="demo-lab-readiness blocked">Could not load readiness</div></div>';
                 setDemoStatus(`Demo catalog error: ${error.message}`, 'active');
             }
         }
@@ -1740,7 +1780,7 @@
         async function startDemoSandboxScan(provider = 'iac') {
             const item = sandboxCatalog.find(entry => entry.provider === provider);
             if (!item?.enabled) {
-                setDemoStatus(`${demoProviderLabel(provider)} is not enabled on this deployment yet.`, 'active');
+                setDemoStatus(`${demoProviderLabel(provider)} is not ready: ${item?.reason || demoReadinessText(item)}.`, 'active');
                 return;
             }
 
