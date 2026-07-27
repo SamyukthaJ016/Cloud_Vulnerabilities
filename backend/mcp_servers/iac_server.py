@@ -1,6 +1,6 @@
 """
 IaC MCP Server
-Scans Terraform and CloudFormation files for common cloud misconfigurations.
+Scans Terraform, CloudFormation, and Kubernetes manifest files for common misconfigurations.
 """
 
 import json
@@ -40,7 +40,7 @@ class IaCMCPServer(BaseMCPServer):
     def _setup_tools(self) -> None:
         self.register_tool(MCPTool(
             name="iac/discover_templates",
-            description="Discover Terraform and CloudFormation files in the repository",
+            description="Discover Terraform, CloudFormation, and Kubernetes manifest files in the repository",
             category=ToolCategory.DISCOVERY,
             input_schema={"type": "object", "properties": {"path": {"type": "string"}}},
             handler=self._discover_templates,
@@ -75,7 +75,7 @@ class IaCMCPServer(BaseMCPServer):
         self.register_resource(MCPResource(
             uri="iac://templates",
             name="IaC Templates",
-            description="Terraform and CloudFormation files discovered in the repository",
+            description="Terraform, CloudFormation, and Kubernetes manifest files discovered in the repository",
             mime_type="application/json",
         ))
 
@@ -154,6 +154,8 @@ class IaCMCPServer(BaseMCPServer):
                         findings.extend(self._scan_terraform(resource, text))
                     elif file_type == "cloudformation":
                         findings.extend(self._scan_cloudformation(resource, Path(filename), text))
+                    elif file_type == "kubernetes":
+                        findings.extend(self._scan_kubernetes(resource, Path(filename), text))
                 except Exception as exc:
                     logger.warning("Failed to scan uploaded IaC file %s: %s", filename, exc)
                     errors.append(f"{filename}: {exc}")
@@ -163,8 +165,8 @@ class IaCMCPServer(BaseMCPServer):
                     resources[0],
                     "INFO",
                     "No supported IaC templates found",
-                    "The uploaded content did not include supported Terraform or CloudFormation templates.",
-                    "Upload .tf, .tfvars, .hcl, .yaml, .yml, or .json files containing Terraform or CloudFormation resources.",
+                    "The uploaded content did not include supported Terraform, CloudFormation, or Kubernetes templates.",
+                    "Upload .tf, .tfvars, .hcl, .yaml, .yml, or .json files containing Terraform, CloudFormation, or Kubernetes resources.",
                     ["CIS Infrastructure as Code"],
                 ))
         else:
@@ -186,6 +188,8 @@ class IaCMCPServer(BaseMCPServer):
                         findings.extend(self._scan_terraform(resource, text))
                     elif file_type == "cloudformation":
                         findings.extend(self._scan_cloudformation(resource, template_file, text))
+                    elif file_type == "kubernetes":
+                        findings.extend(self._scan_kubernetes(resource, template_file, text))
                 except Exception as exc:
                     logger.warning("Failed to scan IaC file %s: %s", template_file, exc)
                     errors.append(f"{template_file}: {exc}")
@@ -195,8 +199,8 @@ class IaCMCPServer(BaseMCPServer):
                 resources[0],
                 "INFO",
                 "No IaC templates found",
-                "The IaC scanner ran successfully but did not find Terraform or CloudFormation templates in the deployment workspace.",
-                "Add Terraform or CloudFormation templates under infra, terraform, cloudformation, or the repository root to include them in scans.",
+                "The IaC scanner ran successfully but did not find Terraform, CloudFormation, or Kubernetes templates in the deployment workspace.",
+                "Add Terraform, CloudFormation, or Kubernetes templates under infra, terraform, cloudformation, deployment, or the repository root to include them in scans.",
                 ["CIS Infrastructure as Code"],
             ))
 
@@ -239,6 +243,16 @@ class IaCMCPServer(BaseMCPServer):
         if suffix in {".yaml", ".yml", ".json"} or "awstemplateformatversion" in lower or "aws::" in lower:
             if "AWSTemplateFormatVersion" in text or "AWS::" in text:
                 return "cloudformation"
+            if re.search(r"(?m)^apiVersion\s*:", text) and re.search(r"(?m)^kind\s*:", text):
+                return "kubernetes"
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict) and data.get("apiVersion") and data.get("kind"):
+                    return "kubernetes"
+                if isinstance(data, list) and any(isinstance(item, dict) and item.get("apiVersion") and item.get("kind") for item in data):
+                    return "kubernetes"
+            except Exception:
+                pass
 
         return None
 
@@ -280,6 +294,16 @@ class IaCMCPServer(BaseMCPServer):
                 return None
             if "AWSTemplateFormatVersion" in text or "AWS::" in text:
                 return "cloudformation"
+            if re.search(r"(?m)^apiVersion\s*:", text) and re.search(r"(?m)^kind\s*:", text):
+                return "kubernetes"
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict) and data.get("apiVersion") and data.get("kind"):
+                    return "kubernetes"
+                if isinstance(data, list) and any(isinstance(item, dict) and item.get("apiVersion") and item.get("kind") for item in data):
+                    return "kubernetes"
+            except Exception:
+                pass
         return None
 
     def _scan_terraform(self, resource: Dict[str, Any], text: str) -> List[Dict[str, Any]]:
@@ -525,6 +549,215 @@ class IaCMCPServer(BaseMCPServer):
         if isinstance(value, list):
             return "*" in value
         return False
+
+    def _scan_kubernetes(self, resource: Dict[str, Any], path: Path, text: str) -> List[Dict[str, Any]]:
+        try:
+            documents = self._load_kubernetes_documents(path, text)
+        except Exception as exc:
+            return [self._finding(
+                resource,
+                "LOW",
+                "Kubernetes manifest could not be parsed",
+                f"The manifest was identified as Kubernetes YAML/JSON but could not be parsed: {exc}",
+                "Validate the Kubernetes manifest before deployment.",
+                ["Kubernetes Manifest Hygiene"],
+            )]
+
+        findings: List[Dict[str, Any]] = []
+        has_workload = False
+        has_network_policy = False
+
+        for doc in documents:
+            kind = str(doc.get("kind") or "")
+            metadata = doc.get("metadata") or {}
+            name = str(metadata.get("name") or path.name)
+            namespace = str(metadata.get("namespace") or "default")
+            spec = doc.get("spec") or {}
+
+            if kind == "NetworkPolicy":
+                has_network_policy = True
+
+            if kind in {"Pod", "Deployment", "DaemonSet", "StatefulSet", "ReplicaSet", "Job", "CronJob"}:
+                has_workload = True
+                pod_spec = self._kubernetes_pod_spec(kind, spec)
+                if pod_spec.get("hostNetwork") is True:
+                    findings.append(self._finding(
+                        resource,
+                        "HIGH",
+                        f"{kind} {namespace}/{name} uses hostNetwork",
+                        "The workload shares the host network namespace, increasing blast radius and bypass risk.",
+                        "Disable hostNetwork unless it is strictly required and isolate the workload with policy.",
+                        ["Kubernetes Pod Security Standards"],
+                    ))
+                if pod_spec.get("automountServiceAccountToken") is not False:
+                    findings.append(self._finding(
+                        resource,
+                        "MEDIUM",
+                        f"{kind} {namespace}/{name} auto-mounts service account tokens",
+                        "The workload does not explicitly disable automatic service account token mounting.",
+                        "Set automountServiceAccountToken: false unless the workload needs Kubernetes API access.",
+                        ["Kubernetes Least Privilege"],
+                    ))
+
+                for container in self._kubernetes_containers(pod_spec):
+                    container_name = str(container.get("name") or "container")
+                    image = str(container.get("image") or "")
+                    security_context = container.get("securityContext") or {}
+                    resource_limits = container.get("resources") or {}
+
+                    if security_context.get("privileged") is True:
+                        findings.append(self._finding(
+                            resource,
+                            "CRITICAL",
+                            f"{kind} {namespace}/{name} container {container_name} is privileged",
+                            "A privileged container can access host-level capabilities and devices.",
+                            "Remove privileged: true and grant only the exact Linux capabilities required.",
+                            ["Kubernetes Pod Security Standards"],
+                        ))
+                    if security_context.get("allowPrivilegeEscalation") is True:
+                        findings.append(self._finding(
+                            resource,
+                            "HIGH",
+                            f"{kind} {namespace}/{name} allows privilege escalation",
+                            "The container can gain more privileges than its parent process.",
+                            "Set allowPrivilegeEscalation: false and run with a restricted security context.",
+                            ["Kubernetes Pod Security Standards"],
+                        ))
+                    if security_context.get("runAsNonRoot") is not True:
+                        findings.append(self._finding(
+                            resource,
+                            "MEDIUM",
+                            f"{kind} {namespace}/{name} does not enforce non-root execution",
+                            "The container security context does not require runAsNonRoot: true.",
+                            "Set runAsNonRoot: true and use an image that can run as a non-root user.",
+                            ["Kubernetes Pod Security Standards"],
+                        ))
+
+                    added_caps = ((security_context.get("capabilities") or {}).get("add") or [])
+                    if any(str(cap).upper() in {"ALL", "SYS_ADMIN", "NET_ADMIN"} for cap in added_caps):
+                        findings.append(self._finding(
+                            resource,
+                            "HIGH",
+                            f"{kind} {namespace}/{name} adds dangerous Linux capabilities",
+                            "The manifest adds broad or host-sensitive Linux capabilities to a container.",
+                            "Drop all capabilities by default and add back only narrowly required capabilities.",
+                            ["Kubernetes Pod Security Standards"],
+                        ))
+
+                    if image.endswith(":latest") or (image and ":" not in image):
+                        findings.append(self._finding(
+                            resource,
+                            "MEDIUM",
+                            f"{kind} {namespace}/{name} uses a mutable image tag",
+                            "The container image tag is missing or uses latest, making deployments non-reproducible.",
+                            "Pin images to immutable versions or digests.",
+                            ["Kubernetes Supply Chain"],
+                        ))
+                    if "limits" not in resource_limits:
+                        findings.append(self._finding(
+                            resource,
+                            "MEDIUM",
+                            f"{kind} {namespace}/{name} has no resource limits",
+                            "The container does not define CPU/memory limits.",
+                            "Set conservative CPU and memory requests/limits for each container.",
+                            ["Kubernetes Resource Governance"],
+                        ))
+
+            if kind in {"Role", "ClusterRole"}:
+                for rule in spec.get("rules") or doc.get("rules") or []:
+                    if not isinstance(rule, dict):
+                        continue
+                    if self._has_wildcard(rule.get("apiGroups")) and self._has_wildcard(rule.get("resources")) and self._has_wildcard(rule.get("verbs")):
+                        findings.append(self._finding(
+                            resource,
+                            "CRITICAL" if kind == "ClusterRole" else "HIGH",
+                            f"{kind} {namespace}/{name} grants wildcard RBAC",
+                            "The RBAC rule grants wildcard apiGroups, resources, and verbs.",
+                            "Replace wildcard RBAC with named resources and the minimum verbs required.",
+                            ["Kubernetes RBAC Least Privilege"],
+                        ))
+
+            if kind == "Service":
+                service_type = str(spec.get("type") or "ClusterIP")
+                if service_type == "LoadBalancer":
+                    findings.append(self._finding(
+                        resource,
+                        "HIGH",
+                        f"Service {namespace}/{name} is externally load-balanced",
+                        "A LoadBalancer service can expose workloads outside the cluster.",
+                        "Restrict exposure through ingress controls, private load balancers, and network policy.",
+                        ["Kubernetes Network Exposure"],
+                    ))
+                if service_type == "NodePort":
+                    findings.append(self._finding(
+                        resource,
+                        "MEDIUM",
+                        f"Service {namespace}/{name} uses NodePort",
+                        "A NodePort service exposes a port on every node in the cluster.",
+                        "Prefer ClusterIP plus a controlled ingress or load balancer.",
+                        ["Kubernetes Network Exposure"],
+                    ))
+
+            if kind == "Secret" and (doc.get("data") or doc.get("stringData")):
+                findings.append(self._finding(
+                    resource,
+                    "HIGH",
+                    f"Secret {namespace}/{name} is stored in source-controlled manifest form",
+                    "The manifest contains Kubernetes Secret data that can leak through source control or CI logs.",
+                    "Use an external secret manager or sealed/encrypted secret workflow.",
+                    ["Kubernetes Secret Management"],
+                ))
+
+        if has_workload and not has_network_policy:
+            findings.append(self._finding(
+                resource,
+                "MEDIUM",
+                "Kubernetes workloads lack a matching NetworkPolicy",
+                "The manifest set includes workloads but no NetworkPolicy object to restrict pod traffic.",
+                "Add namespace-scoped ingress and egress NetworkPolicies for the deployed workloads.",
+                ["Kubernetes Network Segmentation"],
+            ))
+
+        return findings
+
+    def _load_kubernetes_documents(self, path: Path, text: str) -> List[Dict[str, Any]]:
+        stripped = text.strip()
+        if path.suffix.lower() == ".json" or stripped.startswith("{") or stripped.startswith("["):
+            data = json.loads(text)
+            return self._flatten_kubernetes_documents(data)
+
+        import yaml
+        documents: List[Dict[str, Any]] = []
+        for doc in yaml.safe_load_all(text):
+            documents.extend(self._flatten_kubernetes_documents(doc))
+        return documents
+
+    def _flatten_kubernetes_documents(self, data: Any) -> List[Dict[str, Any]]:
+        if isinstance(data, list):
+            documents: List[Dict[str, Any]] = []
+            for item in data:
+                documents.extend(self._flatten_kubernetes_documents(item))
+            return documents
+        if isinstance(data, dict):
+            if data.get("kind") == "List" and isinstance(data.get("items"), list):
+                return self._flatten_kubernetes_documents(data["items"])
+            return [data]
+        return []
+
+    def _kubernetes_pod_spec(self, kind: str, spec: Dict[str, Any]) -> Dict[str, Any]:
+        if kind == "Pod":
+            return spec
+        if kind == "CronJob":
+            return (((spec.get("jobTemplate") or {}).get("spec") or {}).get("template") or {}).get("spec") or {}
+        return ((spec.get("template") or {}).get("spec") or {})
+
+    def _kubernetes_containers(self, pod_spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+        containers: List[Dict[str, Any]] = []
+        for key in ("initContainers", "containers"):
+            for container in pod_spec.get(key) or []:
+                if isinstance(container, dict):
+                    containers.append(container)
+        return containers
 
     def _finding(
         self,

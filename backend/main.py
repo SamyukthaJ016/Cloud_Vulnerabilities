@@ -2138,7 +2138,17 @@ def _sandbox_lab_catalog(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
             "lab_type": "misconfigured_iac",
             "cost": "zero",
             "deploys_real_cloud_resources": False,
-            "tests": ["Terraform public storage", "open security group", "wildcard IAM", "privileged Kubernetes YAML"],
+            "tests": [
+                "Terraform public storage",
+                "open admin ports",
+                "public database",
+                "wildcard IAM",
+                "CloudFormation public resources",
+                "hardcoded Kubernetes Secret",
+                "privileged Kubernetes workload",
+                "wildcard RBAC",
+                "exposed Kubernetes services",
+            ],
             **iac_readiness,
         },
         {
@@ -2407,6 +2417,11 @@ resource "aws_s3_bucket" "public_logs" {{
   bucket = "{prefix}-public-logs"
 }}
 
+resource "aws_s3_bucket_acl" "public_logs" {{
+  bucket = aws_s3_bucket.public_logs.id
+  acl    = "public-read"
+}}
+
 resource "aws_s3_bucket_public_access_block" "public_logs" {{
   bucket                  = aws_s3_bucket.public_logs.id
   block_public_acls       = false
@@ -2438,6 +2453,33 @@ resource "aws_security_group" "open_admin" {{
   }}
 }}
 
+resource "aws_security_group_rule" "open_rdp" {{
+  type              = "ingress"
+  from_port         = 3389
+  to_port           = 3389
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.open_admin.id
+}}
+
+resource "aws_instance" "public_admin_host" {{
+  ami                         = "ami-0c55b159cbfafe1f0"
+  instance_type               = "t3.micro"
+  associate_public_ip_address = true
+  vpc_security_group_ids      = [aws_security_group.open_admin.id]
+}}
+
+resource "aws_db_instance" "public_customer_db" {{
+  identifier          = "{prefix}-customer-db"
+  engine              = "postgres"
+  instance_class      = "db.t3.micro"
+  allocated_storage   = 20
+  username            = "admin"
+  password            = "ChangeMe123!"
+  publicly_accessible = true
+  skip_final_snapshot = true
+}}
+
 resource "aws_iam_policy" "wildcard_admin" {{
   name = "{prefix}-wildcard-admin"
   policy = jsonencode({{
@@ -2451,52 +2493,139 @@ resource "aws_iam_policy" "wildcard_admin" {{
 }}
 """.strip()
 
-    kubernetes = f"""
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {prefix}
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: privileged-demo
-  namespace: {prefix}
-spec:
-  containers:
-    - name: pause
-      image: registry.k8s.io/pause:3.9
-      securityContext:
-        privileged: true
-  hostNetwork: true
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: wildcard-role
-  namespace: {prefix}
-rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs: ["*"]
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: exposed-nodeport
-  namespace: {prefix}
-spec:
-  type: NodePort
-  selector:
-    app: missing-selector
-  ports:
-    - port: 80
-      targetPort: 8080
+    network = f"""
+resource "aws_security_group" "open_web" {{
+  name = "{prefix}-open-web"
+  ingress {{
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }}
+}}
+
+resource "aws_s3_bucket" "unencrypted_artifacts" {{
+  bucket = "{prefix}-artifacts"
+}}
 """.strip()
+
+    cloudformation = json.dumps({
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "CloudGuard vulnerable IaC demo template",
+        "Resources": {
+            "PublicEvidenceBucket": {
+                "Type": "AWS::S3::Bucket",
+                "Properties": {
+                    "BucketName": f"{prefix}-cfn-public-evidence",
+                    "AccessControl": "PublicRead",
+                },
+            },
+            "OpenAdminSecurityGroup": {
+                "Type": "AWS::EC2::SecurityGroup",
+                "Properties": {
+                    "GroupDescription": "Open administrative ingress",
+                    "SecurityGroupIngress": [
+                        {"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "CidrIp": "0.0.0.0/0"},
+                        {"IpProtocol": "tcp", "FromPort": 8443, "ToPort": 8443, "CidrIp": "0.0.0.0/0"},
+                    ],
+                },
+            },
+            "PublicDatabase": {
+                "Type": "AWS::RDS::DBInstance",
+                "Properties": {
+                    "DBInstanceClass": "db.t3.micro",
+                    "Engine": "postgres",
+                    "AllocatedStorage": 20,
+                    "PubliclyAccessible": True,
+                    "StorageEncrypted": False,
+                },
+            },
+            "WildcardManagedPolicy": {
+                "Type": "AWS::IAM::ManagedPolicy",
+                "Properties": {
+                    "ManagedPolicyName": f"{prefix}-cfn-wildcard-admin",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}],
+                    },
+                },
+            },
+        },
+    }, indent=2)
+
+    kubernetes = json.dumps({
+        "apiVersion": "v1",
+        "kind": "List",
+        "items": [
+            {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": prefix}},
+            {
+                "apiVersion": "v1",
+                "kind": "Pod",
+                "metadata": {"name": "privileged-demo", "namespace": prefix},
+                "spec": {
+                    "automountServiceAccountToken": True,
+                    "hostNetwork": True,
+                    "containers": [{
+                        "name": "admin-shell",
+                        "image": "nginx:latest",
+                        "securityContext": {
+                            "privileged": True,
+                            "allowPrivilegeEscalation": True,
+                            "runAsNonRoot": False,
+                            "capabilities": {"add": ["SYS_ADMIN", "NET_ADMIN"]},
+                        },
+                    }],
+                },
+            },
+            {
+                "apiVersion": "rbac.authorization.k8s.io/v1",
+                "kind": "Role",
+                "metadata": {"name": "wildcard-role", "namespace": prefix},
+                "rules": [{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}],
+            },
+            {
+                "apiVersion": "rbac.authorization.k8s.io/v1",
+                "kind": "ClusterRole",
+                "metadata": {"name": f"{prefix}-cluster-admin-lite"},
+                "rules": [{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}],
+            },
+            {
+                "apiVersion": "v1",
+                "kind": "Service",
+                "metadata": {"name": "exposed-nodeport", "namespace": prefix},
+                "spec": {
+                    "type": "NodePort",
+                    "selector": {"app": "missing-selector"},
+                    "ports": [{"port": 80, "targetPort": 8080}],
+                },
+            },
+            {
+                "apiVersion": "v1",
+                "kind": "Service",
+                "metadata": {"name": "public-load-balancer", "namespace": prefix},
+                "spec": {
+                    "type": "LoadBalancer",
+                    "selector": {"app": "missing-selector"},
+                    "ports": [{"port": 443, "targetPort": 8443}],
+                },
+            },
+            {
+                "apiVersion": "v1",
+                "kind": "Secret",
+                "metadata": {"name": "hardcoded-demo-secret", "namespace": prefix},
+                "stringData": {
+                    "database-password": "SuperSecretPassword123",
+                    "api-token": "demo-token-please-rotate",
+                },
+            },
+        ],
+    }, indent=2)
 
     return [
         {"filename": "sandbox_public_storage.tf", "content": terraform},
-        {"filename": "sandbox_privileged_kubernetes.yaml", "content": kubernetes},
+        {"filename": "sandbox_network_exposure.tf", "content": network},
+        {"filename": "sandbox_cloudformation_exposure.json", "content": cloudformation},
+        {"filename": "sandbox_privileged_kubernetes.json", "content": kubernetes},
     ]
 
 

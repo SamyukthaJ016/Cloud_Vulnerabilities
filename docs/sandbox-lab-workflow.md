@@ -26,7 +26,7 @@ The platform does **not** create or close full AWS/GCP cloud accounts on each cl
 
 | Provider | Default state | What it tests | Cost |
 | --- | --- | --- | --- |
-| IaC | Enabled | Public storage Terraform, open security group, wildcard IAM, privileged Kubernetes YAML | Zero |
+| IaC | Enabled | Public storage, open admin ports, public database, wildcard IAM, CloudFormation exposure, privileged Kubernetes YAML/JSON, wildcard RBAC, exposed services, hardcoded Secret | Zero |
 | AWS | Disabled | Public S3 bucket policy, disabled public access block, wildcard IAM role policy | Near-zero if destroyed quickly |
 | GCP | Disabled | Public Cloud Storage IAM binding | Near-zero if destroyed quickly |
 | Kubernetes | Disabled | Privileged pod, wildcard RBAC, missing NetworkPolicy, NodePort service | Uses existing cluster capacity |
