@@ -92,6 +92,33 @@ def create_scan_record(account_id, cloud, aws_credential_id=None):
         cur.close()
 
 
+def finish_scan_record(scan_id: int, status: str = "completed") -> None:
+    conn = ensure_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """
+            UPDATE scans
+            SET
+                status = %s,
+                completed_at = NOW(),
+                duration_seconds = COALESCE(
+                    duration_seconds,
+                    GREATEST(0, EXTRACT(EPOCH FROM (NOW() - started_at))::INTEGER)
+                )
+            WHERE id = %s
+            """,
+            (status, scan_id),
+        )
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to finish scan record {scan_id}: {e}")
+        raise
+    finally:
+        cur.close()
+
+
 # -------------------------------------------------------------------
 # Resources
 # -------------------------------------------------------------------

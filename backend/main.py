@@ -45,6 +45,7 @@ from backend.vulnerability.vulnerability_integration import CloudVulnerabilityIn
 from backend.ai_recommender import AIRecommendationEngine
 from backend.database import (
     create_scan_record,
+    finish_scan_record,
     store_resource,
     store_finding,
     store_vulnerability,
@@ -6610,7 +6611,7 @@ async def store_scan_result(
                     f.vuln_metadata,
                 )
 
-        conn.commit()
+        finish_scan_record(scan_id)
         logger.info(f"Stored scan {scan_id}")
         return scan_id
     except Exception:
@@ -6793,6 +6794,7 @@ async def _store_mcp_scan_result(
                 source=validated_by  # Mark CloudFox findings
             )
 
+    finish_scan_record(scan_id)
     logger.info(f"✅ Stored MCP scan result: scan_id={scan_id}, cloudfox_findings={len([f for f in result.get('findings', []) if f.get('source') == 'cloudfox'])}")
     return scan_id
 
