@@ -293,6 +293,7 @@ class SandboxLabRequest(BaseModel):
     credential_id: Optional[int] = None
     region: Optional[str] = None
     namespace: Optional[str] = None
+    demo_scan: bool = False
     scan_after_deploy: bool = True
     auto_destroy: bool = True
     requested_by: Optional[str] = None
@@ -2227,6 +2228,16 @@ def create_sandbox_lab_run(user_id: str, tenant_id: str, request: SandboxLabRequ
         raise HTTPException(status_code=403, detail="Sandbox labs are disabled. Set SANDBOX_LABS_ENABLED=true.")
 
     provider = _normalize_allowed(request.provider, {"aws", "gcp", "kubernetes", "iac"}, "iac")
+    if request.demo_scan:
+        request.scan_after_deploy = True
+        request.auto_destroy = True
+        request.ttl_minutes = max(1, min(int(request.ttl_minutes or 5), 15))
+        request.metadata = {
+            **(request.metadata or {}),
+            "flow": "create_vulnerable_lab_scan_destroy",
+            "demo_scan_contract": "create vulnerable lab, scan it, then auto-destroy resources",
+        }
+
     readiness = _sandbox_provider_readiness(provider, user_id, request.credential_id)
     if not readiness["enabled"]:
         raise HTTPException(status_code=403, detail=readiness["reason"])
@@ -4570,10 +4581,15 @@ async def create_sandbox_lab(request: SandboxLabRequest, req: Request, backgroun
     lab = create_sandbox_lab_run(user_id, tenant_id, request)
     if os.getenv("SANDBOX_LAB_INLINE_WORKER", "true").lower() == "true":
         background_tasks.add_task(process_sandbox_labs_once)
+    message = (
+        "Demo scan queued. CloudGuard will create a vulnerable lab, scan it, and destroy it automatically."
+        if request.demo_scan
+        else "Sandbox lab queued. Resources will be cleaned after scan completion or TTL expiry."
+    )
     return {
         "status": "accepted",
         "lab": lab,
-        "message": "Sandbox lab queued. Resources will be cleaned after scan completion or TTL expiry.",
+        "message": message,
     }
 
 

@@ -1646,8 +1646,8 @@
         function demoReadinessText(item) {
             if (item?.enabled) {
                 return item.deploys_real_cloud_resources
-                    ? 'Ready: temporary cloud resources will be created and cleaned up.'
-                    : 'Ready: generated local vulnerable files, no cloud cost.';
+                    ? 'Ready: will create, scan, and clean up temporary resources.'
+                    : 'Ready: will generate vulnerable files, scan, and clean up.';
             }
 
             const needs = [];
@@ -1676,7 +1676,7 @@
                     const disabled = !item.enabled;
                     const title = disabled
                         ? (item.reason || 'Sandbox deployment is not ready for this provider yet')
-                        : `Start ${demoProviderLabel(provider)}`;
+                        : `Create, scan, and clean up ${demoProviderLabel(provider)}`;
                     const readinessClass = disabled ? 'blocked' : 'ready';
                     return `
                         <div class="demo-lab-card">
@@ -1736,7 +1736,8 @@
                 const lastEvent = events.length ? events[events.length - 1].message : 'Waiting for worker';
                 setDemoStatus(`Demo ${status}: ${lastEvent}`, 'active');
 
-                if (['requested', 'provisioning', 'deployed', 'scanning', 'destroying'].includes(status)) {
+                const cleanupPending = status === 'scan_completed' && lab.auto_destroy;
+                if (['requested', 'provisioning', 'deployed', 'scanning', 'destroying'].includes(status) || cleanupPending) {
                     demoPollTimer = setTimeout(() => pollDemoSandboxLab(labId), 2500);
                     return;
                 }
@@ -1747,7 +1748,7 @@
                     ? `/dashboard?scanComplete=true&scanIds=${scanIds.join(',')}&labId=${encodeURIComponent(labId)}`
                     : `/dashboard?labId=${encodeURIComponent(labId)}`;
 
-                if (status === 'destroyed' || status === 'scan_completed') {
+                if (status === 'destroyed' || (status === 'scan_completed' && !lab.auto_destroy)) {
                     setDemoStatus('Demo scan completed and cleanup proof was captured. Opening dashboard...', 'active');
                     setTimeout(() => {
                         window.location.href = dashboardUrl;
@@ -1774,7 +1775,7 @@
             document.querySelectorAll('.demo-lab-btn').forEach(button => {
                 button.disabled = true;
             });
-            setDemoStatus(`Starting ${demoProviderLabel(provider)}...`, 'active');
+            setDemoStatus(`Creating vulnerable ${demoProviderLabel(provider)} lab, then scanning and cleaning up...`, 'active');
 
             try {
                 const response = await fetch('/api/sandbox-labs', {
@@ -1784,11 +1785,13 @@
                         provider,
                         lab_type: item.lab_type || 'default',
                         ttl_minutes: 5,
+                        demo_scan: true,
                         scan_after_deploy: true,
                         auto_destroy: true,
                         requested_by: getUserId(),
                         metadata: {
-                            source: 'home_demo_button'
+                            source: 'home_demo_button',
+                            flow: 'create_vulnerable_lab_scan_destroy'
                         }
                     })
                 });

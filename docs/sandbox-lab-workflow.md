@@ -22,6 +22,8 @@ The platform does **not** create or close full AWS/GCP cloud accounts on each cl
 7. For AWS/GCP/Kubernetes labs, the worker queues a real scan job.
 8. When the scan finishes, or when TTL expires, the worker destroys the resources and stores cleanup proof.
 
+When the UI sends `demo_scan=true`, the backend forces `scan_after_deploy=true` and `auto_destroy=true`. That keeps the demo button contract simple: create the vulnerable lab, scan it, and delete it automatically.
+
 ## Supported Labs
 
 | Provider | Default state | What it tests | Cost |
@@ -65,6 +67,7 @@ curl -X POST http://localhost:8000/api/sandbox-labs \
     "provider": "iac",
     "lab_type": "misconfigured_iac",
     "ttl_minutes": 5,
+    "demo_scan": true,
     "scan_after_deploy": true,
     "auto_destroy": true
   }'
@@ -81,6 +84,7 @@ curl -X POST http://localhost:8000/api/sandbox-labs \
     "ttl_minutes": 5,
     "credential_id": 12,
     "region": "ap-south-1",
+    "demo_scan": true,
     "scan_after_deploy": true,
     "auto_destroy": true
   }'
