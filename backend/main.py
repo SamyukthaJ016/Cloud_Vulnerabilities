@@ -751,18 +751,6 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
             except Exception as exc:
                 logger.warning(f"Could not attach GCP credentials for Kubernetes enrichment: {exc}")
 
-            try:
-                azure_cred = credential_manager.get_default_credential(user_id, "azure")
-                if azure_cred:
-                    kubernetes_config["azure"] = {
-                        "client_id": azure_cred.azure_client_id,
-                        "client_secret": azure_cred.azure_client_secret,
-                        "tenant_id": azure_cred.azure_tenant_id,
-                        "subscription_id": azure_cred.azure_subscription_id,
-                    }
-            except Exception as exc:
-                logger.warning(f"Could not attach Azure credentials for Kubernetes enrichment: {exc}")
-
             server = create_kubernetes_server(kubernetes_config)
             mcp_server_manager.register_server(server)
             await server.start()

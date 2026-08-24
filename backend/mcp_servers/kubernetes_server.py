@@ -764,8 +764,6 @@ class KubernetesMCPServer(BaseMCPServer):
                 return self._query_eks_api(cluster_resource, metadata)
             if provider == "gke":
                 return self._query_gke_api(cluster_resource, metadata)
-            if provider == "aks":
-                return self._query_aks_api(cluster_resource, metadata)
         except Exception as exc:
             logger.warning("Managed Kubernetes API query failed for %s: %s", provider, exc)
             return [], [self._finding(
@@ -863,57 +861,6 @@ class KubernetesMCPServer(BaseMCPServer):
         resource = self._managed_cluster_resource("gke", metadata, cluster)
         findings = self._scan_gke_cluster(resource, cluster)
         return [resource], findings, {"provider": "gke", "queried": True, "project": project, "location": location}
-
-    def _query_aks_api(
-        self,
-        cluster_resource: Dict[str, Any],
-        metadata: Dict[str, Any],
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Dict[str, Any]]:
-        azure_config = self.config.get("azure") or {}
-        required = ("client_id", "client_secret", "tenant_id", "subscription_id")
-        if not all(azure_config.get(key) for key in required):
-            return [], [self._cloud_credential_missing_finding(cluster_resource, "AKS", "Azure")], {
-                "provider": "aks",
-                "queried": False,
-                "reason": "missing_azure_credentials",
-            }
-
-        from urllib.request import Request, urlopen
-        from azure.identity import ClientSecretCredential
-
-        credential = ClientSecretCredential(
-            tenant_id=azure_config["tenant_id"],
-            client_id=azure_config["client_id"],
-            client_secret=azure_config["client_secret"],
-        )
-        token = credential.get_token("https://management.azure.com/.default").token
-        subscription_id = azure_config["subscription_id"]
-        cluster_name = metadata.get("cluster_name")
-        resource_group = metadata.get("resource_group")
-        api_version = "2024-05-01"
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-        if resource_group and cluster_name:
-            url = (
-                f"https://management.azure.com/subscriptions/{subscription_id}/resourceGroups/{resource_group}"
-                f"/providers/Microsoft.ContainerService/managedClusters/{cluster_name}?api-version={api_version}"
-            )
-            with urlopen(Request(url, headers=headers), timeout=20) as response:
-                cluster = json.loads(response.read().decode("utf-8"))
-        else:
-            url = (
-                f"https://management.azure.com/subscriptions/{subscription_id}"
-                f"/providers/Microsoft.ContainerService/managedClusters?api-version={api_version}"
-            )
-            with urlopen(Request(url, headers=headers), timeout=20) as response:
-                clusters = json.loads(response.read().decode("utf-8")).get("value", [])
-            cluster = next((item for item in clusters if item.get("name") == cluster_name), None)
-            if not cluster:
-                return [], [], {"provider": "aks", "queried": False, "reason": "cluster_not_found"}
-
-        resource = self._managed_cluster_resource("aks", metadata, cluster)
-        findings = self._scan_aks_cluster(resource, cluster)
-        return [resource], findings, {"provider": "aks", "queried": True, "subscription_id": subscription_id}
 
     def _cloud_credential_missing_finding(
         self,
@@ -1014,40 +961,6 @@ class KubernetesMCPServer(BaseMCPServer):
                 "GKE NetworkPolicy is disabled",
                 "The GKE cluster does not have NetworkPolicy enforcement enabled at the cluster level.",
                 "Enable NetworkPolicy on the cluster and deploy namespace-level default-deny policies.",
-            ))
-        return findings
-
-    def _scan_aks_cluster(self, resource: Dict[str, Any], cluster: Dict[str, Any]) -> List[Dict[str, Any]]:
-        findings: List[Dict[str, Any]] = []
-        properties = cluster.get("properties") or {}
-        api_profile = properties.get("apiServerAccessProfile") or {}
-        network_profile = properties.get("networkProfile") or {}
-
-        if not properties.get("enableRBAC", True):
-            findings.append(self._finding(
-                resource,
-                "HIGH",
-                "AKS RBAC is disabled",
-                "The AKS cluster is not enforcing Kubernetes RBAC.",
-                "Enable Kubernetes RBAC and assign least-privilege roles through Azure/Kubernetes RBAC.",
-            ))
-
-        if not api_profile.get("enablePrivateCluster") and not api_profile.get("authorizedIPRanges"):
-            findings.append(self._finding(
-                resource,
-                "MEDIUM",
-                "AKS API server is not IP restricted",
-                "The AKS API server is public and no authorized IP ranges were found.",
-                "Use a private AKS cluster or configure authorized IP ranges for administrative networks.",
-            ))
-
-        if not network_profile.get("networkPolicy"):
-            findings.append(self._finding(
-                resource,
-                "MEDIUM",
-                "AKS NetworkPolicy is not configured",
-                "The AKS cluster does not report a networkPolicy provider.",
-                "Enable Azure or Cilium NetworkPolicy and deploy namespace-level default-deny policies.",
             ))
         return findings
 
@@ -1270,23 +1183,6 @@ class KubernetesMCPServer(BaseMCPServer):
                 "detected_from": "kubeconfig_server",
             }
 
-        for candidate in candidates:
-            match = re.search(r"(?:clusterUser|clusterAdmin)_([^_]+)_(.+)$", candidate)
-            if match:
-                return {
-                    "provider": "aks",
-                    "resource_group": match.group(1),
-                    "cluster_name": match.group(2),
-                    "detected_from": "kubeconfig_context",
-                }
-
-        if "azmk8s.io" in server:
-            return {
-                "provider": "aks",
-                "cluster_name": self.config.get("cluster_name") or cluster_name or context_name,
-                "detected_from": "kubeconfig_server",
-            }
-
         return {
             "provider": None,
             "cluster_name": self.config.get("cluster_name") or cluster_name or context_name,
@@ -1346,24 +1242,11 @@ class KubernetesMCPServer(BaseMCPServer):
                 "privateClusterConfig": cluster.get("privateClusterConfig") or {},
                 "masterAuthorizedNetworksConfig": cluster.get("masterAuthorizedNetworksConfig") or {},
             }
-        if provider == "aks":
-            properties = cluster.get("properties") or {}
-            return {
-                "id": cluster.get("id"),
-                "location": cluster.get("location"),
-                "kubernetesVersion": properties.get("kubernetesVersion"),
-                "provisioningState": properties.get("provisioningState"),
-                "enableRBAC": properties.get("enableRBAC"),
-                "networkProfile": properties.get("networkProfile") or {},
-                "apiServerAccessProfile": properties.get("apiServerAccessProfile") or {},
-            }
         return {}
 
     def _managed_cluster_public(self, provider: str, cluster: Dict[str, Any]) -> bool:
         if provider == "eks":
             return bool((cluster.get("resourcesVpcConfig") or {}).get("endpointPublicAccess"))
-        if provider == "aks":
-            return not bool(((cluster.get("properties") or {}).get("apiServerAccessProfile") or {}).get("enablePrivateCluster"))
         if provider == "gke":
             return not bool((cluster.get("privateClusterConfig") or {}).get("enablePrivateEndpoint"))
         return False

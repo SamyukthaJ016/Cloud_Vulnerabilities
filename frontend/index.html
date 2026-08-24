@@ -203,11 +203,6 @@
             color: #4285f4;
         }
 
-        .azure-icon {
-            background: rgba(0, 120, 212, 0.1);
-            color: #0078d4;
-        }
-
         .openai-icon {
             background: rgba(16, 163, 127, 0.1);
             color: #10a37f;
@@ -1265,7 +1260,6 @@
             'aws': false,
             'gcp': false,
             'openai': false,
-            'azure': false,
             'kubernetes': false,
             'iac': true
         };
@@ -1464,18 +1458,12 @@
 
                     const configuredProviders = ['aws', 'gcp', 'kubernetes']
                         .filter(provider => data[provider]?.configured).length;
-                    const hasAksEnrichment = data.azure?.configured;
 
                     if (configuredProviders > 0) {
                         statusDot.className = 'status-dot';
-                        message.textContent = `${configuredProviders} scanner credential(s) configured${hasAksEnrichment ? ' plus AKS enrichment' : ''}`;
+                        message.textContent = `${configuredProviders} scanner credential(s) configured`;
                         banner.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(13, 148, 136, 0.1))';
                         banner.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-                    } else if (hasAksEnrichment) {
-                        statusDot.className = 'status-dot warning';
-                        message.textContent = 'AKS enrichment is configured. Add scanner credentials or use IaC file scans.';
-                        banner.style.background = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1))';
-                        banner.style.borderColor = 'rgba(245, 158, 11, 0.3)';
                     } else {
                         statusDot.className = 'status-dot warning';
                         message.textContent = 'No cloud scanner credentials configured. IaC file scans do not need credentials.';
@@ -1500,7 +1488,6 @@
                         'aws': data.aws?.configured || false,
                         'gcp': data.gcp?.configured || false,
                         'openai': data.openai?.configured || false,
-                        'azure': data.azure?.configured || false,
                         'kubernetes': data.kubernetes?.configured || false,
                         'iac': data.iac?.configured !== false
                     };
@@ -2474,53 +2461,6 @@
             }
         }
 
-        async function saveAzureCredentials() {
-            const credentialName = document.getElementById('azureCredentialName').value || 'default';
-            const tenantId = document.getElementById('azureTenantId').value;
-            const clientId = document.getElementById('azureClientId').value;
-            const clientSecret = document.getElementById('azureClientSecret').value;
-            const subscriptionId = document.getElementById('azureSubscriptionId').value;
-            const isDefault = document.getElementById('azureIsDefault').checked;
-
-            if (!tenantId || !clientId || !clientSecret) {
-                showAlert('Please enter Azure tenant ID, client ID, and client secret.', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/credentials/azure', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: getUserId(),
-                        credential_name: credentialName,
-                        azure_tenant_id: tenantId,
-                        azure_client_id: clientId,
-                        azure_client_secret: clientSecret,
-                        azure_subscription_id: subscriptionId || undefined,
-                        is_default: isDefault
-                    })
-                });
-
-                const result = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(result.detail || 'Failed to save Azure credentials');
-                }
-
-                showAlert(`AKS enrichment credentials saved. Validation is running. ID: ${result.id}`, 'success');
-
-                document.getElementById('azureClientSecret').value = '';
-
-                await loadSavedCredentials();
-                await checkCredentialsStatus();
-                await loadProviders();
-                await loadSandboxDemoCatalog();
-
-            } catch (error) {
-                showAlert(`Error: ${error.message}`, 'error');
-            }
-        }
-
         async function saveKubernetesCredentials() {
             const credentialName = document.getElementById('kubernetesCredentialName').value || 'default';
             const kubeconfig = document.getElementById('kubernetesKubeconfig').value;
@@ -2672,10 +2612,6 @@
 
         async function testGCPCredentials() {
             showAlert('Testing GCP credentials...', 'warning');
-        }
-
-        async function testAzureCredentials() {
-            showAlert('Save the AKS enrichment credential first. CloudGuard validates Azure Resource Manager access immediately after saving.', 'warning');
         }
 
         async function testKubernetesCredentials() {
@@ -2923,14 +2859,12 @@
         window.saveAWSCredentials = saveAWSCredentials;
         window.saveOpenAICredentials = saveOpenAICredentials;
         window.saveGCPCredentials = saveGCPCredentials;
-        window.saveAzureCredentials = saveAzureCredentials;
         window.saveKubernetesCredentials = saveKubernetesCredentials;
         window.scanUploadedIacFiles = scanUploadedIacFiles;
         window.clearIacUploadForm = clearIacUploadForm;
         window.testAWSCredentials = testAWSCredentials;
         window.testOpenAICredentials = testOpenAICredentials;
         window.testGCPCredentials = testGCPCredentials;
-        window.testAzureCredentials = testAzureCredentials;
         window.testKubernetesCredentials = testKubernetesCredentials;
         window.selectCredentiallessScanTarget = selectCredentiallessScanTarget;
         window.startDemoSandboxScan = startDemoSandboxScan;
@@ -2952,7 +2886,6 @@
             <div class="modal-tabs">
                 <button class="tab-btn active" onclick="switchCredentialTab('aws', this)">AWS</button>
                 <button class="tab-btn" onclick="switchCredentialTab('gcp', this)">GCP</button>
-                <button class="tab-btn" onclick="switchCredentialTab('azure', this)">AKS Enrichment</button>
                 <button class="tab-btn" onclick="switchCredentialTab('kubernetes', this)">Kubernetes</button>
                 <button class="tab-btn" onclick="switchCredentialTab('iac', this)">IaC</button>
                 <button class="tab-btn" onclick="switchCredentialTab('saved', this)">Saved Credentials</button>
@@ -3233,57 +3166,6 @@
                         </button>
                         <button class="btn btn-primary" onclick="saveGCPCredentials()">
                             💾 Save Credentials
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AKS Enrichment Tab -->
-            <div id="azureTab" class="tab-content">
-                <div class="form-section">
-                    <h3>Azure AKS Enrichment Credentials</h3>
-                    <p class="form-description">
-                        Optional. These credentials are only used by the Kubernetes scanner to enrich AKS clusters
-                        through Azure Resource Manager. This is not a separate Azure scanner target.
-                    </p>
-
-                    <div class="form-group">
-                        <label>Credential Name</label>
-                        <input type="text" id="azureCredentialName" placeholder="azure-production" value="default">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Tenant ID</label>
-                        <input type="text" id="azureTenantId" placeholder="00000000-0000-0000-0000-000000000000">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Client ID</label>
-                        <input type="text" id="azureClientId" placeholder="00000000-0000-0000-0000-000000000000">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Client Secret</label>
-                        <input type="password" id="azureClientSecret" placeholder="Azure app registration secret">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Subscription ID (Optional)</label>
-                        <input type="text" id="azureSubscriptionId"
-                            placeholder="Required for AKS management API enrichment">
-                    </div>
-
-                    <div class="form-group checkbox-group">
-                        <input type="checkbox" id="azureIsDefault" checked>
-                        <label for="azureIsDefault">Set as default AKS enrichment credential</label>
-                    </div>
-
-                    <div class="form-actions">
-                        <button class="btn btn-secondary" onclick="testAzureCredentials()">
-                            Validation Info
-                        </button>
-                        <button class="btn btn-primary" onclick="saveAzureCredentials()">
-                            Save AKS Enrichment Credentials
                         </button>
                     </div>
                 </div>
