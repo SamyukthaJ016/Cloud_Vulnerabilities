@@ -51,7 +51,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-      target: production
+      target: production-lite
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
@@ -107,7 +107,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-      target: production
+      target: production-lite
     restart: always
     command: ["python", "-m", "backend.scheduler_worker"]
     environment:
@@ -136,7 +136,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-      target: production
+      target: production-lite
     restart: always
     command: ["python", "backend/scripts/local_scan_job_worker.py"]
     environment:
@@ -175,7 +175,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-      target: production
+      target: production-lite
     restart: always
     command: ["python", "backend/scripts/sandbox_lab_worker.py"]
     environment:
@@ -221,7 +221,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-      target: production
+      target: production-lite
     restart: always
     command: ["python", "backend/scripts/evidence_connector.py"]
     environment:

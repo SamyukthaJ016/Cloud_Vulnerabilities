@@ -88,12 +88,20 @@ RUN trivy --version && \
     grype version && \
     cloudfox --version && \
     nuclei -version && \
-    echo "✅ All security tools verified"
+    echo "All security tools verified"
 
 # ============================================================================
 # Stage 3: Python Dependencies
 # ============================================================================
 FROM security-tools AS python-deps
+
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
+
+# Same Python dependency layer without external scanner binaries.
+# This is useful for portal-first deployments where cloud/Kubernetes/IaC scans
+# run through SDK/parsing code and heavyweight tool images are built separately.
+FROM base AS python-deps-lite
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt
@@ -176,7 +184,7 @@ RUN trivy --version && \
     grype version && \
     cloudfox --version && \
     nuclei -version && \
-    echo "✅ Production: All security tools verified"
+    echo "Production: All security tools verified"
 
 # Copy Python packages
 COPY --from=python-deps /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
@@ -203,4 +211,48 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Production mode
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+# ============================================================================
+# Stage 6: Production Lite (no external scanner binaries)
+# ============================================================================
+FROM python:3.11-slim-bookworm AS production-lite
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 -s /bin/bash scanner \
+    && mkdir -p /app/logs /app/reports /app/config \
+        /app/sandbox-labs \
+        /app/connectors/inbox /app/connectors/processed /app/connectors/failed \
+    && chown -R scanner:scanner /app
+
+WORKDIR /app
+
+COPY --from=python-deps-lite /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=python-deps-lite /usr/local/bin /usr/local/bin
+
+COPY --chown=scanner:scanner backend/ /app/backend/
+COPY --chown=scanner:scanner frontend/ /app/frontend/
+COPY --chown=scanner:scanner db/ /app/db/
+COPY --chown=scanner:scanner infra/ /app/infra/
+COPY --chown=scanner:scanner config/ /app/config/
+
+RUN chmod -R 755 /app/backend /app/frontend /app/db /app/infra /app/config
+
+ENV PYTHONPATH=/app
+
+USER scanner
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
