@@ -7,6 +7,10 @@
 # Build stage
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS builder
 
+ENV PRISMA_CLI_BINARY_TARGETS=linux-musl-openssl-3.0.x,linux-musl-arm64-openssl-3.0.x
+
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy shared library first
@@ -18,6 +22,7 @@ COPY services/controls/package*.json ./
 
 # Install without running postinstall
 RUN npm ci --ignore-scripts --legacy-peer-deps
+RUN npm rebuild @prisma/engines --foreground-scripts
 
 # Copy shared source and build it. --ignore-scripts blocks postinstall
 # hooks; the explicit `npx prisma generate` below replaces what the
@@ -48,6 +53,11 @@ RUN head -15 ../shared/prisma/schema.prisma
 
 # Generate Prisma client
 RUN npx prisma generate --schema=../shared/prisma/schema.prisma
+
+# The runtime entrypoint uses Prisma CLI to synchronize the schema. Ensure its
+# architecture-specific Alpine/OpenSSL 3 schema engine is present in the image.
+RUN test -f node_modules/@prisma/engines/schema-engine-linux-musl-openssl-3.0.x || \
+    test -f node_modules/@prisma/engines/schema-engine-linux-musl-arm64-openssl-3.0.x
 
 # Verify Prisma client was generated
 RUN ls -la node_modules/.prisma/client/ 2>/dev/null | head -5 || echo "Checking /app/controls/node_modules/.prisma/client/" && ls -la /app/controls/node_modules/.prisma/client/ | head -5
