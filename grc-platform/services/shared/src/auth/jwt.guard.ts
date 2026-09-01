@@ -15,6 +15,8 @@ import { UserContext, UserRole, RolePermissions } from '../types';
 import { ROLES_KEY } from './roles.decorator';
 import { TokenBlacklistService } from './token-blacklist.service';
 
+const sharedJwtReflector = new Reflector();
+
 export interface JwtPayload {
   sub: string;
   email?: string;
@@ -39,14 +41,19 @@ export class JwtAuthGuard implements CanActivate {
   private jwksClient: jwksRsa.JwksClient;
   private readonly issuer: string;
   private readonly audience?: string;
+  private readonly reflector: Reflector;
 
   constructor(
-    private reflector: Reflector,
+    @Optional() @Inject(Reflector) reflector?: Reflector,
     @Optional() @Inject(TokenBlacklistService) private tokenBlacklistService?: TokenBlacklistService
   ) {
+    this.reflector = reflector || sharedJwtReflector;
     const keycloakUrl = process.env.KEYCLOAK_URL || 'http://localhost:8080';
     const realm = process.env.KEYCLOAK_REALM || 'gigachad-grc';
-    this.issuer = (process.env.KEYCLOAK_ISSUER || `${keycloakUrl}/realms/${realm}`).replace(/\/$/, '');
+    this.issuer = (process.env.KEYCLOAK_ISSUER || `${keycloakUrl}/realms/${realm}`).replace(
+      /\/$/,
+      ''
+    );
     this.audience = process.env.KEYCLOAK_AUDIENCE?.trim() || undefined;
 
     if (process.env.NODE_ENV === 'production' && !this.audience) {
@@ -166,7 +173,10 @@ export class JwtAuthGuard implements CanActivate {
     if (!payload.sub) {
       throw new UnauthorizedException('Token subject is required');
     }
-    if (!payload.organization_id || !/^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/.test(payload.organization_id)) {
+    if (
+      !payload.organization_id ||
+      !/^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/.test(payload.organization_id)
+    ) {
       throw new UnauthorizedException('Token organization_id claim is required');
     }
 

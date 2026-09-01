@@ -79,6 +79,15 @@ describe('JwtAuthGuard', () => {
     jest.clearAllMocks();
   });
 
+  it('should initialize when Reflector is not registered by the consuming module', async () => {
+    const fallbackModule = await Test.createTestingModule({
+      providers: [JwtAuthGuard],
+    }).compile();
+
+    expect(fallbackModule.get<JwtAuthGuard>(JwtAuthGuard)).toBeInstanceOf(JwtAuthGuard);
+    await fallbackModule.close();
+  });
+
   describe('Token Extraction', () => {
     it('should throw UnauthorizedException when no Authorization header', async () => {
       const context = mockExecutionContext({});
@@ -295,7 +304,9 @@ describe('JwtAuthGuard', () => {
       (reflector.getAllAndOverride as jest.Mock).mockReturnValue(null);
 
       await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
-      await expect(guard.canActivate(context)).rejects.toThrow('Token organization_id claim is required');
+      await expect(guard.canActivate(context)).rejects.toThrow(
+        'Token organization_id claim is required'
+      );
     });
   });
 });
