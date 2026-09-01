@@ -19,6 +19,7 @@ x-api-environment: &api-environment
   KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-https://auth.sc.deeptrustxai.com/auth/realms/gigachad-grc}
   KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/${KEYCLOAK_REALM:-gigachad-grc}/protocol/openid-connect/certs
   KEYCLOAK_AUDIENCE: grc-api
+  CORS_ORIGINS: https://${APP_DOMAIN:-grc.sc.deeptrustxai.com}
   JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   RATE_LIMIT_ENABLED: "true"
