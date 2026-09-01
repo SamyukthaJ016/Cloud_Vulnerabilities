@@ -5522,6 +5522,17 @@ async def cloudguard_ui():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="UI asset not found")
 
+
+@app.get("/keycloak.js", include_in_schema=False)
+async def cloudguard_keycloak_adapter():
+    try:
+        return Response(
+            read_frontend_asset("vendor/keycloak.js"),
+            media_type="application/javascript",
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Keycloak adapter not found")
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
     try:

@@ -27,6 +27,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Keycloak 26 distributes its browser adapter through npm instead of serving
+# /js/keycloak.js from the identity server. Keep it pinned and self-hosted.
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS frontend-deps
+
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts
+
 # ============================================================================
 # Stage 2: Security Tools (CloudFox + trivy/gitleaks/grype)
 # ============================================================================
@@ -131,6 +139,8 @@ WORKDIR /app
 # Copy application code
 COPY --chown=scanner:scanner backend/ /app/backend/
 COPY --chown=scanner:scanner frontend/ /app/frontend/
+COPY --from=frontend-deps --chown=scanner:scanner /frontend/node_modules/keycloak-js/lib/keycloak.js /app/frontend/vendor/keycloak.js
+COPY --from=frontend-deps --chown=scanner:scanner /frontend/node_modules/keycloak-js/LICENSE.txt /app/frontend/vendor/keycloak.LICENSE.txt
 COPY --chown=scanner:scanner db/ /app/db/
 COPY --chown=scanner:scanner infra/ /app/infra/
 COPY --chown=scanner:scanner config/ /app/config/
@@ -193,6 +203,8 @@ COPY --from=python-deps /usr/local/bin /usr/local/bin
 # Copy application code as scanner user
 COPY --chown=scanner:scanner backend/ /app/backend/
 COPY --chown=scanner:scanner frontend/ /app/frontend/
+COPY --from=frontend-deps --chown=scanner:scanner /frontend/node_modules/keycloak-js/lib/keycloak.js /app/frontend/vendor/keycloak.js
+COPY --from=frontend-deps --chown=scanner:scanner /frontend/node_modules/keycloak-js/LICENSE.txt /app/frontend/vendor/keycloak.LICENSE.txt
 COPY --chown=scanner:scanner db/ /app/db/
 COPY --chown=scanner:scanner infra/ /app/infra/
 COPY --chown=scanner:scanner config/ /app/config/
@@ -240,6 +252,8 @@ COPY --from=python-deps-lite /usr/local/bin /usr/local/bin
 
 COPY --chown=scanner:scanner backend/ /app/backend/
 COPY --chown=scanner:scanner frontend/ /app/frontend/
+COPY --from=frontend-deps --chown=scanner:scanner /frontend/node_modules/keycloak-js/lib/keycloak.js /app/frontend/vendor/keycloak.js
+COPY --from=frontend-deps --chown=scanner:scanner /frontend/node_modules/keycloak-js/LICENSE.txt /app/frontend/vendor/keycloak.LICENSE.txt
 COPY --chown=scanner:scanner db/ /app/db/
 COPY --chown=scanner:scanner infra/ /app/infra/
 COPY --chown=scanner:scanner config/ /app/config/

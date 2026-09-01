@@ -1,0 +1,8 @@
+{
+  "name": "cloudguard-static-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "keycloak-js": "26.2.4"
+  }
+}

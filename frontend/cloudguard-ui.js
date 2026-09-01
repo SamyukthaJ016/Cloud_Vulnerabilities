@@ -7,19 +7,14 @@
         return new URL(rawUrl, window.location.origin).origin === window.location.origin;
     }
 
-    function loadKeycloakAdapter(baseUrl) {
-        return new Promise((resolve, reject) => {
-            if (window.Keycloak) {
-                resolve();
-                return;
-            }
-            const script = document.createElement("script");
-            script.src = `${baseUrl.replace(/\/$/, "")}/js/keycloak.js`;
-            script.async = true;
-            script.onload = resolve;
-            script.onerror = () => reject(new Error("Unable to load the Keycloak adapter"));
-            document.head.appendChild(script);
-        });
+    async function loadKeycloakAdapter() {
+        if (window.Keycloak) return;
+
+        const adapter = await import("/keycloak.js");
+        if (typeof adapter.default !== "function") {
+            throw new Error("Unable to load the Keycloak adapter");
+        }
+        window.Keycloak = adapter.default;
     }
 
     async function initialiseAuthentication() {
@@ -38,7 +33,7 @@
             throw new Error("CloudGuard requires HTTPS for Keycloak authentication");
         }
 
-        await loadKeycloakAdapter(keycloakUrl.toString());
+        await loadKeycloakAdapter();
         keycloak = new window.Keycloak({
             url: keycloakUrl.toString().replace(/\/$/, ""),
             realm: config.realm,
