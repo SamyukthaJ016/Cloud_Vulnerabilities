@@ -185,6 +185,7 @@ services:
     environment:
       <<: *api-environment
       PORT: "3001"
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       CLOUDGUARD_API_URL: ${CLOUDGUARD_API_URL:-https://cloudguard.sc.deeptrustxai.com}
       CLOUDGUARD_CONNECTOR_CREDENTIALS_JSON: ${CLOUDGUARD_CONNECTOR_CREDENTIALS_JSON:?CLOUDGUARD_CONNECTOR_CREDENTIALS_JSON is required}
     depends_on: *api-depends-on
