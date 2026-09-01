@@ -86,7 +86,7 @@
       "baseUrl": "/",
       "redirectUris": ["http://localhost:3000/*", "http://localhost/*"],
       "webOrigins": ["http://localhost:3000", "http://localhost", "+"],
-      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
@@ -150,7 +150,7 @@
       "baseUrl": "/",
       "redirectUris": ["http://localhost:8000/*", "http://localhost/*"],
       "webOrigins": ["http://localhost:8000", "http://localhost"],
-      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
@@ -211,7 +211,7 @@
       "serviceAccountsEnabled": true,
       "protocol": "openid-connect",
       "secret": "${GRC_SERVICES_SECRET}",
-      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
       "protocolMappers": [
         {
           "name": "realm-roles",
@@ -241,7 +241,7 @@
       "serviceAccountsEnabled": true,
       "protocol": "openid-connect",
       "secret": "${GRC_MCP_SECRET}",
-      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"]
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"]
     }
   ],
   "users": [],

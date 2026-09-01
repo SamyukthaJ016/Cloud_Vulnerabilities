@@ -104,7 +104,7 @@
       "baseUrl": "/",
       "redirectUris": ["https://grc.sc.deeptrustxai.com/*"],
       "webOrigins": ["https://grc.sc.deeptrustxai.com"],
-      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
@@ -168,7 +168,7 @@
       "baseUrl": "/",
       "redirectUris": ["https://cloudguard.sc.deeptrustxai.com/*"],
       "webOrigins": ["https://cloudguard.sc.deeptrustxai.com"],
-      "defaultClientScopes": ["web-origins", "acr", "profile", "roles", "email"],
+      "defaultClientScopes": ["web-origins", "acr", "basic", "profile", "roles", "email"],
       "optionalClientScopes": ["address", "phone", "offline_access"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
