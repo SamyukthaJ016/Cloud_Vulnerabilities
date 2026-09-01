@@ -65,11 +65,15 @@ COPY --from=builder /repo/frontend/dist /usr/share/nginx/html
 # Copy nginx config (path relative to context which is repo root)
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Nginx runs on port 80 by default
-EXPOSE 80
+# Run the web tier as the image's unprivileged nginx user. Runtime cache and
+# PID paths are mounted as writable tmpfs volumes by the compose definition.
+RUN chown -R nginx:nginx /var/cache/nginx /var/run /usr/share/nginx/html
+USER nginx
+
+EXPOSE 8080
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget -q --spider http://127.0.0.1/ || exit 1
+  CMD wget -q --spider http://127.0.0.1:8080/health || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
