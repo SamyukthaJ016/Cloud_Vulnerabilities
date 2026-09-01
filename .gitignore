@@ -48,6 +48,10 @@ htmlcov/
 # Project Reports
 reports/
 outputs/
+!grc-platform/**/src/reports/
+!grc-platform/**/src/reports/**
+!grc-platform/**/src/components/reports/
+!grc-platform/**/src/components/reports/**
 
 # Generated demo/submission artifacts
 Review2_CloudGuard_Presentation.pptx

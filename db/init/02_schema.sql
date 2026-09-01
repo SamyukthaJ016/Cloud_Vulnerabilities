@@ -128,6 +128,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ===================================================
 CREATE TABLE IF NOT EXISTS scans (
     id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    tenant_id VARCHAR(255) NOT NULL,
     account_id VARCHAR(255) NOT NULL,
     cloud VARCHAR(50) NOT NULL,
     status VARCHAR(50) DEFAULT 'running',
@@ -145,6 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_scans_cloud ON scans (cloud);
 CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);
 CREATE INDEX IF NOT EXISTS idx_scans_started_at_desc ON scans (started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scans_credential_id ON scans (aws_credential_id);
+CREATE INDEX IF NOT EXISTS idx_scans_tenant_user_started ON scans (tenant_id, user_id, started_at DESC);
 
 
 -- ===================================================
@@ -216,6 +219,7 @@ CREATE INDEX IF NOT EXISTS idx_vulns_scan_id ON vulnerabilities (scan_id);
 CREATE TABLE IF NOT EXISTS scan_schedules (
   id SERIAL PRIMARY KEY,
   user_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
   providers TEXT NOT NULL,
   account_ids TEXT NOT NULL,
   deep_scan BOOLEAN NOT NULL DEFAULT FALSE,
@@ -229,6 +233,7 @@ CREATE TABLE IF NOT EXISTS scan_schedules (
 
 CREATE INDEX IF NOT EXISTS idx_scan_schedules_due ON scan_schedules (status, next_run_at);
 CREATE INDEX IF NOT EXISTS idx_scan_schedules_user_status ON scan_schedules (user_id, status);
+CREATE INDEX IF NOT EXISTS idx_scan_schedules_tenant_user_status ON scan_schedules (tenant_id, user_id, status);
 
 
 -- ===================================================

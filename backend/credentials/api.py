@@ -20,6 +20,7 @@ from starlette.responses import JSONResponse
 
 from backend.credentials.manager import credential_manager, CloudCredential
 from backend.credentials import auto_permission
+from backend.tenant_security import request_identity
 
 logger = logging.getLogger("credentials_api")
 
@@ -90,7 +91,6 @@ class CredentialResponse(BaseModel):
 class ValidationRequest(BaseModel):
     """Credential validation request"""
     credential_id: int
-    user_id: str = Field(default="anonymous")
 
 
 class ValidationResponse(BaseModel):
@@ -119,10 +119,13 @@ class ScanSessionResponse(BaseModel):
 
 # Helper function to get user ID from request
 def get_user_id(request: Request) -> str:
-    """Extract user ID from request"""
-    # 🔥 DEBUG: Log ALL cookies for session debugging
-    logger.info(f"🍪 Request Cookies: {request.cookies}")
-    
+    """Return the identity established by CloudGuard's authentication middleware."""
+    identity = request_identity(request)
+    if identity:
+        return identity.user_id
+
+    # Local-only compatibility. CLOUDGUARD_AUTH_REQUIRED prevents this path
+    # from being used in production.
     session_id = request.cookies.get("session_id")
     if session_id:
         return f"user_{session_id}"
@@ -383,12 +386,15 @@ async def get_credentials(
 
 
 @router.post("/validate", response_model=ValidationResponse)
-async def validate_credential(request: ValidationRequest):
+async def validate_credential(
+    request: ValidationRequest,
+    user_id: str = Depends(get_user_id),
+):
     """Validate a credential"""
     try:
         credential = credential_manager.get_credentials(
             request.credential_id,
-            request.user_id
+            user_id
         )
         
         if not credential:

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudGuard GRC</title>
+    <link rel="stylesheet" href="/cloudguard-theme.css">
+    <script src="/cloudguard-ui.js" defer></script>
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 18% 8%, rgba(20, 184, 166, 0.2), transparent 32rem),
+                radial-gradient(circle at 84% 18%, rgba(59, 130, 246, 0.18), transparent 30rem),
+                linear-gradient(135deg, #07111f 0%, #0f172a 54%, #102033 100%);
+            color: #e5edf6;
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        .grc-shell {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 110px 24px 72px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+            gap: 32px;
+            align-items: stretch;
+        }
+
+        .hero-copy,
+        .flow-panel,
+        .action-panel,
+        .status-panel {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.72);
+            box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(18px);
+            border-radius: 8px;
+        }
+
+        .hero-copy {
+            padding: clamp(32px, 5vw, 56px);
+        }
+
+        .eyebrow {
+            color: #38bdf8;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: clamp(2.2rem, 5vw, 4.8rem);
+            line-height: 0.95;
+            letter-spacing: 0;
+        }
+
+        .lead {
+            margin: 24px 0 0;
+            max-width: 720px;
+            color: #b6c6d9;
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            line-height: 1.65;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .btn {
+            display: inline-flex;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            padding: 0 18px;
+            color: #0f172a;
+            background: #67e8f9;
+            border: 1px solid transparent;
+            font-weight: 800;
+            text-decoration: none;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 34px rgba(103, 232, 249, 0.22);
+        }
+
+        .btn.secondary {
+            color: #dceafe;
+            background: rgba(148, 163, 184, 0.08);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+
+        .flow-panel {
+            padding: 28px;
+        }
+
+        .flow-title {
+            color: #f8fafc;
+            font-weight: 800;
+            margin-bottom: 22px;
+        }
+
+        .step {
+            display: grid;
+            grid-template-columns: 34px 1fr;
+            gap: 14px;
+            align-items: start;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+        }
+
+        .step:last-child {
+            border-bottom: 0;
+        }
+
+        .step-index {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            color: #042f2e;
+            background: #5eead4;
+            font-weight: 900;
+        }
+
+        .step strong {
+            display: block;
+            color: #f8fafc;
+            margin-bottom: 4px;
+        }
+
+        .step span {
+            color: #9fb1c7;
+            line-height: 1.5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .action-panel,
+        .status-panel {
+            padding: 22px;
+        }
+
+        .panel-label {
+            color: #93c5fd;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .panel-copy {
+            color: #cbd5e1;
+            line-height: 1.55;
+        }
+
+        code {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.92);
+            border-radius: 6px;
+            color: #a7f3d0;
+            padding: 2px 6px;
+        }
+
+        @media (max-width: 900px) {
+            .hero,
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .grc-shell {
+                padding-top: 88px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="grc-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow">Merged GRC Module</div>
+                <h1>CloudGuard evidence becomes audit-ready governance.</h1>
+                <p class="lead">
+                    CloudGuard remains the scanning portal. The GRC platform is now included as a sibling module for
+                    compliance workflows, risk review, evidence approval, CERT-In MSME mapping, and reporting.
+                </p>
+                <div class="actions">
+                    <a id="openGrcLink" class="btn" href="#setup">Open GRC Platform</a>
+                    <a class="btn secondary" href="/compliance">View Evidence</a>
+                    <a class="btn secondary" href="/reason-act">Reason & Act</a>
+                </div>
+            </div>
+
+            <aside class="flow-panel" aria-label="GRC flow">
+                <div class="flow-title">How the merged architecture works</div>
+                <div class="step">
+                    <div class="step-index">1</div>
+                    <div><strong>Scanner jobs run separately</strong><span>AWS, GCP, Kubernetes, IaC, web, and demo labs produce findings outside the GRC app.</span></div>
+                </div>
+                <div class="step">
+                    <div class="step-index">2</div>
+                    <div><strong>Connectors normalize evidence</strong><span>CloudGuard and MCP outputs are converted into a common evidence shape.</span></div>
+                </div>
+                <div class="step">
+                    <div class="step-index">3</div>
+                    <div><strong>GRC maps the results</strong><span>Evidence is tied to controls, risk priority, audit status, and remediation workflows.</span></div>
+                </div>
+                <div class="step">
+                    <div class="step-index">4</div>
+                    <div><strong>Teams get one view</strong><span>Compliance owners can see what failed, why it matters, and what should be fixed first.</span></div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="grid" id="setup">
+            <div class="action-panel">
+                <div class="panel-label">Included Folder</div>
+                <div class="panel-copy">The full GRC module lives in <code>grc-platform/</code> with its own frontend, services, MCP evidence tools, docs, and test labs.</div>
+            </div>
+            <div class="action-panel">
+                <div class="panel-label">Local Start</div>
+                <div class="panel-copy">Run the scanner from this repo root. Run the GRC platform from <code>grc-platform/</code> using its Docker startup script.</div>
+            </div>
+            <div class="status-panel">
+                <div class="panel-label">Production Link</div>
+                <div class="panel-copy">Set <code>GRC_PLATFORM_URL</code> to the hosted GRC URL so this page opens the live governance dashboard.</div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const configuredUrl = "__GRC_PLATFORM_URL__";
+        const link = document.getElementById("openGrcLink");
+        if (configuredUrl) {
+            link.href = configuredUrl;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudGuard IaC scanner test template. Do not deploy.
+Resources:
+  PublicBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: cloudguard-test-cfn-public-read-example
+      AccessControl: PublicRead
+      Tags:
+        - Key: Project
+          Value: cloudguard-test
+
+  OpenSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Unrestricted ingress for scanner test
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  PublicUnencryptedDb:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: cloudguard-test-cfn-db
+      Engine: mysql
+      DBInstanceClass: db.t3.micro
+      AllocatedStorage: "20"
+      MasterUsername: dummy
+      MasterUserPassword: dummy-password-not-real
+      PubliclyAccessible: true
+      StorageEncrypted: false
+
+  WildcardPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: cloudguard-test-cfn-wildcard
+      Users:
+        - dummy-user
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "*"
+            Resource: "*"

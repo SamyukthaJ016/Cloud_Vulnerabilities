@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudguard-drift-app
+  namespace: cloudguard-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudguard-drift-app
+  template:
+    metadata:
+      labels:
+        app: cloudguard-drift-app
+    spec:
+      containers:
+        - name: app
+          image: nginx:latest
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: live-only-resource
+  namespace: cloudguard-test
+data:
+  note: "This resource represents live drift not present in IaC."

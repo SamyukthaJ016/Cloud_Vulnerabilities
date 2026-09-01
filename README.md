@@ -13,6 +13,7 @@ A comprehensive, containerized security scanning platform designed to identify v
 - **Reason-and-Act Workflow**: Adds tenant-scoped risk context, contextual prioritization, sandbox validation proof, remediation approval modes, and STRIDE threat models without depending on one cloud provider.
 - **Temporary Sandbox Labs**: Creates short-lived vulnerable IaC/AWS/GCP/Kubernetes demo labs inside isolated sandbox environments, records proof as GRC evidence, queues scans, and auto-destroys resources after scan completion or TTL expiry.
 - **GRC Evidence Ingestion**: Accepts normalized evidence from decoupled scanners/connectors and maps it back to compliance controls.
+- **Merged GRC Platform Module**: Includes the handoff GRC platform under `grc-platform/` for compliance workflows, evidence review, risk management, audit workflows, and CloudGuard connector visualization.
 - **Dockerized**: Fully containerized for easy deployment.
 
 ## 📋 Prerequisites
@@ -119,9 +120,10 @@ Open your browser and navigate to:
 - **Evidence/GRC Layer**: `/api/evidence`, `/api/compliance/*`, `/api/risk/*`, `/api/validation/*`, `/api/remediation/*`, and `/api/threat-models/*`
 - **Sandbox Lab Layer**: `/api/sandbox-labs/*` plus `sandbox-lab-worker` for temporary vulnerable lab deployment, scan proof, and cleanup.
 - **Reason & Act UI**: `/reason-act` for validation jobs, remediation actions, threat models, and workflow visibility.
+- **Full GRC Platform**: `grc-platform/` runs as a sibling governance platform. Set `GRC_PLATFORM_URL` so the CloudGuard `/grc` entry point opens the hosted GRC dashboard.
 - **Tools**: Trivy, Gitleaks, Nuclei, CloudFox, OWASP ZAP
 
-See `docs/vendor-neutral-reason-act-architecture.md` for the workflow that maps discovery, prioritization, validation, remediation, and threat modeling into the decoupled scanner architecture. See `docs/sandbox-lab-workflow.md` for the temporary vulnerable lab setup.
+See `docs/vendor-neutral-reason-act-architecture.md` for the workflow that maps discovery, prioritization, validation, remediation, and threat modeling into the decoupled scanner architecture. See `docs/sandbox-lab-workflow.md` for the temporary vulnerable lab setup. See `docs/grc-platform-merge.md` for how the merged GRC platform fits into the latest CloudGuard project.
 
 ## 🛡️ Security Note
 

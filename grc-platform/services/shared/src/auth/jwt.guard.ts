@@ -1,0 +1,241 @@
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  UnauthorizedException,
+  ForbiddenException,
+  Inject,
+  Optional,
+} from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { Request } from 'express';
+import * as jwt from 'jsonwebtoken';
+import jwksRsa from 'jwks-rsa';
+import { UserContext, UserRole, RolePermissions } from '../types';
+import { ROLES_KEY } from './roles.decorator';
+import { TokenBlacklistService } from './token-blacklist.service';
+
+export interface JwtPayload {
+  sub: string;
+  email?: string;
+  preferred_username?: string;
+  given_name?: string;
+  family_name?: string;
+  name?: string;
+  roles?: string[];
+  realm_access?: {
+    roles: string[];
+  };
+  organization_id?: string;
+  jti?: string;
+  exp: number;
+  iat: number;
+  iss: string;
+  aud?: string | string[];
+}
+
+@Injectable()
+export class JwtAuthGuard implements CanActivate {
+  private jwksClient: jwksRsa.JwksClient;
+  private readonly issuer: string;
+  private readonly audience?: string;
+
+  constructor(
+    private reflector: Reflector,
+    @Optional() @Inject(TokenBlacklistService) private tokenBlacklistService?: TokenBlacklistService
+  ) {
+    const keycloakUrl = process.env.KEYCLOAK_URL || 'http://localhost:8080';
+    const realm = process.env.KEYCLOAK_REALM || 'gigachad-grc';
+    this.issuer = (process.env.KEYCLOAK_ISSUER || `${keycloakUrl}/realms/${realm}`).replace(/\/$/, '');
+    this.audience = process.env.KEYCLOAK_AUDIENCE?.trim() || undefined;
+
+    if (process.env.NODE_ENV === 'production' && !this.audience) {
+      throw new Error('KEYCLOAK_AUDIENCE is required in production.');
+    }
+
+    this.jwksClient = jwksRsa({
+      jwksUri:
+        process.env.KEYCLOAK_JWKS_URL ||
+        `${keycloakUrl}/realms/${realm}/protocol/openid-connect/certs`,
+      cache: true,
+      cacheMaxEntries: 5,
+      cacheMaxAge: 600000, // 10 minutes
+    });
+  }
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const token = this.extractToken(request);
+
+    if (!token) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    try {
+      const decoded = await this.verifyToken(token);
+
+      // Check if token is revoked (if blacklist service is available)
+      if (this.tokenBlacklistService && decoded.jti) {
+        const isRevoked = await this.tokenBlacklistService.isTokenRevoked(decoded.jti);
+        if (isRevoked) {
+          throw new UnauthorizedException('Token has been revoked');
+        }
+      }
+
+      const userContext = this.buildUserContext(decoded);
+
+      // Attach user context and token info to request
+      request.user = userContext;
+      request.tokenJti = decoded.jti;
+      request.tokenExp = decoded.exp;
+
+      // Check role requirements
+      const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+
+      if (requiredRoles && requiredRoles.length > 0) {
+        const hasRole = requiredRoles.some((role: UserRole) => userContext.role === role);
+        if (!hasRole) {
+          throw new ForbiddenException('Insufficient role permissions');
+        }
+      }
+
+      return true;
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        throw error;
+      }
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new UnauthorizedException('Invalid token');
+    }
+  }
+
+  private extractToken(request: Request): string | null {
+    const authHeader = request.headers.authorization;
+    if (!authHeader) {
+      return null;
+    }
+
+    const [type, token] = authHeader.split(' ');
+    if (type !== 'Bearer' || !token) {
+      return null;
+    }
+
+    return token;
+  }
+
+  private async verifyToken(token: string): Promise<JwtPayload> {
+    const decoded = jwt.decode(token, { complete: true });
+    if (!decoded || !decoded.header.kid) {
+      throw new Error('Invalid token format');
+    }
+
+    const key = await this.jwksClient.getSigningKey(decoded.header.kid);
+    const signingKey = key.getPublicKey();
+
+    const options: jwt.VerifyOptions = {
+      algorithms: ['RS256'],
+      issuer: this.issuer,
+    };
+    if (this.audience) {
+      options.audience = this.audience;
+    }
+    return jwt.verify(token, signingKey, options) as JwtPayload;
+  }
+
+  private buildUserContext(payload: JwtPayload): UserContext {
+    // Extract roles from Keycloak token
+    const roles = payload.realm_access?.roles || payload.roles || [];
+
+    // Map Keycloak role to our UserRole type
+    let role: UserRole = 'viewer';
+    if (roles.includes('admin')) {
+      role = 'admin';
+    } else if (roles.includes('compliance_manager')) {
+      role = 'compliance_manager';
+    } else if (roles.includes('auditor')) {
+      role = 'auditor';
+    }
+
+    const permissions = RolePermissions[role];
+
+    if (!payload.sub) {
+      throw new UnauthorizedException('Token subject is required');
+    }
+    if (!payload.organization_id || !/^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/.test(payload.organization_id)) {
+      throw new UnauthorizedException('Token organization_id claim is required');
+    }
+
+    return {
+      userId: payload.sub,
+      keycloakId: payload.sub,
+      email: payload.email || payload.preferred_username || '',
+      organizationId: payload.organization_id,
+      role,
+      permissions,
+    };
+  }
+}
+
+/**
+ * Optional guard for API key authentication.
+ *
+ * SECURITY NOTE: This guard only verifies that an API key header is present.
+ * It does NOT validate the API key against any database or secret store.
+ *
+ * Services using this guard MUST implement their own API key validation logic
+ * because the shared module cannot access service-specific databases.
+ *
+ * Implementation pattern for services:
+ * 1. Use this guard to extract the API key from the request
+ * 2. In your service/controller, validate request.apiKey against your database
+ * 3. Throw UnauthorizedException if the key is invalid or expired
+ *
+ * Example:
+ *   const apiKeyRecord = await this.prisma.apiKey.findFirst({
+ *     where: { key: request.apiKey, organizationId, revokedAt: null }
+ *   });
+ *   if (!apiKeyRecord) throw new UnauthorizedException('Invalid API key');
+ */
+@Injectable()
+export class ApiKeyAuthGuard implements CanActivate {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const apiKey = request.headers['x-api-key'];
+
+    if (!apiKey) {
+      throw new UnauthorizedException('No API key provided');
+    }
+
+    // SECURITY: This guard only checks for header presence.
+    // Actual API key validation MUST be performed by the consuming service
+    // since this shared module cannot access service-specific databases.
+    request.apiKey = apiKey;
+    return true;
+  }
+}
+
+// Combined guard that accepts either JWT or API key
+@Injectable()
+export class CombinedAuthGuard implements CanActivate {
+  constructor(
+    private jwtGuard: JwtAuthGuard,
+    private apiKeyGuard: ApiKeyAuthGuard
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+
+    // Check for API key first
+    if (request.headers['x-api-key']) {
+      return this.apiKeyGuard.canActivate(context);
+    }
+
+    // Fall back to JWT
+    return this.jwtGuard.canActivate(context);
+  }
+}

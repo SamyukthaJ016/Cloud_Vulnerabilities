@@ -87,10 +87,12 @@ Use separate values for:
 
 - `POSTGRES_PASSWORD`
 - `WORKER_TOKEN`
-- `CONNECTOR_TOKEN`
+- `EVIDENCE_CONNECTOR_TOKEN`
 - `MINIO_ROOT_PASSWORD`
 - `SECRET_KEY`
 - `ENCRYPTION_KEY`
+
+Set `CONNECTOR_CREDENTIALS_JSON` as valid JSON in Dokploy's encrypted environment editor. Its evidence-connector entry must use the same ID and token as `EVIDENCE_CONNECTOR_ID` and `EVIDENCE_CONNECTOR_TOKEN`; each tenant's GRC connector needs a separate `grc:read` entry.
 
 ## Domains In Dokploy
 
@@ -168,7 +170,7 @@ docker compose -f deploy/dokploy/docker-compose.yml --env-file deploy/dokploy/en
 - Multi-VM scanner scaling.
 - Managed database failover.
 - Production-grade object storage durability.
-- SSO production hardening.
+- Live Keycloak client creation, redirect-origin approval, and tenant user assignment.
 - Separate ingestion-gateway microservice.
 - Tenant-level isolation hardening beyond the current application/database model.
 

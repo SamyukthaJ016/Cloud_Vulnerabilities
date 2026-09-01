@@ -14,8 +14,9 @@ from zoneinfo import ZoneInfo
 import secrets
 
 from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
-from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse, Response, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -71,6 +72,11 @@ from backend.cloudfox.cloudfox_scanner import (
 
 # Database Migrations
 from backend.migration_manager import run_migrations
+from backend.tenant_security import (
+    cloudguard_auth_required,
+    require_connector_identity,
+    request_identity,
+)
 
 
 load_dotenv()
@@ -118,12 +124,64 @@ app = FastAPI(
     version="3.1.0",
 )
 
+
+class CloudGuardIdentityMiddleware(BaseHTTPMiddleware):
+    """Require a verified Keycloak identity for CloudGuard application APIs.
+
+    Worker and connector routes authenticate with their own machine
+    credentials inside their handlers. They never inherit browser identity.
+    """
+
+    _public_paths = {"/health", "/api/auth/config"}
+    _machine_routes = (
+        "/api/connectors/",
+        "/api/workers/",
+        "/api/jobs/worker/",
+        "/api/cron/",
+        "/api/sandbox-labs/worker/",
+    )
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        is_machine_route = path.startswith(self._machine_routes)
+        is_evidence_ingest = path == "/api/evidence" and request.method == "POST"
+        is_protected_api = (
+            path.startswith("/api/")
+            or path.startswith("/scan")
+            or path.startswith("/agent")
+            or path.startswith("/posture/")
+            or path.startswith("/report/")
+            or path in {"/providers", "/history", "/scheduled_scans", "/schedules"}
+        )
+
+        if (
+            cloudguard_auth_required()
+            and is_protected_api
+            and path not in self._public_paths
+            and not is_machine_route
+            and not is_evidence_ingest
+        ):
+            try:
+                request.state.identity = request_identity(request)
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        return await call_next(request)
+
+
+app.add_middleware(CloudGuardIdentityMiddleware)
+
+cors_origins = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()]
+if not cors_origins:
+    cors_origins = ["http://localhost:8000", "http://127.0.0.1:8000"]
+if os.getenv("NODE_ENV") == "production" and not os.getenv("CORS_ORIGINS"):
+    raise RuntimeError("CORS_ORIGINS is required when NODE_ENV=production")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 app.include_router(credentials_router)
@@ -131,12 +189,9 @@ app.include_router(credentials_router)
 @app.on_event("startup")
 async def startup_event():
     """Run on startup"""
-    logger.info("🚀 Starting CloudGuard Backend...")
-    try:
-        run_migrations()
-        logger.info("✅ Database migrations complete")
-    except Exception as e:
-        logger.error(f"❌ Failed to run database migrations: {e}")
+    logger.info("Starting CloudGuard Backend")
+    run_migrations()
+    logger.info("Database migrations complete")
 
     # Initialize enhanced AI systems
     global multi_agent_analyzer
@@ -457,40 +512,53 @@ def initialize_plugins_with_user_credentials(user_id: str) -> dict:
 
 
 def get_user_id(request: Request) -> str:
-    """Extract the browser-scoped CloudGuard user ID."""
+    """Return the authenticated user, never a caller-supplied user header."""
+    identity = request_identity(request)
+    if identity:
+        return identity.user_id
+
+    # Local-only compatibility for the pre-Keycloak development workflow.
+    # Production sets CLOUDGUARD_AUTH_REQUIRED=true, so this branch is never
+    # reached there.
     session_id = request.cookies.get("session_id") or request.cookies.get("cloudguard_session")
     if session_id:
         return f"user_{session_id}"
     return "anonymous"
 
 
-def _request_token(req: Request, header_name: str, query_name: str) -> Optional[str]:
+def _request_token(req: Request, header_name: str) -> Optional[str]:
     auth_header = req.headers.get("authorization", "")
     return (
         req.headers.get(header_name)
-        or req.query_params.get(query_name)
         or (auth_header.removeprefix("Bearer ").strip() if auth_header.startswith("Bearer ") else None)
     )
 
 
 def _is_connector_request_authorized(req: Request) -> bool:
-    expected_token = os.getenv("CONNECTOR_TOKEN") or os.getenv("EVIDENCE_CONNECTOR_TOKEN")
-    provided_token = _request_token(req, "x-connector-token", "connector_token")
-    if expected_token:
-        return provided_token == expected_token
-    return os.getenv("CONNECTOR_AUTH_REQUIRED", "false").lower() != "true"
+    try:
+        require_connector_identity(req, "worker:heartbeat")
+        return True
+    except HTTPException:
+        return False
 
 
-def _connector_user_id(req: Request) -> str:
-    return req.headers.get("x-cloudguard-user") or get_user_id(req)
+@app.get("/api/auth/config", include_in_schema=False)
+async def cloudguard_auth_config():
+    """Expose public OIDC settings for the static CloudGuard frontend."""
+    return {
+        "enabled": cloudguard_auth_required(),
+        "url": os.getenv("KEYCLOAK_PUBLIC_URL", "").rstrip("/"),
+        "realm": os.getenv("KEYCLOAK_REALM", "gigachad-grc"),
+        "client_id": os.getenv("CLOUDGUARD_KEYCLOAK_CLIENT_ID", "cloudguard-frontend"),
+    }
 
 
 def _wrap_text(text: str, width: int = 95):
     text = text.replace("\r", " ").replace("\n", " ")
     return textwrap.wrap(text, width=width)
 
-def build_scan_report(scan_id: int) -> dict:
-    rows = get_scan_report(scan_id)
+def build_scan_report(scan_id: int, user_id: str, tenant_id: str) -> dict:
+    rows = get_scan_report(scan_id, user_id, tenant_id)
     if not rows:
         raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
 
@@ -514,19 +582,25 @@ def build_scan_report(scan_id: int) -> dict:
 # ============================================================
 
 @app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Manually trigger a scheduled scan now"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT user_id, providers, account_ids, deep_scan, credential_id FROM scan_schedules WHERE id = %s",
-            (schedule_id,)
+            """
+            SELECT user_id, providers, account_ids, deep_scan, credential_id
+            FROM scan_schedules
+            WHERE id = %s AND tenant_id = %s AND user_id = %s
+            """,
+            (schedule_id, tenant_id, user_id),
         )
         row = cur.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Schedule not found")
 
-        user_id, providers_text, account_ids_text, deep_scan, credential_id = row
+        schedule_user_id, providers_text, account_ids_text, deep_scan, credential_id = row
         providers = json.loads(providers_text)
         account_ids = json.loads(account_ids_text)
 
@@ -534,7 +608,7 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
     if "aws" in providers:
         logger.info(f"🛡️ Testing AWS permissions for schedule {schedule_id} before run...")
         try:
-            await initialize_mcp_servers_for_user(user_id, ["aws"], credential_id)
+            await initialize_mcp_servers_for_user(schedule_user_id, ["aws"], credential_id)
         except Exception as e:
             if hasattr(e, 'iam_user_arn') and hasattr(e, 'recommended_policy_arn'):
                 logger.warning(f"🛡️ Permission check failed for schedule {schedule_id}")
@@ -560,10 +634,10 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
         account_ids=account_ids,
         deep_scan=deep_scan,
         offensive_scan=True,
-        user_id=user_id,
+        user_id=schedule_user_id,
         credential_id=credential_id,
     )
-    job = create_scan_job(user_id, scan_request)
+    job = create_scan_job(schedule_user_id, tenant_id, scan_request)
     if os.getenv("SCAN_JOB_INLINE_WORKER", "true").lower() == "true":
         background_tasks.add_task(process_scan_job, job["job_id"])
 
@@ -869,6 +943,7 @@ async def run_multi_cloud_scan_internal(
     account_ids: dict[str, str],
     deep_scan: bool,
     user_id: str,
+    tenant_id: str,
     credential_id: Optional[int] = None,  # NEW: Support specific credential
     offensive_scan: bool = True,
 ):
@@ -954,6 +1029,8 @@ async def run_multi_cloud_scan_internal(
             scan_id = await store_scan_result(
                 result,
                 aws_credential_id=aws_cred_id if provider == "aws" else None,
+                user_id=user_id,
+                tenant_id=tenant_id,
             )
             stored_ids.append(scan_id)
             logger.info(f"✅ {provider.upper()} scan finished, stored as scan_id: {scan_id}")
@@ -993,7 +1070,12 @@ async def run_multi_cloud_scan_internal(
             try:
                 # Get appropriate credential ID if possible
                 aws_id = aws_cred_id if provider == "aws" else None
-                scan_id = await store_scan_result(failed_result, aws_credential_id=aws_id)
+                scan_id = await store_scan_result(
+                    failed_result,
+                    aws_credential_id=aws_id,
+                    user_id=user_id,
+                    tenant_id=tenant_id,
+                )
                 stored_ids.append(scan_id)
                 logger.info(f"⚠️ Stored FAILED scan as scan_id: {scan_id}")
             except Exception as store_err:
@@ -1015,7 +1097,8 @@ async def run_multi_cloud_scan_internal(
     }
 @app.post("/scan/schedule")
 async def schedule_scan(request: ScheduledScanRequest, req: Request):
-    user_id = request.user_id or "anonymous"
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     logger.info(f"📅 Received schedule scan request from user={user_id}: {request}")
 
     schedule = request.schedule or {}
@@ -1118,12 +1201,13 @@ async def schedule_scan(request: ScheduledScanRequest, req: Request):
         cur.execute(
             """
             INSERT INTO scan_schedules
-            (user_id, providers, account_ids, deep_scan, schedule, status, next_run_at, credential_id, notify_email, email_address, created_at)
-            VALUES (%s, %s, %s, %s, %s, 'scheduled', %s, %s, %s, %s, NOW())
+            (user_id, tenant_id, providers, account_ids, deep_scan, schedule, status, next_run_at, credential_id, notify_email, email_address, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, 'scheduled', %s, %s, %s, %s, NOW())
             RETURNING id
             """,
             (
                 user_id,
+                tenant_id,
                 json.dumps(request.providers),
                 json.dumps(request.account_ids),
                 request.deep_scan,
@@ -1187,7 +1271,7 @@ def format_scan_completion_response(scan_ids: List[int], scan_results: List[Scan
 
 
 SCAN_JOB_COLUMNS = """
-    job_id, user_id, providers, account_ids, deep_scan, offensive_scan,
+    job_id, user_id, tenant_id, providers, account_ids, deep_scan, offensive_scan,
     credential_id, status, attempts, max_attempts, priority, scan_ids,
     result, error, queued_at, started_at, completed_at, updated_at,
     last_error, locked_at, worker_id
@@ -1209,29 +1293,38 @@ def _scan_job_from_row(row) -> Optional[Dict[str, Any]]:
     return {
         "job_id": row[0],
         "user_id": row[1],
-        "providers": row[2] or [],
-        "account_ids": row[3] or {},
-        "deep_scan": row[4],
-        "offensive_scan": row[5],
-        "credential_id": row[6],
-        "status": row[7],
-        "attempts": row[8],
-        "max_attempts": row[9],
-        "priority": row[10],
-        "scan_ids": row[11] or [],
-        "result": row[12],
-        "error": row[13],
-        "queued_at": _iso_timestamp(row[14]),
-        "started_at": _iso_timestamp(row[15]),
-        "completed_at": _iso_timestamp(row[16]),
-        "updated_at": _iso_timestamp(row[17]),
-        "last_error": row[18],
-        "locked_at": _iso_timestamp(row[19]),
-        "worker_id": row[20],
+        "tenant_id": row[2],
+        "providers": row[3] or [],
+        "account_ids": row[4] or {},
+        "deep_scan": row[5],
+        "offensive_scan": row[6],
+        "credential_id": row[7],
+        "status": row[8],
+        "attempts": row[9],
+        "max_attempts": row[10],
+        "priority": row[11],
+        "scan_ids": row[12] or [],
+        "result": row[13],
+        "error": row[14],
+        "queued_at": _iso_timestamp(row[15]),
+        "started_at": _iso_timestamp(row[16]),
+        "completed_at": _iso_timestamp(row[17]),
+        "updated_at": _iso_timestamp(row[18]),
+        "last_error": row[19],
+        "locked_at": _iso_timestamp(row[20]),
+        "worker_id": row[21],
     }
 
 
 def _request_tenant_id(req: Request, requested_tenant_id: Optional[str] = None, user_id: Optional[str] = None) -> str:
+    identity = request_identity(req)
+    if identity:
+        if requested_tenant_id and requested_tenant_id != identity.tenant_id:
+            raise HTTPException(status_code=403, detail="Tenant context does not match the authenticated identity")
+        return identity.tenant_id
+
+    # Development compatibility only. Production requests never accept a
+    # caller-controlled tenant because CLOUDGUARD_AUTH_REQUIRED is enabled.
     tenant = requested_tenant_id or req.headers.get("x-cloudguard-tenant") or user_id or get_user_id(req)
     return str(tenant or "default").strip() or "default"
 
@@ -2655,7 +2748,11 @@ async def _deploy_iac_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
             files=files,
         )
         scan_result = _mcp_to_scan_result("iac", result_data)
-        scan_id = await store_scan_result(scan_result)
+        scan_id = await store_scan_result(
+            scan_result,
+            user_id=lab["user_id"],
+            tenant_id=lab["tenant_id"],
+        )
         response = format_scan_completion_response([scan_id], [scan_result], {})
     except Exception as exc:
         logger.warning(f"IaC sandbox scan failed, storing generated files as proof only: {exc}")
@@ -3096,6 +3193,7 @@ def _record_sandbox_evidence_and_workflow(lab: Dict[str, Any], deployment: Dict[
     }
     evidence = store_evidence_artifact(
         lab["user_id"],
+        lab["tenant_id"],
         EvidenceIngestionRequest(
             control_id=f"sandbox.{lab['provider']}",
             control_name=f"{lab['provider'].upper()} sandbox lab validation",
@@ -3190,6 +3288,7 @@ def _queue_sandbox_scan_job(lab: Dict[str, Any], deployment: Dict[str, Any]) -> 
     account_id = deployment.get("account_id") or lab["resource_prefix"]
     job = create_scan_job(
         lab["user_id"],
+        lab["tenant_id"],
         MultiCloudScanRequest(
             providers=[lab["provider"]],
             account_ids={lab["provider"]: account_id},
@@ -3295,6 +3394,7 @@ async def destroy_sandbox_lab(
     }
     cleanup_evidence = store_evidence_artifact(
         lab["user_id"],
+        lab["tenant_id"],
         EvidenceIngestionRequest(
             control_id=f"sandbox.{lab['provider']}.cleanup",
             control_name=f"{lab['provider'].upper()} sandbox cleanup proof",
@@ -3438,7 +3538,7 @@ def _permission_required_payload(exc: Exception, user_id: str, credential_id: Op
     }
 
 
-def create_scan_job(user_id: str, request: MultiCloudScanRequest) -> Dict[str, Any]:
+def create_scan_job(user_id: str, tenant_id: str, request: MultiCloudScanRequest) -> Dict[str, Any]:
     job_id = f"job-{uuid.uuid4().hex}"
     conn = get_conn()
 
@@ -3446,15 +3546,16 @@ def create_scan_job(user_id: str, request: MultiCloudScanRequest) -> Dict[str, A
         cur.execute(
             f"""
             INSERT INTO scan_jobs (
-                job_id, user_id, providers, account_ids, deep_scan,
+                job_id, user_id, tenant_id, providers, account_ids, deep_scan,
                 offensive_scan, credential_id, status
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'queued')
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'queued')
             RETURNING {SCAN_JOB_COLUMNS}
             """,
             (
                 job_id,
                 user_id,
+                tenant_id,
                 Json(request.providers),
                 Json(request.account_ids),
                 request.deep_scan,
@@ -3468,11 +3569,20 @@ def create_scan_job(user_id: str, request: MultiCloudScanRequest) -> Dict[str, A
     return _scan_job_from_row(row)
 
 
-def get_scan_job(job_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def get_scan_job(
+    job_id: str,
+    user_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     conn = get_conn()
 
     with conn.cursor() as cur:
-        if user_id:
+        if user_id and tenant_id:
+            cur.execute(
+                f"SELECT {SCAN_JOB_COLUMNS} FROM scan_jobs WHERE job_id = %s AND user_id = %s AND tenant_id = %s",
+                (job_id, user_id, tenant_id),
+            )
+        elif user_id:
             cur.execute(
                 f"SELECT {SCAN_JOB_COLUMNS} FROM scan_jobs WHERE job_id = %s AND user_id = %s",
                 (job_id, user_id),
@@ -3485,7 +3595,7 @@ def get_scan_job(job_id: str, user_id: Optional[str] = None) -> Optional[Dict[st
         return _scan_job_from_row(cur.fetchone())
 
 
-def list_scan_jobs(user_id: str, status: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+def list_scan_jobs(user_id: str, tenant_id: str, status: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
     conn = get_conn()
     limit = max(1, min(limit, 200))
 
@@ -3495,22 +3605,22 @@ def list_scan_jobs(user_id: str, status: Optional[str] = None, limit: int = 50) 
                 f"""
                 SELECT {SCAN_JOB_COLUMNS}
                 FROM scan_jobs
-                WHERE user_id = %s AND status = %s
+                WHERE user_id = %s AND tenant_id = %s AND status = %s
                 ORDER BY queued_at DESC
                 LIMIT %s
                 """,
-                (user_id, status, limit),
+                (user_id, tenant_id, status, limit),
             )
         else:
             cur.execute(
                 f"""
                 SELECT {SCAN_JOB_COLUMNS}
                 FROM scan_jobs
-                WHERE user_id = %s
+                WHERE user_id = %s AND tenant_id = %s
                 ORDER BY queued_at DESC
                 LIMIT %s
                 """,
-                (user_id, limit),
+                (user_id, tenant_id, limit),
             )
         rows = cur.fetchall()
 
@@ -3629,7 +3739,7 @@ def list_scanner_worker_statuses(stale_after_seconds: Optional[int] = None) -> D
     }
 
 
-def retry_scan_job(job_id: str, user_id: str) -> Dict[str, Any]:
+def retry_scan_job(job_id: str, user_id: str, tenant_id: str) -> Dict[str, Any]:
     conn = get_conn()
 
     with conn.cursor() as cur:
@@ -3649,10 +3759,11 @@ def retry_scan_job(job_id: str, user_id: str) -> Dict[str, Any]:
                 updated_at = NOW()
             WHERE job_id = %s
               AND user_id = %s
+              AND tenant_id = %s
               AND status IN ('failed', 'dead_letter', 'cancelled')
             RETURNING {SCAN_JOB_COLUMNS}
             """,
-            (job_id, user_id),
+            (job_id, user_id, tenant_id),
         )
         row = cur.fetchone()
         conn.commit()
@@ -3662,7 +3773,7 @@ def retry_scan_job(job_id: str, user_id: str) -> Dict[str, Any]:
     return _scan_job_from_row(row)
 
 
-def cancel_scan_job(job_id: str, user_id: str) -> Dict[str, Any]:
+def cancel_scan_job(job_id: str, user_id: str, tenant_id: str) -> Dict[str, Any]:
     conn = get_conn()
 
     with conn.cursor() as cur:
@@ -3678,10 +3789,11 @@ def cancel_scan_job(job_id: str, user_id: str) -> Dict[str, Any]:
                 updated_at = NOW()
             WHERE job_id = %s
               AND user_id = %s
+              AND tenant_id = %s
               AND status IN ('queued', 'running')
             RETURNING {SCAN_JOB_COLUMNS}
             """,
-            (job_id, user_id),
+            (job_id, user_id, tenant_id),
         )
         row = cur.fetchone()
         conn.commit()
@@ -3834,7 +3946,7 @@ def _scan_job_result_payload(scan_result: Dict[str, Any]) -> Dict[str, Any]:
     return payload
 
 
-def store_evidence_artifact(user_id: str, request: EvidenceIngestionRequest) -> Dict[str, Any]:
+def store_evidence_artifact(user_id: str, tenant_id: str, request: EvidenceIngestionRequest) -> Dict[str, Any]:
     payload = request.payload or {}
     metadata = request.metadata or {}
     evidence_id = request.evidence_id or f"ev-{uuid.uuid4().hex}"
@@ -3855,7 +3967,7 @@ def store_evidence_artifact(user_id: str, request: EvidenceIngestionRequest) -> 
             object_secret_key = os.getenv("OBJECT_STORAGE_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_ACCESS_KEY")
             storage_provider = os.getenv("OBJECT_STORAGE_PROVIDER", "s3-compatible")
             key_prefix = (os.getenv("OBJECT_STORAGE_PREFIX") or os.getenv("EVIDENCE_S3_PREFIX") or "cloudguard/evidence").strip("/")
-            key = f"{key_prefix}/{user_id}/{evidence_id}.json"
+            key = f"{key_prefix}/{tenant_id}/{user_id}/{evidence_id}.json"
             client_kwargs = {
                 "service_name": "s3",
                 "region_name": object_region,
@@ -3895,11 +4007,11 @@ def store_evidence_artifact(user_id: str, request: EvidenceIngestionRequest) -> 
         cur.execute(
             """
             INSERT INTO evidence_artifacts (
-                evidence_id, job_id, user_id, control_id, control_name,
+                evidence_id, job_id, user_id, tenant_id, control_id, control_name,
                 source_system, scanner_type, artifact_type, storage_type,
                 uri, filename, content_type, checksum_sha256, payload, metadata
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (evidence_id) DO UPDATE SET
                 job_id = EXCLUDED.job_id,
                 control_id = EXCLUDED.control_id,
@@ -3920,6 +4032,7 @@ def store_evidence_artifact(user_id: str, request: EvidenceIngestionRequest) -> 
                 evidence_id,
                 request.job_id,
                 user_id,
+                tenant_id,
                 request.control_id,
                 request.control_name,
                 request.source_system,
@@ -3945,7 +4058,12 @@ def store_evidence_artifact(user_id: str, request: EvidenceIngestionRequest) -> 
     }
 
 
-def list_evidence_artifacts(user_id: str, job_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+def list_evidence_artifacts(
+    user_id: str,
+    tenant_id: str,
+    job_id: Optional[str] = None,
+    limit: int = 50,
+) -> List[Dict[str, Any]]:
     conn = get_conn()
     limit = max(1, min(limit, 200))
 
@@ -3956,11 +4074,11 @@ def list_evidence_artifacts(user_id: str, job_id: Optional[str] = None, limit: i
                 SELECT evidence_id, job_id, control_id, control_name, source_system,
                        scanner_type, artifact_type, storage_type, uri, checksum_sha256, metadata, created_at
                 FROM evidence_artifacts
-                WHERE user_id = %s AND job_id = %s
+                WHERE user_id = %s AND tenant_id = %s AND job_id = %s
                 ORDER BY created_at DESC
                 LIMIT %s
                 """,
-                (user_id, job_id, limit),
+                (user_id, tenant_id, job_id, limit),
             )
         else:
             cur.execute(
@@ -3968,11 +4086,11 @@ def list_evidence_artifacts(user_id: str, job_id: Optional[str] = None, limit: i
                 SELECT evidence_id, job_id, control_id, control_name, source_system,
                        scanner_type, artifact_type, storage_type, uri, checksum_sha256, metadata, created_at
                 FROM evidence_artifacts
-                WHERE user_id = %s
+                WHERE user_id = %s AND tenant_id = %s
                 ORDER BY created_at DESC
                 LIMIT %s
                 """,
-                (user_id, limit),
+                (user_id, tenant_id, limit),
             )
         rows = cur.fetchall()
 
@@ -4115,7 +4233,7 @@ def _control_matches_framework(control: Dict[str, Any], framework: str) -> bool:
     return control.get("framework", "").lower() == framework.lower()
 
 
-def build_compliance_summary(user_id: str, framework: str = "all") -> Dict[str, Any]:
+def build_compliance_summary(user_id: str, tenant_id: str, framework: str = "all") -> Dict[str, Any]:
     conn = get_conn()
     with conn.cursor() as cur:
         cur.execute(
@@ -4124,11 +4242,11 @@ def build_compliance_summary(user_id: str, framework: str = "all") -> Dict[str, 
                    scanner_type, artifact_type, storage_type, uri, checksum_sha256,
                    payload, metadata, created_at
             FROM evidence_artifacts
-            WHERE user_id = %s
+            WHERE user_id = %s AND tenant_id = %s
             ORDER BY created_at DESC
             LIMIT 1000
             """,
-            (user_id,),
+            (user_id, tenant_id),
         )
         evidence_rows = cur.fetchall()
 
@@ -4142,6 +4260,13 @@ def build_compliance_summary(user_id: str, framework: str = "all") -> Dict[str, 
 
     recent_evidence: List[Dict[str, Any]] = []
     source_counts: Dict[str, int] = {}
+    severity_by_source: Dict[str, Dict[str, int]] = {}
+    evidence_review_counts = {
+        "system_generated": 0,
+        "manual_uploaded": 0,
+        "pending_review": 0,
+        "approved": 0,
+    }
 
     for row in evidence_rows:
         evidence = {
@@ -4164,6 +4289,22 @@ def build_compliance_summary(user_id: str, framework: str = "all") -> Dict[str, 
         source = evidence["source_system"] or "unknown"
         source_counts[source] = source_counts.get(source, 0) + 1
 
+        review_status = str(
+            evidence["metadata"].get("review_status")
+            or evidence["metadata"].get("approval_status")
+            or evidence["metadata"].get("status")
+            or ""
+        ).lower()
+        scanner_type = str(evidence["scanner_type"] or "").lower()
+        if review_status in {"approved", "accepted", "verified"}:
+            evidence_review_counts["approved"] += 1
+        elif review_status in {"pending", "pending_review", "needs_review", "in_review"}:
+            evidence_review_counts["pending_review"] += 1
+        elif scanner_type in {"manual", "upload", "manual_upload"} or "manual" in source.lower():
+            evidence_review_counts["manual_uploaded"] += 1
+        else:
+            evidence_review_counts["system_generated"] += 1
+
         explicit_control_id = evidence["control_id"] or "unmapped.evidence"
         control = controls.setdefault(
             explicit_control_id,
@@ -4179,7 +4320,13 @@ def build_compliance_summary(user_id: str, framework: str = "all") -> Dict[str, 
         if source not in control["sources"]:
             control["sources"].append(source)
 
-        for finding in _extract_compliance_findings(evidence["payload"]):
+        extracted_findings = _extract_compliance_findings(evidence["payload"])
+        source_severities = severity_by_source.setdefault(
+            source,
+            {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
+        )
+        for finding in extracted_findings:
+            source_severities[finding["severity"]] += 1
             finding_control_id = finding["control_id"]
             finding_control = controls.setdefault(
                 finding_control_id,
@@ -4253,12 +4400,14 @@ def build_compliance_summary(user_id: str, framework: str = "all") -> Dict[str, 
         "score": weighted_score,
         "counts": counts,
         "source_counts": source_counts,
+        "severity_by_source": severity_by_source,
+        "evidence_review_counts": evidence_review_counts,
         "controls": filtered_controls,
         "recent_evidence": recent_evidence[:20],
     }
 
 
-def list_control_evidence(user_id: str, control_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+def list_control_evidence(user_id: str, tenant_id: str, control_id: str, limit: int = 50) -> List[Dict[str, Any]]:
     conn = get_conn()
     limit = max(1, min(limit, 200))
     with conn.cursor() as cur:
@@ -4268,11 +4417,11 @@ def list_control_evidence(user_id: str, control_id: str, limit: int = 50) -> Lis
                    scanner_type, artifact_type, storage_type, uri, checksum_sha256,
                    payload, metadata, created_at
             FROM evidence_artifacts
-            WHERE user_id = %s AND control_id = %s
+            WHERE user_id = %s AND tenant_id = %s AND control_id = %s
             ORDER BY created_at DESC
             LIMIT %s
             """,
-            (user_id, control_id, limit),
+            (user_id, tenant_id, control_id, limit),
         )
         rows = cur.fetchall()
     return [
@@ -4299,6 +4448,7 @@ def _store_scan_job_evidence(job: Dict[str, Any], payload: Dict[str, Any]) -> No
     try:
         store_evidence_artifact(
             job["user_id"],
+            job["tenant_id"],
             EvidenceIngestionRequest(
                 job_id=job["job_id"],
                 control_id="scan.summary",
@@ -4358,6 +4508,7 @@ async def process_scan_job(job_id: Optional[str] = None) -> Dict[str, Any]:
             account_ids=job["account_ids"],
             deep_scan=job["deep_scan"],
             user_id=job["user_id"],
+            tenant_id=job["tenant_id"],
             credential_id=job["credential_id"],
             offensive_scan=job["offensive_scan"],
         )
@@ -4390,25 +4541,25 @@ async def process_scan_job(job_id: Optional[str] = None) -> Dict[str, Any]:
 
 @app.post("/api/evidence")
 async def ingest_evidence(request: EvidenceIngestionRequest, req: Request):
-    if not _is_connector_request_authorized(req):
-        raise HTTPException(status_code=401, detail="Connector token required")
-    user_id = _connector_user_id(req)
-    artifact = store_evidence_artifact(user_id, request)
+    connector = require_connector_identity(req, "evidence:write")
+    artifact = store_evidence_artifact(connector.user_id, connector.tenant_id, request)
     return {"status": "accepted", **artifact}
 
 
 @app.get("/api/evidence")
 async def get_evidence(req: Request, job_id: Optional[str] = None, limit: int = 50):
     user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     return {
         "status": "ok",
-        "evidence": list_evidence_artifacts(user_id, job_id=job_id, limit=limit),
+        "evidence": list_evidence_artifacts(user_id, tenant_id, job_id=job_id, limit=limit),
     }
 
 
 @app.get("/api/evidence/{evidence_id}")
 async def get_evidence_detail(evidence_id: str, req: Request):
     user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     with conn.cursor() as cur:
         cur.execute(
@@ -4417,9 +4568,9 @@ async def get_evidence_detail(evidence_id: str, req: Request):
                    scanner_type, artifact_type, storage_type, uri, checksum_sha256,
                    payload, metadata, created_at
             FROM evidence_artifacts
-            WHERE evidence_id = %s AND user_id = %s
+            WHERE evidence_id = %s AND user_id = %s AND tenant_id = %s
             """,
-            (evidence_id, user_id),
+            (evidence_id, user_id, tenant_id),
         )
         row = cur.fetchone()
 
@@ -4647,22 +4798,39 @@ async def destroy_sandbox_lab_endpoint(lab_id: str, request: SandboxLabDestroyRe
 @app.get("/api/compliance/summary")
 async def get_compliance_summary(req: Request, framework: str = "all"):
     user_id = get_user_id(req)
-    return build_compliance_summary(user_id, framework=framework)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    return build_compliance_summary(user_id, tenant_id, framework=framework)
+
+
+@app.get("/api/connectors/grc/dashboard")
+async def get_grc_connector_dashboard(req: Request, framework: str = "all", evidence_limit: int = 50):
+    """Return a read-only CloudGuard snapshot to an authenticated GRC connector."""
+    connector = require_connector_identity(req, "grc:read")
+    return {
+        "status": "ok",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "tenant_id": connector.tenant_id,
+        "compliance": build_compliance_summary(connector.user_id, connector.tenant_id, framework=framework),
+        "evidence": list_evidence_artifacts(connector.user_id, connector.tenant_id, limit=evidence_limit),
+        "workers": list_scanner_worker_statuses(),
+    }
 
 
 @app.get("/api/compliance/controls/{control_id}/evidence")
 async def get_compliance_control_evidence(control_id: str, req: Request, limit: int = 50):
     user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     return {
         "status": "ok",
         "control_id": control_id,
-        "evidence": list_control_evidence(user_id, control_id, limit=limit),
+        "evidence": list_control_evidence(user_id, tenant_id, control_id, limit=limit),
     }
 
 
 @app.post("/api/iac/scan-files")
 async def scan_iac_uploaded_files(request: IaCFileScanRequest, req: Request):
-    user_id = request.user_id or get_user_id(req)
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     files = _validated_iac_uploads(request.files)
 
     server = create_iac_server({"root_path": os.getcwd()})
@@ -4672,7 +4840,7 @@ async def scan_iac_uploaded_files(request: IaCFileScanRequest, req: Request):
         files=files,
     )
     scan_result = _mcp_to_scan_result("iac", result_data)
-    scan_id = await store_scan_result(scan_result)
+    scan_id = await store_scan_result(scan_result, user_id=user_id, tenant_id=tenant_id)
 
     try:
         ai_analysis = await ai_engine.analyze_scan_results([scan_result])
@@ -4696,6 +4864,7 @@ async def scan_iac_uploaded_files(request: IaCFileScanRequest, req: Request):
     try:
         store_evidence_artifact(
             user_id,
+            _request_tenant_id(req, user_id=user_id),
             EvidenceIngestionRequest(
                 control_id="iac.uploaded_files",
                 control_name="Uploaded IaC file scan",
@@ -4721,7 +4890,8 @@ async def enqueue_scan_job(
     req: Request,
     background_tasks: BackgroundTasks,
 ):
-    user_id = request.user_id or get_user_id(req)
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     logger.info(f"📥 Enqueue scan job for user={user_id}: {request.dict()}")
 
     try:
@@ -4739,7 +4909,7 @@ async def enqueue_scan_job(
             detail=f"Missing credentials for: {', '.join(missing_providers)}. Please add credentials in Settings.",
         )
 
-    job = create_scan_job(user_id, request)
+    job = create_scan_job(user_id, tenant_id, request)
     if os.getenv("SCAN_JOB_INLINE_WORKER", "true").lower() == "true":
         background_tasks.add_task(process_scan_job, job["job_id"])
 
@@ -4757,7 +4927,8 @@ async def enqueue_scan_job(
 @app.get("/api/jobs")
 async def get_scan_jobs(req: Request, status: Optional[str] = None, limit: int = 50):
     user_id = get_user_id(req)
-    jobs = list_scan_jobs(user_id, status=status, limit=limit)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    jobs = list_scan_jobs(user_id, tenant_id, status=status, limit=limit)
     return {
         "status": "ok",
         "jobs": jobs,
@@ -4775,7 +4946,8 @@ async def get_scan_jobs(req: Request, status: Optional[str] = None, limit: int =
 @app.post("/api/jobs/{job_id}/retry")
 async def retry_scan_job_endpoint(job_id: str, req: Request, background_tasks: BackgroundTasks):
     user_id = get_user_id(req)
-    job = retry_scan_job(job_id, user_id)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    job = retry_scan_job(job_id, user_id, tenant_id)
     if os.getenv("SCAN_JOB_INLINE_WORKER", "true").lower() == "true":
         background_tasks.add_task(process_scan_job, job["job_id"])
     return {"status": "queued", "job": job}
@@ -4784,14 +4956,16 @@ async def retry_scan_job_endpoint(job_id: str, req: Request, background_tasks: B
 @app.post("/api/jobs/{job_id}/cancel")
 async def cancel_scan_job_endpoint(job_id: str, req: Request):
     user_id = get_user_id(req)
-    job = cancel_scan_job(job_id, user_id)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    job = cancel_scan_job(job_id, user_id, tenant_id)
     return {"status": "cancelled", "job": job}
 
 
 @app.get("/api/jobs/{job_id}")
 async def get_scan_job_status(job_id: str, req: Request):
     user_id = get_user_id(req)
-    job = get_scan_job(job_id, user_id=user_id)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    job = get_scan_job(job_id, user_id=user_id, tenant_id=tenant_id)
     if not job:
         raise HTTPException(status_code=404, detail="Scan job not found")
     return job
@@ -4801,7 +4975,7 @@ def _is_worker_request_authorized(req: Request) -> bool:
     expected_token = os.getenv("WORKER_TOKEN")
     expected_cron_secret = os.getenv("CRON_SECRET")
     auth_header = req.headers.get("authorization", "")
-    provided_token = _request_token(req, "x-worker-token", "token")
+    provided_token = _request_token(req, "x-worker-token")
 
     if expected_token and provided_token == expected_token:
         return True
@@ -4879,10 +5053,7 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
     logger.info(f"📦 Payload: {request.dict()}")
 
     user_id = get_user_id(req)
-    # If the request has an explicit user_id, use it (though cookies are safer)
-    if "user_id" in request.dict() and request.user_id:
-        user_id = request.user_id
-
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     logger.info(f"👤 Resolved User ID for scan: {user_id}")
 
     # 🔥 Initialize MCP servers FIRST
@@ -4969,6 +5140,8 @@ async def multi_cloud_scan(request: MultiCloudScanRequest, req: Request):
             scan_id = await store_scan_result(
                 scan_result_obj,
                 aws_credential_id=credential_id,
+                user_id=user_id,
+                tenant_id=tenant_id,
             )
             stored_ids.append(scan_id)
 
@@ -5389,6 +5562,20 @@ async def reason_act_page():
         return HTMLResponse("<h1>Reason and act page not found</h1>", status_code=404)
 
 
+@app.get("/grc", response_class=HTMLResponse)
+@app.get("/grc.html", response_class=HTMLResponse)
+async def grc_platform_entrypoint():
+    grc_url = os.getenv("GRC_PLATFORM_URL", "").strip()
+    if grc_url and not grc_url.startswith("/"):
+        return RedirectResponse(grc_url, status_code=302)
+
+    try:
+        page = read_frontend_asset("grc.html")
+        return HTMLResponse(page.replace("__GRC_PLATFORM_URL__", grc_url or ""))
+    except FileNotFoundError:
+        return HTMLResponse("<h1>GRC platform entry page not found</h1>", status_code=404)
+
+
 @app.get("/health")
 async def health():
     try:
@@ -5467,11 +5654,13 @@ async def list_providers():
     }
 
 @app.get("/posture/dashboard")
-async def posture_dashboard(scan_ids: Optional[str] = None):
+async def posture_dashboard(req: Request, scan_ids: Optional[str] = None):
     # Pass scan_ids to get_multi_cloud_summary if implemented
     # or filter here if not.
     logger.info(f"📊 Dashboard request with scan_ids={scan_ids}")
-    summary = get_multi_cloud_summary(scan_ids=scan_ids)
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    summary = get_multi_cloud_summary(user_id, tenant_id, scan_ids=scan_ids)
     logger.info(f"📉 Resulting summary from DB: {summary}")
 
     dashboard = {
@@ -5505,13 +5694,17 @@ async def posture_dashboard(scan_ids: Optional[str] = None):
 
 # Dashboard API endpoints
 @app.get("/api/severity-breakdown")
-async def get_severity_breakdown():
+async def get_severity_breakdown(req: Request):
     try:
+        user_id = get_user_id(req)
+        tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT severity, COUNT(*) as count
                 FROM findings
+                JOIN scans ON scans.id = findings.scan_id
+                WHERE scans.user_id = %s AND scans.tenant_id = %s
                 GROUP BY severity
                 ORDER BY
                     CASE severity
@@ -5521,7 +5714,7 @@ async def get_severity_breakdown():
                         WHEN 'LOW' THEN 4
                         ELSE 5
                     END
-            """)
+            """, (user_id, tenant_id))
             results = cur.fetchall()
 
         breakdown = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "INFO": 0}
@@ -5539,8 +5732,10 @@ async def get_severity_breakdown():
         }
 
 @app.get("/api/provider-breakdown")
-async def get_provider_breakdown(scan_ids: Optional[str] = None):
+async def get_provider_breakdown(req: Request, scan_ids: Optional[str] = None):
     try:
+        user_id = get_user_id(req)
+        tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
             query = """
@@ -5549,14 +5744,16 @@ async def get_provider_breakdown(scan_ids: Optional[str] = None):
                     COUNT(DISTINCT r.id) as resources,
                     COUNT(DISTINCT f.id) as findings
                 FROM resources r
+                JOIN scans s ON s.id = r.scan_id
                 LEFT JOIN findings f ON r.id = f.resource_id
             """
-            params = []
+            params = [user_id, tenant_id]
+            query += " WHERE s.user_id = %s AND s.tenant_id = %s"
 
             if scan_ids:
                 try:
                     ids = [int(i.strip()) for i in scan_ids.split(",")]
-                    query += " WHERE r.scan_id = ANY(%s)"
+                    query += " AND r.scan_id = ANY(%s)"
                     params.append(ids)
                 except ValueError:
                     pass
@@ -5596,8 +5793,10 @@ async def get_provider_breakdown(scan_ids: Optional[str] = None):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/scan-history")
-async def get_scan_history(days: int = 30):
+async def get_scan_history(req: Request, days: int = 30):
     try:
+        user_id = get_user_id(req)
+        tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
             cur.execute("""
@@ -5608,10 +5807,11 @@ async def get_scan_history(days: int = 30):
                     COUNT(DISTINCT CASE WHEN f.severity = 'CRITICAL' THEN f.id END) as critical_count
                 FROM scans s
                 LEFT JOIN findings f ON s.id = f.scan_id
-                WHERE s.started_at >= NOW() - INTERVAL %s
+                WHERE s.user_id = %s AND s.tenant_id = %s
+                  AND s.started_at >= NOW() - INTERVAL %s
                 GROUP BY DATE(s.started_at)
                 ORDER BY scan_date ASC
-            """, (f"{days} days",))
+            """, (user_id, tenant_id, f"{days} days"))
             results = cur.fetchall()
 
         return {
@@ -5631,8 +5831,10 @@ async def get_scan_history(days: int = 30):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/latest-findings")
-async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
+async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[str] = None):
     try:
+        user_id = get_user_id(req)
+        tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
             query = """
@@ -5645,13 +5847,15 @@ async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
                     f.created_at
                 FROM findings f
                 JOIN resources r ON f.resource_id = r.id
+                JOIN scans s ON s.id = f.scan_id
             """
-            params = []
+            params = [user_id, tenant_id]
+            query += " WHERE s.user_id = %s AND s.tenant_id = %s"
 
             if scan_ids:
                 try:
                     ids = [int(i.strip()) for i in scan_ids.split(",")]
-                    query += " WHERE f.scan_id = ANY(%s)"
+                    query += " AND f.scan_id = ANY(%s)"
                     params.append(ids)
                 except ValueError:
                     pass
@@ -5682,7 +5886,7 @@ async def get_latest_findings(limit: int = 10, scan_ids: Optional[str] = None):
 
 @app.get("/api/scans")
 async def get_scans(
-    user_id: str,
+    req: Request,
     limit: int = 20,
     offset: int = 0,
     provider: Optional[str] = None,
@@ -5692,6 +5896,8 @@ async def get_scans(
 ):
     """Get all scans with filters and pagination for history page"""
     try:
+        user_id = get_user_id(req)
+        tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
             # Build query with filters
@@ -5709,9 +5915,9 @@ async def get_scans(
                 FROM scans s
                 LEFT JOIN resources r ON s.id = r.scan_id
                 LEFT JOIN findings f ON s.id = f.scan_id
-                WHERE 1=1
+                WHERE s.user_id = %s AND s.tenant_id = %s
             """
-            params = []
+            params = [user_id, tenant_id]
 
             # Add filters
             if provider:
@@ -5741,8 +5947,8 @@ async def get_scans(
             results = cur.fetchall()
 
             # Get total count
-            count_query = "SELECT COUNT(*) FROM scans WHERE 1=1"
-            count_params = []
+            count_query = "SELECT COUNT(*) FROM scans WHERE user_id = %s AND tenant_id = %s"
+            count_params = [user_id, tenant_id]
             if provider:
                 count_query += " AND cloud = %s"
                 count_params.append(provider)
@@ -5782,14 +5988,18 @@ async def get_scans(
         return {"status": "error", "message": str(e), "scans": [], "total": 0}
 
 @app.get("/report/{scan_id}")
-async def get_report(scan_id: int):
+async def get_report(scan_id: int, req: Request):
     """Get scan report"""
-    return build_scan_report(scan_id)
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    return build_scan_report(scan_id, user_id, tenant_id)
 
 @app.get("/report/{scan_id}/pdf")
-async def get_report_pdf(scan_id: int):
+async def get_report_pdf(scan_id: int, req: Request):
     """Generate PDF report"""
-    data = build_scan_report(scan_id)
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    data = build_scan_report(scan_id, user_id, tenant_id)
 
     providers = data.get("providers", [])
 
@@ -5866,9 +6076,11 @@ async def agent_chat(request: AgentChatRequest):
     return AgentChatResponse(reply=reply)
 
 @app.post("/agent/scan/explain", response_model=AgentChatResponse)
-async def agent_explain_scan(request: AgentExplainScanRequest):
+async def agent_explain_scan(request: AgentExplainScanRequest, req: Request):
     """Explain scan results with AI"""
-    data = build_scan_report(request.scan_id)
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    data = build_scan_report(request.scan_id, user_id, tenant_id)
 
     prompt = f"""
 You are analyzing Scan ID {request.scan_id}.
@@ -5939,6 +6151,7 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
     logger.info(f"🚀 ENHANCED multi-cloud scan: {request.providers}")
 
     user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
 
     # Initialize MCP servers
     await initialize_mcp_servers_for_user(user_id, request.providers)
@@ -5971,6 +6184,8 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
             scan_id = await store_scan_result(
                 scan_result_obj,
                 aws_credential_id=credential_id,
+                user_id=user_id,
+                tenant_id=tenant_id,
             )
             stored_ids.append(scan_id)
 
@@ -6245,26 +6460,20 @@ async def scheduled_scans_page():
             return HTMLResponse("<h1>Scheduled scans page not found</h1>")
 
 @app.get("/api/schedules")
-async def get_all_schedules(user_id: Optional[str] = None):
+async def get_all_schedules(req: Request):
     """Get all scheduled scans"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            if user_id:
-                cur.execute("""
-                    SELECT id, user_id, providers, account_ids, deep_scan,
-                           schedule, status, next_run_at, created_at
-                    FROM scan_schedules
-                    WHERE user_id = %s
-                    ORDER BY created_at DESC
-                """, (user_id,))
-            else:
-                cur.execute("""
-                    SELECT id, user_id, providers, account_ids, deep_scan,
-                           schedule, status, next_run_at, created_at
-                    FROM scan_schedules
-                    ORDER BY created_at DESC
-                """)
+            cur.execute("""
+                SELECT id, user_id, providers, account_ids, deep_scan,
+                       schedule, status, next_run_at, created_at
+                FROM scan_schedules
+                WHERE tenant_id = %s AND user_id = %s
+                ORDER BY created_at DESC
+            """, (tenant_id, user_id))
 
             rows = cur.fetchall()
 
@@ -6291,8 +6500,10 @@ async def get_all_schedules(user_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/schedules/{schedule_id}")
-async def get_schedule(schedule_id: int):
+async def get_schedule(schedule_id: int, req: Request):
     """Get a specific scheduled scan"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -6300,8 +6511,8 @@ async def get_schedule(schedule_id: int):
                 SELECT id, user_id, providers, account_ids, deep_scan,
                        schedule, status, next_run_at, created_at
                 FROM scan_schedules
-                WHERE id = %s
-            """, (schedule_id,))
+                WHERE id = %s AND tenant_id = %s AND user_id = %s
+            """, (schedule_id, tenant_id, user_id))
 
             row = cur.fetchone()
             if not row:
@@ -6328,8 +6539,10 @@ async def get_schedule(schedule_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/schedules/{schedule_id}/run")
-async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
+async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, req: Request):
     """Run a scheduled scan immediately"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -6337,8 +6550,8 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
             cur.execute("""
                 SELECT user_id, providers, account_ids, deep_scan, credential_id
                 FROM scan_schedules
-                WHERE id = %s
-            """, (schedule_id,))
+                WHERE id = %s AND tenant_id = %s AND user_id = %s
+            """, (schedule_id, tenant_id, user_id))
 
             row = cur.fetchone()
             if not row:
@@ -6382,7 +6595,7 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
                 user_id=user_id,
                 credential_id=credential_id,
             )
-            job = create_scan_job(user_id, scan_request)
+            job = create_scan_job(user_id, tenant_id, scan_request)
             if os.getenv("SCAN_JOB_INLINE_WORKER", "true").lower() == "true":
                 background_tasks.add_task(process_scan_job, job["job_id"])
 
@@ -6399,23 +6612,18 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: int, user_id: Optional[str] = None):
+async def delete_schedule(schedule_id: int, req: Request):
     """Delete a scheduled scan"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            if user_id:
-                cur.execute("""
-                    DELETE FROM scan_schedules
-                    WHERE id = %s AND user_id = %s
-                    RETURNING id
-                """, (schedule_id, user_id))
-            else:
-                cur.execute("""
-                    DELETE FROM scan_schedules
-                    WHERE id = %s
-                    RETURNING id
-                """, (schedule_id,))
+            cur.execute("""
+                DELETE FROM scan_schedules
+                WHERE id = %s AND tenant_id = %s AND user_id = %s
+                RETURNING id
+            """, (schedule_id, tenant_id, user_id))
 
             deleted = cur.fetchone()
             if not deleted:
@@ -6432,8 +6640,10 @@ async def delete_schedule(schedule_id: int, user_id: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/schedules/{schedule_id}")
-async def update_schedule(schedule_id: int, request: ScheduledScanRequest):
+async def update_schedule(schedule_id: int, request: ScheduledScanRequest, req: Request):
     """Update a scheduled scan"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     conn = get_conn()
     try:
         with conn.cursor() as cur:
@@ -6444,14 +6654,16 @@ async def update_schedule(schedule_id: int, request: ScheduledScanRequest):
                     deep_scan = %s,
                     schedule = %s,
                     updated_at = NOW()
-                WHERE id = %s
+                WHERE id = %s AND tenant_id = %s AND user_id = %s
                 RETURNING id
             """, (
                 json.dumps(request.providers),
                 json.dumps(request.account_ids),
                 request.deep_scan,
                 Json(request.schedule),
-                schedule_id
+                schedule_id,
+                tenant_id,
+                user_id,
             ))
 
             updated = cur.fetchone()
@@ -6701,13 +6913,21 @@ async def call_mcp_tool(provider: str, tool_name: str, arguments: Dict[str, Any]
 async def store_scan_result(
     result: ScanResult,
     aws_credential_id: int | None = None,
+    user_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> int:
     conn = get_conn()
     try:
         account_id = result.account_id or "default"
         logger.info(f"DEBUG store_scan_result got aws_credential_id={aws_credential_id}")
 
-        scan_id = create_scan_record(account_id, result.provider, aws_credential_id)
+        scan_id = create_scan_record(
+            account_id,
+            result.provider,
+            aws_credential_id,
+            user_id=user_id,
+            tenant_id=tenant_id,
+        )
 
         resource_id_map: dict[str, int] = {}
 
@@ -6768,8 +6988,11 @@ async def store_scan_result(
 # ============================================================
 
 @app.get("/api/debug/credentials/{user_id}")
-async def debug_user_credentials(user_id: str):
+async def debug_user_credentials(user_id: str, req: Request):
     """Debug endpoint to check user credentials status"""
+    authenticated_user_id = get_user_id(req)
+    if user_id != authenticated_user_id:
+        raise HTTPException(status_code=403, detail="Credentials can only be inspected by their owner")
     try:
         from backend.credentials.manager import credential_manager
 
@@ -6827,8 +7050,10 @@ async def debug_user_credentials(user_id: str):
         }
 
 @app.get("/api/debug/scheduled-scans")
-async def debug_scheduled_scans():
+async def debug_scheduled_scans(req: Request):
     """Debug endpoint to check scheduled scans"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     try:
         conn = get_conn()
         with conn.cursor() as cur:
@@ -6843,9 +7068,10 @@ async def debug_scheduled_scans():
                     created_at,
                     schedule
                 FROM scan_schedules
+                WHERE tenant_id = %s AND user_id = %s
                 ORDER BY created_at DESC
                 LIMIT 10
-            """)
+            """, (tenant_id, user_id))
             rows = cur.fetchall()
 
         schedules = []
@@ -6866,8 +7092,9 @@ async def debug_scheduled_scans():
             cur.execute("""
                 SELECT COUNT(*)
                 FROM scan_schedules
-                WHERE status = 'scheduled' AND next_run_at <= NOW()
-            """)
+                WHERE tenant_id = %s AND user_id = %s
+                  AND status = 'scheduled' AND next_run_at <= NOW()
+            """, (tenant_id, user_id))
             due_count = cur.fetchone()[0]
 
         return {
@@ -6893,7 +7120,9 @@ async def debug_scheduled_scans():
 async def _store_mcp_scan_result(
     provider: str,
     result: Dict[str, Any],
-    credential_id: Optional[int] = None
+    credential_id: Optional[int] = None,
+    user_id: Optional[str] = None,
+    tenant_id: Optional[str] = None,
 ) -> int:
     """
     Convert MCP scan result to database format and store
@@ -6902,7 +7131,9 @@ async def _store_mcp_scan_result(
     scan_id = create_scan_record(
         account_id=result.get("account_id", "default"),
         cloud=provider,
-        aws_credential_id=credential_id if provider == "aws" else None
+        aws_credential_id=credential_id if provider == "aws" else None,
+        user_id=user_id,
+        tenant_id=tenant_id,
     )
 
     # Store resources

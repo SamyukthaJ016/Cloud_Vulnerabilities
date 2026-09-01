@@ -1,4 +1,80 @@
 (function () {
+    const originalFetch = window.fetch.bind(window);
+    let keycloak = null;
+
+    function isSameOrigin(input) {
+        const rawUrl = input instanceof Request ? input.url : String(input);
+        return new URL(rawUrl, window.location.origin).origin === window.location.origin;
+    }
+
+    function loadKeycloakAdapter(baseUrl) {
+        return new Promise((resolve, reject) => {
+            if (window.Keycloak) {
+                resolve();
+                return;
+            }
+            const script = document.createElement("script");
+            script.src = `${baseUrl.replace(/\/$/, "")}/js/keycloak.js`;
+            script.async = true;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error("Unable to load the Keycloak adapter"));
+            document.head.appendChild(script);
+        });
+    }
+
+    async function initialiseAuthentication() {
+        const response = await originalFetch("/api/auth/config", { credentials: "same-origin" });
+        if (!response.ok) throw new Error("Unable to load CloudGuard authentication configuration");
+        const config = await response.json();
+        if (!config.enabled) return null;
+        if (!config.url || !config.realm || !config.client_id) {
+            throw new Error("CloudGuard Keycloak configuration is incomplete");
+        }
+
+        const keycloakUrl = new URL(config.url, window.location.origin);
+        const localKeycloak = keycloakUrl.protocol === "http:" &&
+            ["localhost", "127.0.0.1"].includes(keycloakUrl.hostname);
+        if (keycloakUrl.protocol !== "https:" && !localKeycloak) {
+            throw new Error("CloudGuard requires HTTPS for Keycloak authentication");
+        }
+
+        await loadKeycloakAdapter(keycloakUrl.toString());
+        keycloak = new window.Keycloak({
+            url: keycloakUrl.toString().replace(/\/$/, ""),
+            realm: config.realm,
+            clientId: config.client_id,
+        });
+        await keycloak.init({
+            onLoad: "login-required",
+            checkLoginIframe: false,
+            pkceMethod: "S256",
+            redirectUri: window.location.href,
+        });
+        return keycloak;
+    }
+
+    const authenticationReady = initialiseAuthentication().catch((error) => {
+        console.error("CloudGuard authentication could not be initialized:", error);
+        document.documentElement.dataset.authError = "true";
+        throw error;
+    });
+
+    window.fetch = async function (input, init) {
+        const auth = await authenticationReady;
+        if (!auth || !isSameOrigin(input)) {
+            return originalFetch(input, init);
+        }
+
+        await auth.updateToken(30);
+        const headers = new Headers(
+            init && init.headers ? init.headers : (input instanceof Request ? input.headers : undefined)
+        );
+        if (auth.token && !headers.has("Authorization")) {
+            headers.set("Authorization", `Bearer ${auth.token}`);
+        }
+        return originalFetch(input, { ...init, headers });
+    };
+
     function detectPage() {
         const path = window.location.pathname;
         const title = document.title.toLowerCase();
@@ -7,6 +83,7 @@
         if (path.includes("operations")) return "operations";
         if (path.includes("compliance")) return "compliance";
         if (path.includes("reason-act") || path.includes("reason_act")) return "reason";
+        if (path.includes("grc")) return "grc";
         if (path.includes("dashboard") || title.includes("dashboard")) return "dashboard";
         return "home";
     }
@@ -21,7 +98,8 @@
                 history: "/history.html",
                 operations: "/operations.html",
                 compliance: "/compliance.html",
-                reason: "/reason_act.html"
+                reason: "/reason_act.html",
+                grc: "/grc.html"
             };
         }
         return {
@@ -31,7 +109,8 @@
             history: "/history",
             operations: "/operations",
             compliance: "/compliance",
-            reason: "/reason-act"
+            reason: "/reason-act",
+            grc: "/grc"
         };
     }
 
@@ -49,7 +128,8 @@
             ["history", "History"],
             ["operations", "Operations"],
             ["compliance", "Compliance"],
-            ["reason", "Reason & Act"]
+            ["reason", "Reason & Act"],
+            ["grc", "GRC"]
         ];
 
         const shell = document.createElement("div");

@@ -1,0 +1,198 @@
+# =============================================================================
+# GigaChad GRC - Monitoring Stack
+# =============================================================================
+# This docker-compose adds observability tools to the GRC platform
+# Usage: docker compose -f docker-compose.yml -f deploy/monitoring/docker-compose.monitoring.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Prometheus - Metrics Collection
+  # =============================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: grc-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - grc-network
+    ports:
+      # SECURITY: Bind to localhost only to prevent external network access
+      - '127.0.0.1:9090:9090'
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:9090/-/healthy']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # Grafana - Visualization
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grc-grafana
+    environment:
+      # SECURITY: Credentials must be explicitly set - no defaults allowed
+      GF_SECURITY_ADMIN_USER: '${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}'
+      GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3030}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-piechart-panel
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    networks:
+      - grc-network
+    ports:
+      # SECURITY: Bind to localhost only to prevent external network access
+      - '127.0.0.1:3030:3000'
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # Loki - Log Aggregation
+  # =============================================================================
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: grc-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./deploy/monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - grc-network
+    ports:
+      # SECURITY: Bind to localhost only to prevent external network access
+      - '127.0.0.1:3100:3100'
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # =============================================================================
+  # Promtail - Log Shipping
+  # =============================================================================
+  promtail:
+    image: grafana/promtail:2.9.0
+    container_name: grc-promtail
+    volumes:
+      - ./deploy/monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - grc-network
+    depends_on:
+      - loki
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # =============================================================================
+  # cAdvisor - Container Metrics
+  # SECURITY: Removed privileged mode to prevent container escape risks
+  # Using specific device access and read-only mounts instead
+  # =============================================================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: grc-cadvisor
+    # SECURITY: Do NOT use privileged mode - use specific capabilities instead
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /cgroup:/cgroup:ro
+    networks:
+      - grc-network
+    ports:
+      # SECURITY: Bind to localhost only to prevent external network access
+      - '127.0.0.1:8081:8080'
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # =============================================================================
+  # Node Exporter - Host Metrics
+  # =============================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: grc-node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - grc-network
+    ports:
+      # SECURITY: Bind to localhost only to prevent external network access
+      - '127.0.0.1:9100:9100'
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # =============================================================================
+  # Alertmanager - Alert Routing
+  # =============================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: grc-alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./deploy/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - grc-network
+    ports:
+      # SECURITY: Bind to localhost only to prevent external network access
+      - '127.0.0.1:9093:9093'
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+
+networks:
+  grc-network:
+    external: true

@@ -1,0 +1,335 @@
+name: cloudguard-grc
+
+x-api-environment: &api-environment
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-gigachad_grc}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+  S3_ENDPOINT: rustfs
+  S3_PORT: "9000"
+  S3_USE_SSL: "false"
+  S3_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+  S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+  MINIO_ENDPOINT: rustfs
+  MINIO_PORT: "9000"
+  MINIO_USE_SSL: "false"
+  MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+  MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+  KEYCLOAK_URL: http://keycloak:8080/auth
+  KEYCLOAK_REALM: ${KEYCLOAK_REALM:-gigachad-grc}
+  KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-https://auth.sc.deeptrustxai.com/auth/realms/gigachad-grc}
+  KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/${KEYCLOAK_REALM:-gigachad-grc}/protocol/openid-connect/certs
+  KEYCLOAK_AUDIENCE: grc-api
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+  RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+
+x-api-depends-on: &api-depends-on
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  keycloak:
+    condition: service_healthy
+  rustfs:
+    condition: service_healthy
+
+x-api-runtime: &api-runtime
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  read_only: true
+  tmpfs:
+    - /tmp
+    - /app/.npm
+  networks:
+    - grc-network
+  deploy:
+    resources:
+      limits:
+        cpus: "0.75"
+        memory: 512M
+      reservations:
+        memory: 128M
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-gigachad_grc}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - grc-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-gigachad_grc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - grc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 320M
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.3
+    restart: unless-stopped
+    command: ["start", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB:-keycloak}
+      KC_DB_USERNAME: ${POSTGRES_USER:?POSTGRES_USER is required}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      KC_DB_POOL_INITIAL_SIZE: "3"
+      KC_DB_POOL_MIN_SIZE: "3"
+      KC_DB_POOL_MAX_SIZE: "10"
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-auth.sc.deeptrustxai.com}
+      KC_HOSTNAME_STRICT: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_MANAGEMENT_RELATIVE_PATH: /
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+    volumes:
+      - ./auth/realm-export.dokploy.json:/opt/keycloak/data/import/realm-export.json:ro
+      - keycloak_data:/opt/keycloak/data
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - grc-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "{ printf 'HEAD /health/ready HTTP/1.0\r\n\r\n' >&0; grep -q 'HTTP/1.0 200'; } 0<>/dev/tcp/127.0.0.1/9000"
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1536M
+
+  rustfs:
+    image: rustfs/rustfs@sha256:8e467b32af3ff83e70c70dddb0c36b5e611f46e89a3075db8770aea4f30b2fe3
+    restart: unless-stopped
+    environment:
+      RUSTFS_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      RUSTFS_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      RUSTFS_BROWSER: "off"
+      RUSTFS_PROMETHEUS_AUTH_TYPE: authenticated
+    volumes:
+      - rustfs_data:/data
+      - rustfs_logs:/logs
+    networks:
+      - grc-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9001/rustfs/console/index.html || exit 1"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+
+  controls:
+    <<: *api-runtime
+    build:
+      context: .
+      dockerfile: services/controls/Dockerfile
+    environment:
+      <<: *api-environment
+      PORT: "3001"
+      CLOUDGUARD_API_URL: ${CLOUDGUARD_API_URL:-https://cloudguard.sc.deeptrustxai.com}
+      CLOUDGUARD_CONNECTOR_CREDENTIALS_JSON: ${CLOUDGUARD_CONNECTOR_CREDENTIALS_JSON:?CLOUDGUARD_CONNECTOR_CREDENTIALS_JSON is required}
+    depends_on: *api-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frameworks:
+    <<: *api-runtime
+    build:
+      context: .
+      dockerfile: services/frameworks/Dockerfile
+    environment:
+      <<: *api-environment
+      PORT: "3002"
+    depends_on: *api-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  policies:
+    <<: *api-runtime
+    build:
+      context: .
+      dockerfile: services/policies/Dockerfile
+    environment:
+      <<: *api-environment
+      PORT: "3004"
+    depends_on: *api-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  tprm:
+    <<: *api-runtime
+    build:
+      context: .
+      dockerfile: services/tprm/Dockerfile
+    environment:
+      <<: *api-environment
+      PORT: "3005"
+    depends_on: *api-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  trust:
+    <<: *api-runtime
+    build:
+      context: .
+      dockerfile: services/trust/Dockerfile
+    environment:
+      <<: *api-environment
+      PORT: "3006"
+    depends_on: *api-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  audit:
+    <<: *api-runtime
+    build:
+      context: .
+      dockerfile: services/audit/Dockerfile
+    environment:
+      <<: *api-environment
+      PORT: "3007"
+    depends_on: *api-depends-on
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ""
+        VITE_ENABLE_AI_MODULE: "true"
+        VITE_KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL:-https://auth.sc.deeptrustxai.com/auth}
+        VITE_KEYCLOAK_REALM: ${KEYCLOAK_REALM:-gigachad-grc}
+        VITE_KEYCLOAK_CLIENT_ID: grc-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      controls:
+        condition: service_healthy
+      frameworks:
+        condition: service_healthy
+      policies:
+        condition: service_healthy
+      tprm:
+        condition: service_healthy
+      trust:
+        condition: service_healthy
+      audit:
+        condition: service_healthy
+    networks:
+      - grc-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /run
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 192M
+
+networks:
+  grc-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  keycloak_data:
+  rustfs_data:
+  rustfs_logs:

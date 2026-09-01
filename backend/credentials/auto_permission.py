@@ -7,12 +7,13 @@ to users when they need to assume CloudFormation-created roles.
 
 import logging
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 import boto3
 from botocore.exceptions import ClientError
 
 from backend.credentials.manager import CredentialManager
+from backend.tenant_security import request_identity
 
 logger = logging.getLogger("auto_permission")
 router = APIRouter()
@@ -21,7 +22,6 @@ credential_manager = CredentialManager()
 
 class AutoPermissionRequest(BaseModel):
     """Request to auto-grant IAM permission"""
-    user_id: str
     credential_id: int
     iam_user_name: str
     policy_arn: str
@@ -42,7 +42,7 @@ class AutoPermissionResponse(BaseModel):
 
 
 @router.post("/auto-grant-permission", response_model=AutoPermissionResponse)
-async def auto_grant_permission(request: AutoPermissionRequest):
+async def auto_grant_permission(request: AutoPermissionRequest, http_request: Request):
     """
     Automatically attach IAM policy to user to grant assume role permission.
     
@@ -59,7 +59,12 @@ async def auto_grant_permission(request: AutoPermissionRequest):
     - Full audit trail
     """
     try:
-        logger.info(f"[AutoPermission] Request to grant permission for user {request.user_id}")
+        identity = request_identity(http_request)
+        if not identity:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        user_id = identity.user_id
+
+        logger.info(f"[AutoPermission] Request to grant permission for user {user_id}")
         logger.info(f"[AutoPermission] IAM User: {request.iam_user_name}, Policy: {request.policy_arn}")
         
         # Validate policy ARN format (security check)
@@ -80,7 +85,7 @@ async def auto_grant_permission(request: AutoPermissionRequest):
         op_cred_id = request.admin_credential_id or request.credential_id
         credential = credential_manager.get_credentials(
             credential_id=op_cred_id,
-            user_id=request.user_id
+            user_id=user_id
         )
         
         if not credential:
@@ -176,7 +181,7 @@ async def auto_grant_permission(request: AutoPermissionRequest):
         # Log to audit trail
         credential_manager._log_audit(
             credential_id=request.credential_id,
-            user_id=request.user_id,
+            user_id=user_id,
             action='auto_grant_permission',
             details={
                 'iam_user': request.iam_user_name,

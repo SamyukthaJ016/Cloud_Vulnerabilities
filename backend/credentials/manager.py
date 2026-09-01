@@ -66,28 +66,44 @@ class CredentialManager:
         if not self.db_url:
             raise ValueError("DATABASE_URL environment variable is required")
 
-        # DEV MODE: encryption disabled
-        self.encryption_key = None
-        self.cipher = None
+        raw_encryption_key = os.getenv("ENCRYPTION_KEY", "").strip()
+        if not raw_encryption_key:
+            if os.getenv("NODE_ENV") == "production":
+                raise ValueError("ENCRYPTION_KEY is required in production")
+            logger.warning("ENCRYPTION_KEY is not set; local development credentials are not encrypted")
+            self.encryption_key = None
+            self.cipher = None
+        else:
+            self.encryption_key = base64.urlsafe_b64encode(
+                hashlib.sha256(raw_encryption_key.encode("utf-8")).digest()
+            )
+            self.cipher = Fernet(self.encryption_key)
 
     def _get_encryption_key(self) -> bytes:
         """
-        DEV MODE: no encryption key needed.
-        Kept only for compatibility if called somewhere.
+        Return the derived Fernet key when credential encryption is enabled.
         """
-        return b""
+        if not self.encryption_key:
+            raise ValueError("ENCRYPTION_KEY is not configured")
+        return self.encryption_key
     
     def encrypt(self, text: str) -> str:
-        """DEV MODE: no encryption, store as plain text"""
+        """Encrypt new credential secrets with a versioned, authenticated format."""
         if not text:
             return ""
-        return text
+        if not self.cipher:
+            return text
+        return "v1:" + self.cipher.encrypt(text.encode("utf-8")).decode("utf-8")
 
     def decrypt(self, encrypted_text: str) -> str:
-        """DEV MODE: no decryption, value is already plain text"""
+        """Decrypt new secrets while allowing existing plaintext records to migrate safely."""
         if not encrypted_text:
             return ""
-        return encrypted_text
+        if not encrypted_text.startswith("v1:"):
+            return encrypted_text
+        if not self.cipher:
+            raise ValueError("ENCRYPTION_KEY is required to decrypt stored credentials")
+        return self.cipher.decrypt(encrypted_text[3:].encode("utf-8")).decode("utf-8")
     
     def _get_connection(self):
         """Get database connection"""

@@ -48,7 +48,7 @@ nano .env.e2e.worker
 Important:
 
 - `DATABASE_URL` must point to the shared PostgreSQL database.
-- `CONNECTOR_TOKEN` must match the portal env.
+- `EVIDENCE_CONNECTOR_ID` must identify an entry in the portal's `CONNECTOR_CREDENTIALS_JSON`, and `EVIDENCE_CONNECTOR_TOKEN` must match that entry's token.
 - Object storage settings should point to shared object storage. For separate VMs, prefer E2E object storage or MinIO exposed only on a private network.
 - Keep `SANDBOX_AWS_DEPLOY`, `SANDBOX_GCP_DEPLOY`, and `SANDBOX_KUBERNETES_DEPLOY` disabled until isolated sandbox accounts/projects/clusters are ready.
 
@@ -88,8 +88,8 @@ Connectors submit evidence to:
 
 ```text
 POST /api/evidence
-Header: x-connector-token: <CONNECTOR_TOKEN>
-Header: x-cloudguard-user: <user-id>
+Header: Authorization: Bearer <tenant-specific-connector-token>
+Header: X-Connector-ID: <connector-id>
 ```
 
 Payload:
@@ -120,5 +120,5 @@ The bundled `evidence-connector` service watches `/app/connectors/inbox`. Any JS
 
 - Do not expose PostgreSQL publicly. Use E2E private networking, firewall allowlists, or managed PostgreSQL.
 - Do not expose MinIO publicly unless it is behind strict firewall rules.
-- Rotate `WORKER_TOKEN` and `CONNECTOR_TOKEN` if they are shared.
+- Give every connector a separate secret and tenant-scoped entry in `CONNECTOR_CREDENTIALS_JSON`; rotate a connector's token independently if it is exposed.
 - Keep scanner workers separate from the portal VM for production.

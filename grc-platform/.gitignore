@@ -1,0 +1,78 @@
+node_modules
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Sensitive files - DO NOT COMMIT
+env.development
+*.pdf
+services/policies/storage/
+
+# Credentials
+*.pem
+*.key
+*.p12
+
+# Infisical
+.infisical.json
+.infisical-initialized
+
+# Storage directories - contain user data
+services/*/storage/
+**/storage/evidence/
+**/storage/policies/
+**/storage/integrations/
+
+# Excel/Office files that may contain data
+*.xlsx
+*.xls
+*.docx
+
+# Screenshots (may contain PII)
+Screenshot*.png
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Log files
+*.log
+logs/
+
+# Database dumps
+*.sql
+*.dump
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Playwright artifacts
+frontend/test-results/
+frontend/playwright-report/
+frontend/playwright/.auth/
+
+# Build artifacts (service-specific)
+services/*/dist/
+frontend/dist/
+
+# IDE
+.idea/
+*.swp
+*.swo
+.vscode/settings.json
+
+# OS files
+Thumbs.db
+Desktop.ini

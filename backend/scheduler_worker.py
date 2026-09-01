@@ -59,7 +59,7 @@ async def run_due_schedules():
             # Get all due schedules with FOR UPDATE SKIP LOCKED to prevent concurrent execution
             cur.execute(
                 """
-                SELECT id, user_id, providers, account_ids, deep_scan, schedule, credential_id
+                SELECT id, user_id, tenant_id, providers, account_ids, deep_scan, schedule, credential_id
                 FROM scan_schedules
                 WHERE status = 'scheduled' AND next_run_at <= NOW()
                 FOR UPDATE SKIP LOCKED
@@ -74,7 +74,7 @@ async def run_due_schedules():
         logger.info(f"🕒 Found {len(rows)} due scheduled scans")
 
         for row in rows:
-            schedule_id, user_id, providers_text, account_ids_text, deep_scan, schedule, credential_id = row
+            schedule_id, user_id, tenant_id, providers_text, account_ids_text, deep_scan, schedule, credential_id = row
             
             # Parse JSON fields
             try:
@@ -86,10 +86,10 @@ async def run_due_schedules():
                 _mark_schedule_failed(schedule_id, f"JSON parse error: {e}")
                 continue
 
-            # Ensure user_id is valid
-            if not user_id:
-                user_id = "anonymous"
-                logger.warning(f"Schedule {schedule_id} has no user_id, using 'anonymous'")
+            if not user_id or not tenant_id:
+                logger.error(f"Schedule {schedule_id} is missing its owner or tenant and cannot be run")
+                _mark_schedule_failed(schedule_id, "Schedule is missing tenant ownership")
+                continue
 
             logger.info(f"▶️ Running scheduled scan {schedule_id} for user={user_id} providers={providers}")
 
@@ -102,7 +102,7 @@ async def run_due_schedules():
                     user_id=user_id,
                     credential_id=credential_id,
                 )
-                job = create_scan_job(user_id, scan_request)
+                job = create_scan_job(user_id, tenant_id, scan_request)
                 if os.getenv("SCHEDULER_ENQUEUE_ONLY", "false").lower() == "true":
                     processed_job = {
                         "status": "queued",

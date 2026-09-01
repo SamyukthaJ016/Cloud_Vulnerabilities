@@ -1,0 +1,130 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { KnowledgeBaseService } from './knowledge-base.service';
+import { CreateKnowledgeBaseDto } from './dto/create-knowledge-base.dto';
+import { UpdateKnowledgeBaseDto } from './dto/update-knowledge-base.dto';
+import { BulkCreateKnowledgeBaseDto } from './dto/bulk-create-knowledge-base.dto';
+import { CurrentUser, UserContext } from '@gigachad-grc/shared';
+import { JwtAuthGuard } from '../auth/dev-auth.guard';
+
+@Controller('knowledge-base')
+@UseGuards(JwtAuthGuard)
+export class KnowledgeBaseController {
+  constructor(private readonly knowledgeBaseService: KnowledgeBaseService) {}
+
+  @Post()
+  create(
+    @Body() createKnowledgeBaseDto: CreateKnowledgeBaseDto,
+    @CurrentUser() user: UserContext,
+  ) {
+    // SECURITY: Tenant isolation. Override organizationId in the body
+    // with the caller's authenticated org. Without this, an attacker
+    // could POST `{ organizationId: <other-org-id>, ... }` and have the
+    // entry persist under a different tenant.
+    return this.knowledgeBaseService.create(
+      { ...createKnowledgeBaseDto, organizationId: user.organizationId },
+      user.userId,
+    );
+  }
+
+  @Post('bulk')
+  bulkCreate(
+    @Body() bulkCreateDto: BulkCreateKnowledgeBaseDto,
+    @CurrentUser() user: UserContext,
+  ) {
+    // SECURITY: Tenant isolation — see comment on create() above.
+    const entries = bulkCreateDto.entries.map((e) => ({
+      ...e,
+      organizationId: user.organizationId,
+    }));
+    return this.knowledgeBaseService.bulkCreate(entries, user.userId);
+  }
+
+  @Get()
+  findAll(
+    @CurrentUser() user: UserContext,
+    @Query('category') category?: string,
+    @Query('status') status?: string,
+    @Query('framework') framework?: string,
+    @Query('isPublic') isPublic?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.knowledgeBaseService.findAll(user.organizationId, {
+      category,
+      status,
+      framework,
+      isPublic,
+      search,
+    });
+  }
+
+  @Get('stats')
+  getStats(@CurrentUser() user: UserContext) {
+    return this.knowledgeBaseService.getStats(user.organizationId);
+  }
+
+  @Get('search')
+  search(
+    @CurrentUser() user: UserContext,
+    @Query('q') query: string,
+  ) {
+    return this.knowledgeBaseService.search(user.organizationId, query);
+  }
+
+  @Get('public')
+  getPublicEntries(
+    @CurrentUser() user: UserContext,
+    @Query('category') category?: string,
+  ) {
+    return this.knowledgeBaseService.getPublicEntries(user.organizationId, category);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @CurrentUser() user: UserContext) {
+    // SECURITY: Pass organizationId to ensure tenant isolation
+    return this.knowledgeBaseService.findOne(id, user.organizationId);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateKnowledgeBaseDto: UpdateKnowledgeBaseDto,
+    @CurrentUser() user: UserContext,
+  ) {
+    // SECURITY: Pass organizationId to ensure tenant isolation
+    return this.knowledgeBaseService.update(id, updateKnowledgeBaseDto, user.userId, user.organizationId);
+  }
+
+  @Delete(':id')
+  remove(
+    @Param('id') id: string,
+    @CurrentUser() user: UserContext,
+  ) {
+    // SECURITY: Pass organizationId to ensure tenant isolation
+    return this.knowledgeBaseService.remove(id, user.userId, user.organizationId);
+  }
+
+  @Post(':id/approve')
+  approve(
+    @Param('id') id: string,
+    @CurrentUser() user: UserContext,
+  ) {
+    // SECURITY: Pass organizationId to ensure tenant isolation
+    return this.knowledgeBaseService.approve(id, user.userId, user.organizationId);
+  }
+
+  @Post(':id/use')
+  incrementUsage(@Param('id') id: string, @CurrentUser() user: UserContext) {
+    // SECURITY: Pass organizationId to ensure tenant isolation
+    return this.knowledgeBaseService.incrementUsage(id, user.organizationId);
+  }
+}

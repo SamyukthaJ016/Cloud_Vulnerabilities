@@ -1,0 +1,175 @@
+{
+  "id": "cmmc-2",
+  "name": "CMMC 2.0",
+  "version": "2.0",
+  "description": "The Cybersecurity Maturity Model Certification (CMMC) 2.0 is a framework designed to protect sensitive unclassified information shared by the Department of Defense with its contractors and subcontractors. CMMC 2.0 streamlines requirements to three certification levels aligned with NIST cybersecurity standards.",
+  "source": "U.S. Department of Defense",
+  "category": "security",
+  "requirements": [
+    {
+      "reference": "Level 1",
+      "title": "Level 1 - Foundational",
+      "description": "Level 1 focuses on the protection of Federal Contract Information (FCI) and consists of 17 practices based on FAR 52.204-21.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "L1-AC.1.001", "title": "Authorized Access Control", "description": "Limit information system access to authorized users, processes acting on behalf of authorized users, or devices (including other information systems).", "level": 1, "isCategory": false},
+        {"reference": "L1-AC.1.002", "title": "Transaction Types", "description": "Limit information system access to the types of transactions and functions that authorized users are permitted to execute.", "level": 1, "isCategory": false},
+        {"reference": "L1-AC.1.003", "title": "External Connections", "description": "Verify and control/limit connections to and use of external information systems.", "level": 1, "isCategory": false},
+        {"reference": "L1-AC.1.004", "title": "Public Information", "description": "Control information posted or processed on publicly accessible information systems.", "level": 1, "isCategory": false},
+        {"reference": "L1-IA.1.076", "title": "User Identification", "description": "Identify information system users, processes acting on behalf of users, or devices.", "level": 1, "isCategory": false},
+        {"reference": "L1-IA.1.077", "title": "User Authentication", "description": "Authenticate (or verify) the identities of those users, processes, or devices, as a prerequisite to allowing access to organizational information systems.", "level": 1, "isCategory": false},
+        {"reference": "L1-MP.1.118", "title": "Media Sanitization", "description": "Sanitize or destroy information system media containing Federal Contract Information before disposal or release for reuse.", "level": 1, "isCategory": false},
+        {"reference": "L1-PE.1.131", "title": "Physical Access", "description": "Limit physical access to organizational information systems, equipment, and the respective operating environments to authorized individuals.", "level": 1, "isCategory": false},
+        {"reference": "L1-PE.1.132", "title": "Escort Visitors", "description": "Escort visitors and monitor visitor activity.", "level": 1, "isCategory": false},
+        {"reference": "L1-PE.1.133", "title": "Physical Access Logs", "description": "Maintain audit logs of physical access.", "level": 1, "isCategory": false},
+        {"reference": "L1-PE.1.134", "title": "Physical Access Control", "description": "Control and manage physical access devices.", "level": 1, "isCategory": false},
+        {"reference": "L1-SC.1.175", "title": "Communication Monitoring", "description": "Monitor, control, and protect organizational communications (i.e., information transmitted or received by organizational information systems) at the external boundaries and key internal boundaries of the information systems.", "level": 1, "isCategory": false},
+        {"reference": "L1-SC.1.176", "title": "Public Access Subnetworks", "description": "Implement subnetworks for publicly accessible system components that are physically or logically separated from internal networks.", "level": 1, "isCategory": false},
+        {"reference": "L1-SI.1.210", "title": "Flaw Remediation", "description": "Identify, report, and correct information and information system flaws in a timely manner.", "level": 1, "isCategory": false},
+        {"reference": "L1-SI.1.211", "title": "Malicious Code Protection", "description": "Provide protection from malicious code at appropriate locations within organizational information systems.", "level": 1, "isCategory": false},
+        {"reference": "L1-SI.1.212", "title": "Malicious Code Updates", "description": "Update malicious code protection mechanisms when new releases are available.", "level": 1, "isCategory": false},
+        {"reference": "L1-SI.1.213", "title": "System Scans", "description": "Perform periodic scans of the information system and real-time scans of files from external sources as files are downloaded, opened, or executed.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "Level 2",
+      "title": "Level 2 - Advanced",
+      "description": "Level 2 focuses on the protection of Controlled Unclassified Information (CUI) and encompasses the 110 security requirements specified in NIST SP 800-171 Rev 2.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "L2-AC", "title": "Access Control (22 Practices)", "description": "Limit system access to authorized users and control the flow of CUI.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-AC.2.005", "title": "Separation of Duties", "description": "Separate the duties of individuals to reduce the risk of malevolent activity without collusion.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.006", "title": "Least Privilege", "description": "Employ the principle of least privilege, including for specific security functions and privileged accounts.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.007", "title": "Non-Privileged Accounts", "description": "Use non-privileged accounts or roles when accessing nonsecurity functions.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.008", "title": "Privileged Functions", "description": "Prevent non-privileged users from executing privileged functions and capture the execution of such functions in audit logs.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.009", "title": "Unsuccessful Logon Attempts", "description": "Limit unsuccessful logon attempts.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.010", "title": "Session Lock", "description": "Use session lock with pattern-hiding displays to prevent access and viewing of data after period of inactivity.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.011", "title": "Session Termination", "description": "Terminate (automatically) a user session after a defined condition.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.013", "title": "Remote Access", "description": "Monitor and control remote access sessions.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.015", "title": "Remote Access Routing", "description": "Route remote access via managed access control points.", "level": 2, "isCategory": false},
+          {"reference": "L2-AC.2.016", "title": "Wireless Access", "description": "Authorize wireless access prior to allowing such connections.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-AT", "title": "Awareness and Training (3 Practices)", "description": "Ensure awareness and training of personnel regarding security risks.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-AT.2.056", "title": "Security Awareness", "description": "Ensure that managers, systems administrators, and users of organizational systems are made aware of the security risks associated with their activities.", "level": 2, "isCategory": false},
+          {"reference": "L2-AT.2.057", "title": "Role-Based Training", "description": "Ensure that personnel are trained to carry out their assigned information security-related duties and responsibilities.", "level": 2, "isCategory": false},
+          {"reference": "L2-AT.2.058", "title": "Insider Threat Training", "description": "Provide security awareness training on recognizing and reporting potential indicators of insider threat.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-AU", "title": "Audit and Accountability (9 Practices)", "description": "Create and retain audit logs for monitoring and incident response.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-AU.2.041", "title": "Audit Events", "description": "Ensure that the actions of individual system users can be uniquely traced to those users.", "level": 2, "isCategory": false},
+          {"reference": "L2-AU.2.042", "title": "Audit Content", "description": "Create and retain system audit logs and records to the extent needed for monitoring.", "level": 2, "isCategory": false},
+          {"reference": "L2-AU.2.043", "title": "Audit Failure Alerts", "description": "Alert in the event of an audit logging process failure.", "level": 2, "isCategory": false},
+          {"reference": "L2-AU.2.044", "title": "Audit Review", "description": "Review and update logged events.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-CM", "title": "Configuration Management (9 Practices)", "description": "Establish and maintain baseline configurations.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-CM.2.061", "title": "Baseline Configuration", "description": "Establish and maintain baseline configurations and inventories of organizational systems.", "level": 2, "isCategory": false},
+          {"reference": "L2-CM.2.062", "title": "Security Configuration Settings", "description": "Establish and enforce security configuration settings for information technology products.", "level": 2, "isCategory": false},
+          {"reference": "L2-CM.2.063", "title": "Change Control", "description": "Track, review, approve/disapprove, and log changes to organizational systems.", "level": 2, "isCategory": false},
+          {"reference": "L2-CM.2.064", "title": "Impact Analysis", "description": "Analyze the security impact of changes prior to implementation.", "level": 2, "isCategory": false},
+          {"reference": "L2-CM.2.065", "title": "Least Functionality", "description": "Define, document, approve, and enforce physical and logical access restrictions.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-IA", "title": "Identification and Authentication (11 Practices)", "description": "Identify and authenticate users and devices.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-IA.2.078", "title": "Multi-Factor Authentication", "description": "Enforce a limit of unsuccessful logon attempts.", "level": 2, "isCategory": false},
+          {"reference": "L2-IA.2.079", "title": "Replay-Resistant Auth", "description": "Employ replay-resistant authentication mechanisms for network access.", "level": 2, "isCategory": false},
+          {"reference": "L2-IA.2.080", "title": "Identifier Disabling", "description": "Disable identifiers after a defined period of inactivity.", "level": 2, "isCategory": false},
+          {"reference": "L2-IA.2.081", "title": "Password Complexity", "description": "Enforce a minimum password complexity and change of characters when new passwords are created.", "level": 2, "isCategory": false},
+          {"reference": "L2-IA.2.082", "title": "Password Reuse", "description": "Prohibit password reuse for a specified number of generations.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-IR", "title": "Incident Response (3 Practices)", "description": "Establish incident handling capabilities.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-IR.2.092", "title": "Incident Handling", "description": "Establish an operational incident-handling capability.", "level": 2, "isCategory": false},
+          {"reference": "L2-IR.2.093", "title": "Incident Reporting", "description": "Track, document, and report incidents to designated officials.", "level": 2, "isCategory": false},
+          {"reference": "L2-IR.2.094", "title": "Incident Response Testing", "description": "Test the organizational incident response capability.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-MA", "title": "Maintenance (6 Practices)", "description": "Perform maintenance on organizational systems.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-MA.2.111", "title": "Maintenance Procedures", "description": "Perform maintenance on organizational systems.", "level": 2, "isCategory": false},
+          {"reference": "L2-MA.2.112", "title": "Maintenance Tools", "description": "Provide effective controls on the tools, techniques, and personnel used to conduct maintenance.", "level": 2, "isCategory": false},
+          {"reference": "L2-MA.2.113", "title": "Sanitization", "description": "Ensure equipment is sanitized of CUI before off-site maintenance.", "level": 2, "isCategory": false},
+          {"reference": "L2-MA.2.114", "title": "Media Inspection", "description": "Check media containing diagnostic programs for malicious code.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-MP", "title": "Media Protection (9 Practices)", "description": "Protect and control system media containing CUI.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-MP.2.119", "title": "Media Protection", "description": "Protect (physically control and securely store) system media containing CUI.", "level": 2, "isCategory": false},
+          {"reference": "L2-MP.2.120", "title": "Media Access", "description": "Limit access to CUI on system media to authorized users.", "level": 2, "isCategory": false},
+          {"reference": "L2-MP.2.121", "title": "Media Marking", "description": "Mark media with necessary CUI markings and distribution limitations.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-PS", "title": "Personnel Security (2 Practices)", "description": "Screen and manage personnel with access to CUI.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-PS.2.127", "title": "Screening", "description": "Screen individuals prior to authorizing access to systems containing CUI.", "level": 2, "isCategory": false},
+          {"reference": "L2-PS.2.128", "title": "Personnel Actions", "description": "Ensure CUI and systems are protected during and after personnel actions.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-PE", "title": "Physical Protection (6 Practices)", "description": "Limit and protect physical access to systems.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-PE.2.135", "title": "Facility Protection", "description": "Protect and monitor the physical facility and support infrastructure.", "level": 2, "isCategory": false},
+          {"reference": "L2-PE.2.136", "title": "Alternate Work Sites", "description": "Enforce safeguarding measures for CUI at alternate work sites.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-RA", "title": "Risk Assessment (3 Practices)", "description": "Periodically assess and manage organizational risk.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-RA.2.141", "title": "Risk Assessment", "description": "Periodically assess the risk to organizational operations and assets.", "level": 2, "isCategory": false},
+          {"reference": "L2-RA.2.142", "title": "Vulnerability Scanning", "description": "Scan for vulnerabilities periodically and when new vulnerabilities are identified.", "level": 2, "isCategory": false},
+          {"reference": "L2-RA.2.143", "title": "Vulnerability Remediation", "description": "Remediate vulnerabilities in accordance with risk assessments.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-CA", "title": "Security Assessment (4 Practices)", "description": "Periodically assess security controls.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-CA.2.157", "title": "Security Assessment", "description": "Periodically assess the security controls to determine effectiveness.", "level": 2, "isCategory": false},
+          {"reference": "L2-CA.2.158", "title": "Plan of Action", "description": "Develop and implement plans of action to correct deficiencies.", "level": 2, "isCategory": false},
+          {"reference": "L2-CA.2.159", "title": "Continuous Monitoring", "description": "Monitor security controls on an ongoing basis.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-SC", "title": "System and Communications Protection (16 Practices)", "description": "Protect communications and system boundaries.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-SC.2.178", "title": "Security Engineering", "description": "Employ architectural designs and development techniques that promote effective security.", "level": 2, "isCategory": false},
+          {"reference": "L2-SC.2.179", "title": "Role Separation", "description": "Separate user functionality from system management functionality.", "level": 2, "isCategory": false},
+          {"reference": "L2-SC.2.180", "title": "Deny by Default", "description": "Deny network communications traffic by default; allow by exception.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L2-SI", "title": "System and Information Integrity (7 Practices)", "description": "Monitor and protect system integrity.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L2-SI.2.214", "title": "Security Alerts", "description": "Monitor system security alerts and advisories and take action in response.", "level": 2, "isCategory": false},
+          {"reference": "L2-SI.2.216", "title": "Traffic Monitoring", "description": "Monitor organizational systems including inbound and outbound traffic.", "level": 2, "isCategory": false},
+          {"reference": "L2-SI.2.217", "title": "Unauthorized Use", "description": "Identify unauthorized use of organizational systems.", "level": 2, "isCategory": false}
+        ]}
+      ]
+    },
+    {
+      "reference": "Level 3",
+      "title": "Level 3 - Expert",
+      "description": "Level 3 focuses on reducing risk from Advanced Persistent Threats (APTs) and includes a subset of NIST SP 800-172 requirements, requiring government-led assessments.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "L3-AC", "title": "Access Control Enhancements", "description": "Enhanced access control to protect against APTs.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-AC.3.017", "title": "Dual Authorization", "description": "Employ dual authorization to execute critical or sensitive system operations.", "level": 2, "isCategory": false},
+          {"reference": "L3-AC.3.018", "title": "Privileged Access Protection", "description": "Employ organization-defined secure information transfer solutions to control information flows between security domains.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-AT", "title": "Awareness and Training Enhancements", "description": "Enhanced training requirements.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-AT.3.059", "title": "Practical Exercises", "description": "Include practical exercises in awareness training that are aligned with current threat scenarios.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-AU", "title": "Audit Enhancements", "description": "Enhanced auditing for APT detection.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-AU.3.045", "title": "Audit Analysis", "description": "Review and update logged events on an ongoing basis with automated analysis.", "level": 2, "isCategory": false},
+          {"reference": "L3-AU.3.046", "title": "Anomaly Detection", "description": "Alert when audit logging fails and implement anomaly detection.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-CA", "title": "Security Assessment Enhancements", "description": "Enhanced assessment requirements.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-CA.3.161", "title": "Penetration Testing", "description": "Employ penetration testing to identify vulnerabilities on a recurring basis.", "level": 2, "isCategory": false},
+          {"reference": "L3-CA.3.162", "title": "Red Team Exercises", "description": "Employ adversarial techniques including red team exercises.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-CM", "title": "Configuration Management Enhancements", "description": "Enhanced configuration management.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-CM.3.067", "title": "Authorized Software", "description": "Define and document a list of authorized software programs and versions and prohibit all others.", "level": 2, "isCategory": false},
+          {"reference": "L3-CM.3.068", "title": "Automated Monitoring", "description": "Employ automated mechanisms to detect unauthorized software.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-IA", "title": "Identification and Authentication Enhancements", "description": "Enhanced authentication requirements.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-IA.3.083", "title": "Hardware Token MFA", "description": "Require multi-factor authentication using hardware tokens for all privileged and non-privileged accounts.", "level": 2, "isCategory": false},
+          {"reference": "L3-IA.3.084", "title": "Biometric Authentication", "description": "Employ biometric or advanced authentication mechanisms where available.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-IR", "title": "Incident Response Enhancements", "description": "Enhanced incident response capabilities.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-IR.3.098", "title": "Automated Response", "description": "Use automated mechanisms to support incident handling processes.", "level": 2, "isCategory": false},
+          {"reference": "L3-IR.3.099", "title": "Cyber Threat Intelligence", "description": "Identify and share cyber threat intelligence with appropriate parties.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-RA", "title": "Risk Assessment Enhancements", "description": "Enhanced risk assessment.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-RA.3.144", "title": "Threat Intelligence", "description": "Use threat intelligence as part of a risk assessment.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-SC", "title": "System Protection Enhancements", "description": "Enhanced system and communications protection.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-SC.3.181", "title": "Network Isolation", "description": "Isolate CUI or system components performing CUI processing from internet-accessible network segments.", "level": 2, "isCategory": false},
+          {"reference": "L3-SC.3.182", "title": "Deception", "description": "Employ deception techniques and tools designed to impede adversary reconnaissance.", "level": 2, "isCategory": false},
+          {"reference": "L3-SC.3.183", "title": "Diversity", "description": "Employ diversity in system components to limit the impact of a single point of failure.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "L3-SI", "title": "System Integrity Enhancements", "description": "Enhanced system and information integrity.", "level": 1, "isCategory": true, "children": [
+          {"reference": "L3-SI.3.218", "title": "Threat Hunting", "description": "Perform threat hunting to detect advanced threats.", "level": 2, "isCategory": false},
+          {"reference": "L3-SI.3.219", "title": "Sandbox Analysis", "description": "Analyze suspicious files in a sandboxed environment.", "level": 2, "isCategory": false},
+          {"reference": "L3-SI.3.220", "title": "Endpoint Protection", "description": "Use advanced endpoint detection and response capabilities.", "level": 2, "isCategory": false}
+        ]}
+      ]
+    }
+  ]
+}

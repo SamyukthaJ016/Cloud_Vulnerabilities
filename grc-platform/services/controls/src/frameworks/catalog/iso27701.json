@@ -1,0 +1,224 @@
+{
+  "id": "iso27701",
+  "name": "ISO/IEC 27701",
+  "version": "2025",
+  "description": "ISO/IEC 27701:2025 specifies requirements and provides guidance for establishing, implementing, maintaining and continually improving a Privacy Information Management System (PIMS). This second edition is a standalone standard with requirements in clauses 4-10 and controls in Annex A.",
+  "source": "International Organization for Standardization",
+  "category": "privacy",
+  "requirements": [
+    {
+      "reference": "4",
+      "title": "Context of the Organization",
+      "description": "Requirements for understanding the organization and its context for the PIMS.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "4.1", "title": "Understanding the Organization and Its Context", "description": "The organization shall determine external and internal issues that are relevant to its purpose and that affect its ability to achieve the intended outcome(s) of its privacy information management system.", "level": 1, "isCategory": false},
+        {"reference": "4.2", "title": "Understanding the Needs and Expectations of Interested Parties", "description": "The organization shall determine the interested parties that are relevant to the privacy information management system, their requirements relevant to privacy, and which of these requirements will be addressed through the PIMS.", "level": 1, "isCategory": false},
+        {"reference": "4.3", "title": "Determining the Scope of the PIMS", "description": "The organization shall determine the boundaries and applicability of the privacy information management system to establish its scope, considering external and internal issues and requirements of interested parties.", "level": 1, "isCategory": false},
+        {"reference": "4.4", "title": "Privacy Information Management System", "description": "The organization shall establish, implement, maintain and continually improve a privacy information management system in accordance with the requirements of this document.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "5",
+      "title": "Leadership",
+      "description": "Requirements for leadership commitment and privacy policy.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "5.1", "title": "Leadership and Commitment", "description": "Top management shall demonstrate leadership and commitment with respect to the privacy information management system.", "level": 1, "isCategory": false},
+        {"reference": "5.2", "title": "Privacy Policy", "description": "Top management shall establish a privacy policy that is appropriate to the purpose of the organization, provides a framework for setting privacy objectives, includes a commitment to satisfy applicable requirements, and includes a commitment to continual improvement.", "level": 1, "isCategory": false},
+        {"reference": "5.3", "title": "Roles, Responsibilities and Authorities", "description": "Top management shall ensure that the responsibilities and authorities for roles relevant to privacy are assigned and communicated within the organization.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "6",
+      "title": "Planning",
+      "description": "Requirements for planning actions to address risks and opportunities.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "6.1.1", "title": "Actions to Address Risks and Opportunities - General", "description": "When planning for the privacy information management system, the organization shall consider the issues and requirements and determine the risks and opportunities that need to be addressed.", "level": 1, "isCategory": false},
+        {"reference": "6.1.2", "title": "Privacy Risk Assessment", "description": "The organization shall define and apply a privacy risk assessment process that establishes and maintains privacy risk criteria, ensures repeated risk assessments produce consistent, valid and comparable results, identifies privacy risks, analyzes and evaluates the risks.", "level": 1, "isCategory": false},
+        {"reference": "6.1.3", "title": "Privacy Risk Treatment", "description": "The organization shall define and apply a privacy risk treatment process to select appropriate risk treatment options, determine all controls necessary to implement the options chosen, compare with Annex A, and produce a Statement of Applicability.", "level": 1, "isCategory": false},
+        {"reference": "6.2", "title": "Privacy Objectives and Planning to Achieve Them", "description": "The organization shall establish privacy objectives at relevant functions and levels, which are consistent with the privacy policy, measurable, take into account applicable requirements, and are monitored, communicated and updated.", "level": 1, "isCategory": false},
+        {"reference": "6.3", "title": "Planning of Changes", "description": "When the organization determines the need for changes to the privacy information management system, the changes shall be carried out in a planned manner.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "7",
+      "title": "Support",
+      "description": "Requirements for resources, competence, awareness, communication and documented information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "7.1", "title": "Resources", "description": "The organization shall determine and provide the resources needed for the establishment, implementation, maintenance and continual improvement of the privacy information management system.", "level": 1, "isCategory": false},
+        {"reference": "7.2", "title": "Competence", "description": "The organization shall determine the necessary competence of persons doing work under its control that affects privacy performance, ensure these persons are competent, and retain documented evidence of competence.", "level": 1, "isCategory": false},
+        {"reference": "7.3", "title": "Awareness", "description": "Persons doing work under the organization's control shall be aware of the privacy policy, their contribution to the effectiveness of the PIMS, the implications of not conforming with requirements, and the benefits of improved privacy performance.", "level": 1, "isCategory": false},
+        {"reference": "7.4", "title": "Communication", "description": "The organization shall determine the need for internal and external communications relevant to the privacy information management system including what to communicate, when, with whom, and how.", "level": 1, "isCategory": false},
+        {"reference": "7.5.1", "title": "Documented Information - General", "description": "The organization's privacy information management system shall include documented information required by this document and determined by the organization as necessary for the effectiveness of the PIMS.", "level": 1, "isCategory": false},
+        {"reference": "7.5.2", "title": "Creating and Updating Documented Information", "description": "When creating and updating documented information, the organization shall ensure appropriate identification, format, and review and approval for suitability and adequacy.", "level": 1, "isCategory": false},
+        {"reference": "7.5.3", "title": "Control of Documented Information", "description": "Documented information required by the PIMS shall be controlled to ensure it is available and suitable for use, and adequately protected.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "8",
+      "title": "Operation",
+      "description": "Requirements for operational planning, risk assessment and risk treatment.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "8.1", "title": "Operational Planning and Control", "description": "The organization shall plan, implement and control the processes needed to meet privacy requirements and to implement the actions determined in clause 6, by establishing criteria for processes and implementing control of processes in accordance with the criteria.", "level": 1, "isCategory": false},
+        {"reference": "8.2", "title": "Privacy Risk Assessment", "description": "The organization shall perform privacy risk assessments at planned intervals or when significant changes are proposed or occur, taking account of the criteria established in 6.1.2.", "level": 1, "isCategory": false},
+        {"reference": "8.3", "title": "Privacy Risk Treatment", "description": "The organization shall implement the privacy risk treatment plan. Documented information of the results of the privacy risk treatment shall be retained.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "9",
+      "title": "Performance Evaluation",
+      "description": "Requirements for monitoring, measurement, analysis, evaluation, internal audit and management review.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "9.1", "title": "Monitoring, Measurement, Analysis and Evaluation", "description": "The organization shall determine what needs to be monitored and measured, the methods, when monitoring and measuring shall be performed, when results shall be analyzed and evaluated, and who shall do so.", "level": 1, "isCategory": false},
+        {"reference": "9.2.1", "title": "Internal Audit - General", "description": "The organization shall conduct internal audits at planned intervals to provide information on whether the PIMS conforms to the organization's own requirements and the requirements of this document, and is effectively implemented and maintained.", "level": 1, "isCategory": false},
+        {"reference": "9.2.2", "title": "Internal Audit Programme", "description": "The organization shall plan, establish, implement and maintain an audit programme including frequency, methods, responsibilities, planning requirements and reporting.", "level": 1, "isCategory": false},
+        {"reference": "9.3.1", "title": "Management Review - General", "description": "Top management shall review the organization's privacy information management system at planned intervals to ensure its continuing suitability, adequacy, and effectiveness.", "level": 1, "isCategory": false},
+        {"reference": "9.3.2", "title": "Management Review Inputs", "description": "The management review shall include consideration of status of actions from previous reviews, changes in issues relevant to the PIMS, feedback on privacy performance, audit results, and opportunities for improvement.", "level": 1, "isCategory": false},
+        {"reference": "9.3.3", "title": "Management Review Results", "description": "The results of the management review shall include decisions related to continual improvement opportunities and any needs for changes to the privacy information management system.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "10",
+      "title": "Improvement",
+      "description": "Requirements for continual improvement and handling nonconformity.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "10.1", "title": "Continual Improvement", "description": "The organization shall continually improve the suitability, adequacy and effectiveness of the privacy information management system.", "level": 1, "isCategory": false},
+        {"reference": "10.2", "title": "Nonconformity and Corrective Action", "description": "When a nonconformity occurs, the organization shall react to the nonconformity, evaluate the need for action to eliminate causes, implement any action needed, review the effectiveness of corrective action, and make changes to the PIMS if necessary.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "A.1",
+      "title": "Controls for PII Controllers",
+      "description": "Annex A Table A.1 - Control objectives and controls for PII controllers.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "A.1.2", "title": "Conditions for Collection and Processing", "description": "Objective: To demonstrate that processing is lawful, with legal basis as per applicable jurisdictions, with clearly defined and legitimate purposes.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.1.2.2", "title": "Identify and Document Purpose", "description": "The organization shall identify and document the specific purposes for which the PII will be processed.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.3", "title": "Identify Lawful Basis", "description": "The organization shall determine, document and be able to demonstrate compliance with the relevant lawful basis for the processing of PII for the identified purposes.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.4", "title": "Determine When and How Consent is to be Obtained", "description": "The organization shall determine and document a process by which it can demonstrate if, when and how consent for the processing of PII was obtained from PII principals.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.5", "title": "Obtain and Record Consent", "description": "The organization shall obtain and record consent from PII principals according to the documented processes.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.6", "title": "Privacy Impact Assessment", "description": "The organization shall assess the need for, and implement where appropriate, a privacy impact assessment whenever new processing of PII or changes to existing processing of PII is planned.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.7", "title": "Contracts with PII Processors", "description": "The organization shall have a written contract with any PII processor that it uses, and shall ensure that their contracts with PII processors address the implementation of the appropriate controls in Annex A.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.8", "title": "Joint PII Controller", "description": "The organization shall determine respective roles and responsibilities for the processing of PII (including PII protection and security requirements) with any joint PII controller.", "level": 2, "isCategory": false},
+          {"reference": "A.1.2.9", "title": "Records Related to Processing PII", "description": "The organization shall determine and securely maintain the necessary records in support of its obligations for the processing of PII.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "A.1.3", "title": "Obligations to PII Principals", "description": "Objective: To ensure that PII principals are provided with appropriate information about the processing of their PII, and to meet any other applicable obligations to PII principals.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.1.3.2", "title": "Determining and Fulfilling Obligations to PII Principals", "description": "The organization shall determine and document its legal, regulatory and business obligations to PII principals related to the processing of their PII and provide the means to meet these obligations.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.3", "title": "Determining Information for PII Principals", "description": "The organization shall determine and document the information to be provided to PII principals regarding the processing of their PII and the timing of such a provision.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.4", "title": "Providing Information to PII Principals", "description": "The organization shall provide PII principals with clear and easily accessible information identifying the PII controller and describing the processing of their PII.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.5", "title": "Providing Mechanism to Modify or Withdraw Consent", "description": "The organization shall provide a mechanism for PII principals to modify or withdraw their consent.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.6", "title": "Providing Mechanism to Object to PII Processing", "description": "The organization shall provide a mechanism for PII principals to object to the processing of their PII.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.7", "title": "Access, Correction or Erasure", "description": "The organization shall implement policies, procedures or mechanisms to meet its obligations to PII principals to access, correct or erase their PII.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.8", "title": "PII Controllers' Obligations to Inform Third Parties", "description": "The organization shall inform third parties with whom PII has been shared of any modification, withdrawal or objections pertaining to the shared PII, and implement appropriate policies, procedures or mechanisms to do so.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.9", "title": "Providing Copy of PII Processed", "description": "The organization shall be able to provide a copy of the PII that is processed, when requested by the PII principal.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.10", "title": "Handling Requests", "description": "The organization shall define and document policies and procedures for handling and responding to legitimate requests from PII principals.", "level": 2, "isCategory": false},
+          {"reference": "A.1.3.11", "title": "Automated Decision Making", "description": "The organization shall identify obligations, including legal obligations, to the PII principals resulting from decisions made by the organization which are related to the PII principal based solely on automated processing of PII, and be able to demonstrate how it addresses these obligations.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "A.1.4", "title": "Privacy by Design and Privacy by Default", "description": "Objective: To ensure that processes and systems are designed such that the collection and processing of PII are limited to what is necessary for the identified purpose.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.1.4.2", "title": "Limit Collection", "description": "The organization shall limit the collection of PII to the minimum that is relevant, proportional and necessary for the identified purposes.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.3", "title": "Limit Processing", "description": "The organization shall limit the processing of PII to that which is adequate, relevant and necessary for the identified purposes.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.4", "title": "Accuracy and Quality", "description": "The organization shall ensure and document that PII is as accurate, complete and up to date as necessary for the purposes for which it is processed, throughout the life cycle of the PII.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.5", "title": "PII Minimization Objectives", "description": "The organization shall define and document data minimization objectives and what mechanisms (such as de-identification) are used to meet those objectives.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.6", "title": "PII De-identification and Deletion at End of Processing", "description": "The organization shall either delete PII or render it in a form which does not permit identification or re-identification of PII principals, as soon as the original PII is no longer necessary for the identified purpose(s).", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.7", "title": "Temporary Files", "description": "The organization shall ensure that temporary files created as a result of the processing of PII are disposed of following documented procedures within a specified, documented period.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.8", "title": "Retention", "description": "The organization shall not retain PII for longer than is necessary for the purposes for which the PII is processed.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.9", "title": "Disposal", "description": "The organization shall have documented policies, procedures or mechanisms for the disposal of PII.", "level": 2, "isCategory": false},
+          {"reference": "A.1.4.10", "title": "PII Transmission Controls", "description": "The organization shall subject PII transmitted over a data-transmission network to appropriate controls designed to ensure that the data reaches its intended destination.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "A.1.5", "title": "PII Sharing, Transfer and Disclosure", "description": "Objective: To determine whether, and document when, PII is shared, transferred to other jurisdictions or third parties or disclosed in accordance with applicable obligations.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.1.5.2", "title": "Identify Basis for PII Transfer Between Jurisdictions", "description": "The organization shall identify and document the relevant basis for transfers of PII between jurisdictions.", "level": 2, "isCategory": false},
+          {"reference": "A.1.5.3", "title": "Countries and International Organizations to Which PII Can Be Transferred", "description": "The organization shall specify and document the countries and international organizations to which PII can possibly be transferred.", "level": 2, "isCategory": false},
+          {"reference": "A.1.5.4", "title": "Records of Transfer of PII", "description": "The organization shall record transfers of PII to or from third parties and ensure cooperation with those parties to support future requests related to obligations to the PII principals.", "level": 2, "isCategory": false},
+          {"reference": "A.1.5.5", "title": "Records of PII Disclosures to Third Parties", "description": "The organization shall record disclosures of PII to third parties, including which PII has been disclosed, to whom and at what time.", "level": 2, "isCategory": false}
+        ]}
+      ]
+    },
+    {
+      "reference": "A.2",
+      "title": "Controls for PII Processors",
+      "description": "Annex A Table A.2 - Control objectives and controls for PII processors.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "A.2.2", "title": "Conditions for Collection and Processing", "description": "Objective: To demonstrate that processing is lawful, with legal basis as per applicable jurisdictions, and with clearly defined and legitimate purposes.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.2.2.2", "title": "Customer Agreement", "description": "The organization shall ensure, where relevant, that the contract to process PII addresses the organization's role in assisting the customer with their PII processing obligations.", "level": 2, "isCategory": false},
+          {"reference": "A.2.2.3", "title": "Organization's Purposes", "description": "The organization shall ensure that PII processed on behalf of a customer are only processed for the purposes expressed in the documented instructions of the customer.", "level": 2, "isCategory": false},
+          {"reference": "A.2.2.4", "title": "Marketing and Advertising Use", "description": "The organization shall not use PII processed under a contract for the purposes of marketing and advertising without establishing that prior consent was obtained from the appropriate PII principal.", "level": 2, "isCategory": false},
+          {"reference": "A.2.2.5", "title": "Infringing Instruction", "description": "The organization shall inform the customer if, in its opinion, a processing instruction infringes applicable legal requirements.", "level": 2, "isCategory": false},
+          {"reference": "A.2.2.6", "title": "Customer Obligations", "description": "The organization shall provide the customer with the appropriate information such that the customer can demonstrate compliance with its obligations.", "level": 2, "isCategory": false},
+          {"reference": "A.2.2.7", "title": "Records Related to Processing PII", "description": "The organization shall determine and maintain the necessary records in support of demonstrating compliance with its obligations for processing PII on behalf of a customer.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "A.2.3", "title": "Obligations to PII Principals", "description": "Objective: To support the customer in meeting their obligations to PII principals.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.2.3.2", "title": "Comply with Obligations to PII Principals", "description": "The organization shall provide the customer with the means to comply with their obligations related to PII principals.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "A.2.4", "title": "Privacy by Design and Privacy by Default", "description": "Objective: To ensure that processes and systems are designed such that the collection and processing of PII are limited to what is necessary.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.2.4.2", "title": "Temporary Files", "description": "The organization shall ensure that temporary files created as a result of the processing of PII are disposed of following documented procedures within a specified, documented period.", "level": 2, "isCategory": false},
+          {"reference": "A.2.4.3", "title": "Return, Transfer or Disposal of PII", "description": "The organization shall provide the ability to return, transfer or dispose of PII in a secure manner. It shall also make its policy available to the customer.", "level": 2, "isCategory": false},
+          {"reference": "A.2.4.4", "title": "PII Transmission Controls", "description": "The organization shall subject PII transmitted over a data-transmission network to appropriate controls designed to ensure that the data reaches its intended destination.", "level": 2, "isCategory": false}
+        ]},
+        {"reference": "A.2.5", "title": "PII Sharing, Transfer and Disclosure", "description": "Objective: To determine whether, and document when, PII is shared, transferred or disclosed.", "level": 1, "isCategory": true, "children": [
+          {"reference": "A.2.5.2", "title": "Basis for PII Transfer Between Jurisdictions", "description": "The organization shall inform the customer in a timely manner of the basis for transfers of PII to another geographic jurisdiction and of any intended changes in this regard.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.3", "title": "Countries and International Organizations to Which PII Can Be Transferred", "description": "The organization shall specify and document the countries and international organizations to which PII can possibly be transferred.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.4", "title": "Records of PII Disclosure to Third Parties", "description": "The organization shall record disclosures of PII to third parties including what PII was disclosed, to whom, when and the lawful basis.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.5", "title": "Notification of PII Disclosure Requests", "description": "The organization shall notify the customer of any legally binding request for disclosure of PII by a law enforcement authority unless otherwise prohibited.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.6", "title": "Legally Binding PII Disclosures", "description": "The organization shall reject any requests for PII disclosures that are not legally binding.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.7", "title": "Disclosure of Subcontractors", "description": "The organization shall disclose to the customer any use of subcontractors to process PII before use.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.8", "title": "Engagement of a Subcontractor to Process PII", "description": "The organization shall only engage another organization (subcontractor) to process PII in accordance with the customer's contract.", "level": 2, "isCategory": false},
+          {"reference": "A.2.5.9", "title": "Change of Subcontractor to Process PII", "description": "The organization shall inform the customer of any intended changes in the engagement of subcontractors for processing PII, providing the customer the opportunity to object.", "level": 2, "isCategory": false}
+        ]}
+      ]
+    },
+    {
+      "reference": "A.3",
+      "title": "Security Controls for PII Controllers and Processors",
+      "description": "Annex A Table A.3 - Control objectives and controls for information security related to PII processing.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "A.3.3", "title": "Information Security Roles and Responsibilities", "description": "Information security roles and responsibilities related to PII processing shall be defined and allocated according to the organizational needs.", "level": 1, "isCategory": false},
+        {"reference": "A.3.4", "title": "Policies for Information Security", "description": "Information security policies related to PII processing shall be defined, approved by management, published, communicated to and acknowledged by relevant personnel and relevant interested parties, and reviewed at planned intervals and if significant changes occur.", "level": 1, "isCategory": false},
+        {"reference": "A.3.5", "title": "Classification of Information", "description": "Information shall be classified according to the information security needs of the organization, taking into consideration PII, based on confidentiality, integrity, availability and relevant interested party requirements.", "level": 1, "isCategory": false},
+        {"reference": "A.3.6", "title": "Labelling of Information", "description": "An appropriate set of procedures for information labelling that considers PII shall be developed and implemented in accordance with the information classification scheme adopted by the organization.", "level": 1, "isCategory": false},
+        {"reference": "A.3.7", "title": "Information Transfer", "description": "Information transfer rules, procedures, or agreements related to processing PII shall be in place for all types of transfer facilities within the organization and between the organization and other parties.", "level": 1, "isCategory": false},
+        {"reference": "A.3.8", "title": "Identity Management", "description": "The full life cycle of identities related to PII processing shall be managed.", "level": 1, "isCategory": false},
+        {"reference": "A.3.9", "title": "Access Rights", "description": "Access rights to PII and other associated assets related to PII processing shall be provisioned, reviewed, modified and removed in accordance with the organization's topic-specific policy on and rules for access control.", "level": 1, "isCategory": false},
+        {"reference": "A.3.10", "title": "Addressing Information Security Within Supplier Agreements", "description": "Relevant information security requirements related to PII processing shall be established and agreed with each supplier based on the type of supplier relationship.", "level": 1, "isCategory": false},
+        {"reference": "A.3.11", "title": "Information Security Incident Management Planning and Preparation", "description": "The organization shall plan and prepare for managing information security incidents related to PII processing by defining, establishing and communicating incident management processes, roles and responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "A.3.12", "title": "Response to Information Security Incidents", "description": "Responses to information security incidents related to PII processing shall be according to the documented procedures.", "level": 1, "isCategory": false},
+        {"reference": "A.3.13", "title": "Legal, Statutory, Regulatory and Contractual Requirements", "description": "Legal, statutory, regulatory and contractual requirements relevant to information security related to PII processing and the organization's approach to meet these requirements shall be documented and kept up to date.", "level": 1, "isCategory": false},
+        {"reference": "A.3.14", "title": "Protection of Records", "description": "Records related to PII processing shall be protected from loss, destruction, falsification, unauthorized access and unauthorized release.", "level": 1, "isCategory": false},
+        {"reference": "A.3.15", "title": "Independent Review of Information Security", "description": "The organization's approach to managing information security related to PII processing and its implementation including people, processes and technologies shall be reviewed independently at planned intervals, or when significant changes occur.", "level": 1, "isCategory": false},
+        {"reference": "A.3.16", "title": "Compliance with Policies, Rules and Standards for Information Security", "description": "Compliance with the organization's information security policy, topic-specific policies, rules and standards related to PII processing shall be regularly reviewed.", "level": 1, "isCategory": false},
+        {"reference": "A.3.17", "title": "Information Security Awareness, Education and Training", "description": "Personnel of the organization and relevant interested parties shall receive appropriate information security awareness education and training, and regular updates of the organization's information security policy, topic-specific policies and procedures, as relevant for their job function, as they relate to PII processing.", "level": 1, "isCategory": false},
+        {"reference": "A.3.18", "title": "Confidentiality or Non-disclosure Agreements", "description": "Confidentiality or non-disclosure agreements reflecting the organization's needs for the protection of PII shall be identified, documented, regularly reviewed and signed by personnel and other relevant interested parties.", "level": 1, "isCategory": false},
+        {"reference": "A.3.19", "title": "Clear Desk and Clear Screen", "description": "Clear desk rules for papers and removable storage media and clear screen rules for information processing facilities shall be defined and appropriately enforced.", "level": 1, "isCategory": false},
+        {"reference": "A.3.20", "title": "Storage Media", "description": "Storage media with PII shall be managed through its life cycle of acquisition, use, transportation and disposal in accordance with the organization's classification scheme and handling requirements.", "level": 1, "isCategory": false},
+        {"reference": "A.3.21", "title": "Equipment Disposal or Re-use", "description": "Items of equipment containing PII storage media shall be verified to ensure that any sensitive data and licensed software has been removed or securely overwritten prior to disposal or re-use.", "level": 1, "isCategory": false},
+        {"reference": "A.3.22", "title": "Secure Development Policy", "description": "Rules for the secure development of software and systems that process PII shall be established and applied.", "level": 1, "isCategory": false},
+        {"reference": "A.3.23", "title": "Security Testing in Development and Acceptance", "description": "Security testing processes related to PII processing shall be defined and implemented in the development life cycle.", "level": 1, "isCategory": false},
+        {"reference": "A.3.24", "title": "Protection of Test Data", "description": "Test data that includes PII shall be appropriately selected, protected and managed.", "level": 1, "isCategory": false},
+        {"reference": "A.3.25", "title": "Use of Cryptography", "description": "A policy on the use of cryptographic controls for protection of PII shall be developed and implemented.", "level": 1, "isCategory": false},
+        {"reference": "A.3.26", "title": "Protection of PII in Public Networks", "description": "PII involved in transactions over public networks shall be protected from fraudulent activity, contract dispute and unauthorized disclosure and modification.", "level": 1, "isCategory": false},
+        {"reference": "A.3.27", "title": "Logging", "description": "Logs that record activities, exceptions, faults and other relevant events related to PII processing shall be produced, stored, protected and analyzed.", "level": 1, "isCategory": false},
+        {"reference": "A.3.28", "title": "Backup of Information", "description": "Backup copies of PII and software shall be maintained and regularly tested in accordance with the agreed topic-specific policy on backup.", "level": 1, "isCategory": false},
+        {"reference": "A.3.29", "title": "Network Security", "description": "Networks and network devices handling PII shall be managed and controlled to protect information in systems and applications.", "level": 1, "isCategory": false},
+        {"reference": "A.3.30", "title": "Physical Security Perimeters", "description": "Security perimeters shall be defined and used to protect areas that contain PII and other sensitive information.", "level": 1, "isCategory": false},
+        {"reference": "A.3.31", "title": "ICT Readiness for Business Continuity", "description": "ICT readiness shall be planned, implemented, maintained and tested based on business continuity objectives and ICT continuity requirements for PII processing.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}

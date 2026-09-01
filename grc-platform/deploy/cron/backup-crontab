@@ -1,0 +1,17 @@
+# GigaChad GRC - Automated Backup Schedule
+# This file is used by the backup-scheduler container
+#
+# Format: minute hour day-of-month month day-of-week command
+#
+# Default: Daily at 2:00 AM, Weekly full backup on Sundays at 1:00 AM
+#
+# Override by setting AUTO_BACKUP_SCHEDULE in your .env.prod file
+
+# Daily incremental backup at 2:00 AM
+0 2 * * * /app/backup.sh /backups/gigachad-grc >> /var/log/cron/backup.log 2>&1
+
+# Weekly verification of backup integrity (Sunday 4:00 AM)
+0 4 * * 0 /app/verify-backup.sh >> /var/log/cron/verify.log 2>&1
+
+# Monthly cleanup of old backups (1st of month at 3:00 AM)
+0 3 1 * * find /backups/gigachad-grc -name "backup-*.tar.gz" -mtime +${BACKUP_RETENTION_DAYS:-90} -delete >> /var/log/cron/cleanup.log 2>&1

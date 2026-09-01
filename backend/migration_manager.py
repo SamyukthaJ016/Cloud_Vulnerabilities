@@ -53,7 +53,7 @@ def run_migrations():
             if filename in applied_files:
                 continue
 
-            logger.info(f"🚀 Applying migration: {filename}")
+            logger.info("Applying migration: %s", filename)
             try:
                 with open(sql_file, "r") as f:
                     sql_content = f.read()
@@ -62,17 +62,16 @@ def run_migrations():
                 
                 # Record success
                 cur.execute("INSERT INTO migration_history (filename) VALUES (%s)", (filename,))
-                logger.info(f"✅ Migration applied: {filename}")
+                logger.info("Migration applied: %s", filename)
             except Exception as e:
-                logger.error(f"❌ Failed migration {filename}: {e}")
-                # We don't want to stop everything if one fails (usually), 
-                # but for schema it might be critical.
-                # For now, we continue but log the error.
+                logger.exception("Failed migration %s", filename)
+                raise RuntimeError(f"Migration {filename} failed") from e
 
         cur.close()
         conn.close()
-    except Exception as e:
-        logger.error(f"Failed to run migrations: {e}")
+    except Exception:
+        logger.exception("Failed to run database migrations")
+        raise
 
 if __name__ == "__main__":
     # Allow running as a standalone script

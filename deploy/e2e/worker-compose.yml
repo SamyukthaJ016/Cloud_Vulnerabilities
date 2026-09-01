@@ -48,8 +48,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       CLOUDGUARD_BASE_URL: ${CLOUDGUARD_BASE_URL}
-      CONNECTOR_TOKEN: ${CONNECTOR_TOKEN}
-      CONNECTOR_USER_ID: ${CONNECTOR_USER_ID:-anonymous}
+      EVIDENCE_CONNECTOR_TOKEN: ${EVIDENCE_CONNECTOR_TOKEN}
       EVIDENCE_CONNECTOR_ID: ${EVIDENCE_CONNECTOR_ID:-e2e-evidence-connector-1}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       EVIDENCE_CONNECTOR_INBOX: /app/connectors/inbox

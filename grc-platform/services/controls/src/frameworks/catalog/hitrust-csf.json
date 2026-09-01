@@ -1,0 +1,285 @@
+{
+  "id": "hitrust-csf",
+  "name": "HITRUST CSF",
+  "version": "11.0",
+  "description": "HITRUST Common Security Framework - A certifiable framework that provides organizations with a comprehensive, flexible, and efficient approach to regulatory compliance and risk management by harmonizing multiple standards including HIPAA, HITECH, PCI DSS, ISO 27001, NIST, and others.",
+  "source": "HITRUST Alliance",
+  "category": "security",
+  "requirements": [
+    {
+      "reference": "00",
+      "title": "Information Security Management Program",
+      "description": "Establish and maintain an information security management program to ensure the confidentiality, integrity, and availability of information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "00.a", "title": "Information Security Management Program", "description": "A formal information security management program shall be developed, implemented, maintained, and continually improved.", "level": 1, "isCategory": false},
+        {"reference": "00.b", "title": "Management Direction for Information Security", "description": "Management shall actively support security within the organization through clear direction, demonstrated commitment, explicit assignment, and acknowledgment of information security responsibilities.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "01",
+      "title": "Access Control",
+      "description": "Limit information system access to authorized users, processes, or devices, and to authorized types of transactions and functions.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "01.a", "title": "Access Control Policy", "description": "An access control policy shall be established, documented, and reviewed based on business and security requirements.", "level": 1, "isCategory": false},
+        {"reference": "01.b", "title": "User Registration", "description": "There shall be a formal user registration and de-registration procedure in place for granting and revoking access to all information systems and services.", "level": 1, "isCategory": false},
+        {"reference": "01.c", "title": "Privilege Management", "description": "The allocation and use of privileges shall be restricted and controlled.", "level": 1, "isCategory": false},
+        {"reference": "01.d", "title": "User Password Management", "description": "The allocation of passwords shall be controlled through a formal management process.", "level": 1, "isCategory": false},
+        {"reference": "01.e", "title": "Review of User Access Rights", "description": "Management shall review users' access rights at regular intervals using a formal process.", "level": 1, "isCategory": false},
+        {"reference": "01.f", "title": "Password Use", "description": "Users shall be required to follow good security practices in the selection and use of passwords.", "level": 1, "isCategory": false},
+        {"reference": "01.g", "title": "Unattended User Equipment", "description": "Users shall ensure that unattended equipment has appropriate protection.", "level": 1, "isCategory": false},
+        {"reference": "01.h", "title": "Clear Desk and Clear Screen Policy", "description": "A clear desk policy for papers and removable storage media and a clear screen policy for information processing facilities shall be adopted.", "level": 1, "isCategory": false},
+        {"reference": "01.i", "title": "Policy on Use of Network Services", "description": "Users shall only be provided with access to the services that they have been specifically authorized to use.", "level": 1, "isCategory": false},
+        {"reference": "01.j", "title": "User Authentication for External Connections", "description": "Appropriate authentication methods shall be used to control access by remote users.", "level": 1, "isCategory": false},
+        {"reference": "01.k", "title": "Equipment Identification in Networks", "description": "Automatic equipment identification shall be considered as a means to authenticate connections from specific locations and equipment.", "level": 1, "isCategory": false},
+        {"reference": "01.l", "title": "Remote Diagnostic and Configuration Port Protection", "description": "Physical and logical access to diagnostic and configuration ports shall be controlled.", "level": 1, "isCategory": false},
+        {"reference": "01.m", "title": "Segregation in Networks", "description": "Groups of information services, users, and information systems shall be segregated on networks.", "level": 1, "isCategory": false},
+        {"reference": "01.n", "title": "Network Connection Control", "description": "For shared networks, especially those extending across the organization's boundaries, the capability of users to connect to the network shall be restricted.", "level": 1, "isCategory": false},
+        {"reference": "01.o", "title": "Network Routing Control", "description": "Routing controls shall be implemented for networks to ensure that computer connections and information flows do not breach the access control policy.", "level": 1, "isCategory": false},
+        {"reference": "01.p", "title": "Secure Log-on Procedures", "description": "Access to operating systems shall be controlled by a secure log-on procedure.", "level": 1, "isCategory": false},
+        {"reference": "01.q", "title": "User Identification and Authentication", "description": "All users shall have a unique identifier for their personal use only, and a suitable authentication technique shall be chosen to substantiate the claimed identity of a user.", "level": 1, "isCategory": false},
+        {"reference": "01.r", "title": "Password Management System", "description": "Systems for managing passwords shall be interactive and shall ensure quality passwords.", "level": 1, "isCategory": false},
+        {"reference": "01.s", "title": "Use of System Utilities", "description": "The use of utility programs that might be capable of overriding system and application controls shall be restricted and tightly controlled.", "level": 1, "isCategory": false},
+        {"reference": "01.t", "title": "Session Time-out", "description": "Inactive sessions shall shut down after a defined period of inactivity.", "level": 1, "isCategory": false},
+        {"reference": "01.u", "title": "Limitation of Connection Time", "description": "Restrictions on connection times shall be used to provide additional security for high-risk applications.", "level": 1, "isCategory": false},
+        {"reference": "01.v", "title": "Information Access Restriction", "description": "Access to information and application system functions shall be restricted in accordance with the access control policy.", "level": 1, "isCategory": false},
+        {"reference": "01.w", "title": "Sensitive System Isolation", "description": "Sensitive systems shall have a dedicated (isolated) computing environment.", "level": 1, "isCategory": false},
+        {"reference": "01.x", "title": "Mobile Computing and Communications", "description": "A formal policy shall be in place, and appropriate security measures shall be adopted to protect against the risks of using mobile computing and communication facilities.", "level": 1, "isCategory": false},
+        {"reference": "01.y", "title": "Teleworking", "description": "A policy, operational plans, and procedures shall be developed and implemented for teleworking activities.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "02",
+      "title": "Human Resources Security",
+      "description": "Ensure that employees, contractors, and third-party users understand their responsibilities and are suitable for the roles they are considered for, to reduce the risk of theft, fraud, or misuse of facilities.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "02.a", "title": "Roles and Responsibilities", "description": "Security roles and responsibilities of employees, contractors, and third-party users shall be defined and documented.", "level": 1, "isCategory": false},
+        {"reference": "02.b", "title": "Screening", "description": "Background verification checks on all candidates for employment, contractors, and third-party users shall be carried out in accordance with relevant laws, regulations, and ethics.", "level": 1, "isCategory": false},
+        {"reference": "02.c", "title": "Terms and Conditions of Employment", "description": "As part of their contractual obligation, employees, contractors, and third-party users shall agree and sign the terms and conditions of their employment contract.", "level": 1, "isCategory": false},
+        {"reference": "02.d", "title": "Management Responsibilities", "description": "Management shall require employees, contractors, and third-party users to apply security in accordance with established policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "02.e", "title": "Information Security Awareness, Education, and Training", "description": "All employees of the organization and, where relevant, contractors and third-party users shall receive appropriate awareness training and regular updates in organizational policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "02.f", "title": "Disciplinary Process", "description": "There shall be a formal disciplinary process for employees who have committed a security breach.", "level": 1, "isCategory": false},
+        {"reference": "02.g", "title": "Termination Responsibilities", "description": "Responsibilities for performing employment termination or change of employment shall be clearly defined and assigned.", "level": 1, "isCategory": false},
+        {"reference": "02.h", "title": "Return of Assets", "description": "All employees, contractors, and third-party users shall return all of the organization's assets in their possession upon termination of their employment, contract, or agreement.", "level": 1, "isCategory": false},
+        {"reference": "02.i", "title": "Removal of Access Rights", "description": "The access rights of all employees, contractors, and third-party users to information and information processing facilities shall be removed upon termination of their employment, contract, or agreement.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "03",
+      "title": "Risk Management",
+      "description": "Identify, assess, and manage risks to organizational operations, organizational assets, individuals, and other organizations.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "03.a", "title": "Risk Management Program Development", "description": "A risk management program shall be developed and implemented to identify, evaluate, and treat risks.", "level": 1, "isCategory": false},
+        {"reference": "03.b", "title": "Performing Risk Assessments", "description": "Risk assessments shall be performed to identify, quantify, and prioritize risks against criteria for risk acceptance and objectives relevant to the organization.", "level": 1, "isCategory": false},
+        {"reference": "03.c", "title": "Risk Mitigation", "description": "Risks shall be mitigated through the implementation of appropriate controls to reduce the risks to an acceptable level.", "level": 1, "isCategory": false},
+        {"reference": "03.d", "title": "Risk Evaluation", "description": "Risks shall be evaluated on a recurring basis to determine if there have been significant changes that affect the risk profile.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "04",
+      "title": "Security Policy",
+      "description": "Provide management direction and support for information security in accordance with business requirements and relevant laws and regulations.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "04.a", "title": "Information Security Policy Document", "description": "An information security policy document shall be approved by management, and published and communicated to all employees and relevant external parties.", "level": 1, "isCategory": false},
+        {"reference": "04.b", "title": "Review of the Information Security Policy", "description": "The information security policy shall be reviewed at planned intervals or if significant changes occur to ensure its continuing suitability, adequacy, and effectiveness.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "05",
+      "title": "Organization of Information Security",
+      "description": "Manage information security within the organization by establishing a management framework to initiate and control the implementation and operation of information security.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "05.a", "title": "Management Commitment to Information Security", "description": "Management shall actively support security within the organization through clear direction, demonstrated commitment, explicit assignment, and acknowledgment of information security responsibilities.", "level": 1, "isCategory": false},
+        {"reference": "05.b", "title": "Information Security Coordination", "description": "Information security activities shall be coordinated by representatives from different parts of the organization with relevant roles and job functions.", "level": 1, "isCategory": false},
+        {"reference": "05.c", "title": "Allocation of Information Security Responsibilities", "description": "All information security responsibilities shall be clearly defined.", "level": 1, "isCategory": false},
+        {"reference": "05.d", "title": "Authorization Process for Information Processing Facilities", "description": "A management authorization process for new information processing facilities shall be defined and implemented.", "level": 1, "isCategory": false},
+        {"reference": "05.e", "title": "Confidentiality Agreements", "description": "Requirements for confidentiality or non-disclosure agreements reflecting the organization's needs for the protection of information shall be identified and regularly reviewed.", "level": 1, "isCategory": false},
+        {"reference": "05.f", "title": "Contact with Authorities", "description": "Appropriate contacts with relevant authorities shall be maintained.", "level": 1, "isCategory": false},
+        {"reference": "05.g", "title": "Contact with Special Interest Groups", "description": "Appropriate contacts with special interest groups or other specialist security forums and professional associations shall be maintained.", "level": 1, "isCategory": false},
+        {"reference": "05.h", "title": "Independent Review of Information Security", "description": "The organization's approach to managing information security and its implementation shall be reviewed independently at planned intervals, or when significant changes to the security implementation occur.", "level": 1, "isCategory": false},
+        {"reference": "05.i", "title": "Identification of Risks Related to External Parties", "description": "The risks to the organization's information and information processing facilities from business processes involving external parties shall be identified and appropriate controls implemented before granting access.", "level": 1, "isCategory": false},
+        {"reference": "05.j", "title": "Addressing Security When Dealing with Customers", "description": "All identified security requirements shall be addressed before giving customers access to the organization's information or assets.", "level": 1, "isCategory": false},
+        {"reference": "05.k", "title": "Addressing Security in Third-Party Agreements", "description": "Agreements with third parties involving accessing, processing, communicating, or managing the organization's information or information processing facilities, or adding products or services to information processing facilities shall cover all relevant security requirements.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "06",
+      "title": "Compliance",
+      "description": "Avoid breaches of any law, statutory, regulatory, or contractual obligations, and of any security requirements.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "06.a", "title": "Identification of Applicable Legislation", "description": "All relevant statutory, regulatory, and contractual requirements and the organization's approach to meet these requirements shall be explicitly defined, documented, and kept up to date for each information system and the organization.", "level": 1, "isCategory": false},
+        {"reference": "06.b", "title": "Intellectual Property Rights", "description": "Appropriate procedures shall be implemented to ensure compliance with legislative, regulatory, and contractual requirements on the use of material in respect of which there may be intellectual property rights and on the use of proprietary software products.", "level": 1, "isCategory": false},
+        {"reference": "06.c", "title": "Protection of Organizational Records", "description": "Important records shall be protected from loss, destruction, and falsification, in accordance with statutory, regulatory, contractual, and business requirements.", "level": 1, "isCategory": false},
+        {"reference": "06.d", "title": "Data Protection and Privacy of Personal Information", "description": "Data protection and privacy shall be ensured as required by relevant legislation, regulations, and, if applicable, contractual clauses.", "level": 1, "isCategory": false},
+        {"reference": "06.e", "title": "Prevention of Misuse of Information Processing Facilities", "description": "Users shall be deterred from using information processing facilities for unauthorized purposes.", "level": 1, "isCategory": false},
+        {"reference": "06.f", "title": "Regulation of Cryptographic Controls", "description": "Cryptographic controls shall be used in compliance with all relevant agreements, laws, and regulations.", "level": 1, "isCategory": false},
+        {"reference": "06.g", "title": "Compliance with Security Policies and Standards", "description": "Managers shall ensure that all security procedures within their area of responsibility are carried out correctly to achieve compliance with security policies and standards.", "level": 1, "isCategory": false},
+        {"reference": "06.h", "title": "Technical Compliance Checking", "description": "Information systems shall be regularly checked for compliance with security implementation standards.", "level": 1, "isCategory": false},
+        {"reference": "06.i", "title": "Information Systems Audit Controls", "description": "Audit requirements and activities involving checks on operational systems shall be carefully planned and agreed to minimize the risk of disruptions to business processes.", "level": 1, "isCategory": false},
+        {"reference": "06.j", "title": "Protection of Information Systems Audit Tools", "description": "Access to information systems audit tools shall be protected to prevent any possible misuse or compromise.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "07",
+      "title": "Asset Management",
+      "description": "Achieve and maintain appropriate protection of organizational assets.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "07.a", "title": "Inventory of Assets", "description": "All assets shall be clearly identified and an inventory of all important assets drawn up and maintained.", "level": 1, "isCategory": false},
+        {"reference": "07.b", "title": "Ownership of Assets", "description": "All information and assets associated with information processing facilities shall be owned by a designated part of the organization.", "level": 1, "isCategory": false},
+        {"reference": "07.c", "title": "Acceptable Use of Assets", "description": "Rules for the acceptable use of information and assets associated with information processing facilities shall be identified, documented, and implemented.", "level": 1, "isCategory": false},
+        {"reference": "07.d", "title": "Classification Guidelines", "description": "Information shall be classified in terms of its value, legal requirements, sensitivity, and criticality to the organization.", "level": 1, "isCategory": false},
+        {"reference": "07.e", "title": "Information Labeling and Handling", "description": "An appropriate set of procedures for information labeling and handling shall be developed and implemented in accordance with the classification scheme adopted by the organization.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "08",
+      "title": "Physical and Environmental Security",
+      "description": "Prevent unauthorized physical access, damage, and interference to the organization's premises and information.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "08.a", "title": "Physical Security Perimeter", "description": "Security perimeters (barriers such as walls, card controlled entry gates, or manned reception desks) shall be used to protect areas that contain information and information processing facilities.", "level": 1, "isCategory": false},
+        {"reference": "08.b", "title": "Physical Entry Controls", "description": "Secure areas shall be protected by appropriate entry controls to ensure that only authorized personnel are allowed access.", "level": 1, "isCategory": false},
+        {"reference": "08.c", "title": "Securing Offices, Rooms, and Facilities", "description": "Physical security for offices, rooms, and facilities shall be designed and applied.", "level": 1, "isCategory": false},
+        {"reference": "08.d", "title": "Protecting Against External and Environmental Threats", "description": "Physical protection against damage from fire, flood, earthquake, explosion, civil unrest, and other forms of natural or man-made disaster shall be designed and applied.", "level": 1, "isCategory": false},
+        {"reference": "08.e", "title": "Working in Secure Areas", "description": "Physical protection and guidelines for working in secure areas shall be designed and applied.", "level": 1, "isCategory": false},
+        {"reference": "08.f", "title": "Public Access, Delivery, and Loading Areas", "description": "Access points such as delivery and loading areas and other points where unauthorized persons may enter the premises shall be controlled and, if possible, isolated from information processing facilities to avoid unauthorized access.", "level": 1, "isCategory": false},
+        {"reference": "08.g", "title": "Equipment Siting and Protection", "description": "Equipment shall be sited or protected to reduce the risks from environmental threats and hazards, and opportunities for unauthorized access.", "level": 1, "isCategory": false},
+        {"reference": "08.h", "title": "Supporting Utilities", "description": "Equipment shall be protected from power failures and other disruptions caused by failures in supporting utilities.", "level": 1, "isCategory": false},
+        {"reference": "08.i", "title": "Cabling Security", "description": "Power and telecommunications cabling carrying data or supporting information services shall be protected from interception or damage.", "level": 1, "isCategory": false},
+        {"reference": "08.j", "title": "Equipment Maintenance", "description": "Equipment shall be correctly maintained to ensure its continued availability and integrity.", "level": 1, "isCategory": false},
+        {"reference": "08.k", "title": "Security of Equipment Off-Premises", "description": "Security shall be applied to off-site equipment taking into account the different risks of working outside the organization's premises.", "level": 1, "isCategory": false},
+        {"reference": "08.l", "title": "Secure Disposal or Re-Use of Equipment", "description": "All items of equipment containing storage media shall be checked to ensure that any sensitive data and licensed software has been removed or securely overwritten prior to disposal.", "level": 1, "isCategory": false},
+        {"reference": "08.m", "title": "Removal of Property", "description": "Equipment, information, or software shall not be taken off-site without prior authorization.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "09",
+      "title": "Communications and Operations Management",
+      "description": "Ensure the correct and secure operation of information processing facilities.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "09.a", "title": "Documented Operating Procedures", "description": "Operating procedures shall be documented, maintained, and made available to all users who need them.", "level": 1, "isCategory": false},
+        {"reference": "09.b", "title": "Change Management", "description": "Changes to information processing facilities and systems shall be controlled.", "level": 1, "isCategory": false},
+        {"reference": "09.c", "title": "Segregation of Duties", "description": "Duties and areas of responsibility shall be segregated to reduce opportunities for unauthorized or unintentional modification or misuse of the organization's assets.", "level": 1, "isCategory": false},
+        {"reference": "09.d", "title": "Separation of Development, Test, and Operational Facilities", "description": "Development, test, and operational facilities shall be separated to reduce the risks of unauthorized access or changes to the operational system.", "level": 1, "isCategory": false},
+        {"reference": "09.e", "title": "Service Delivery", "description": "It shall be ensured that the security controls, service definitions, and delivery levels included in the third-party service delivery agreement are implemented, operated, and maintained by the third party.", "level": 1, "isCategory": false},
+        {"reference": "09.f", "title": "Monitoring and Review of Third-Party Services", "description": "The services, reports, and records provided by the third party shall be regularly monitored and reviewed, and audits shall be carried out regularly.", "level": 1, "isCategory": false},
+        {"reference": "09.g", "title": "Managing Changes to Third-Party Services", "description": "Changes to the provision of services, including maintaining and improving existing information security policies, procedures, and controls, shall be managed.", "level": 1, "isCategory": false},
+        {"reference": "09.h", "title": "Capacity Management", "description": "The use of resources shall be monitored, tuned, and projections made of future capacity requirements to ensure the required system performance.", "level": 1, "isCategory": false},
+        {"reference": "09.i", "title": "System Acceptance", "description": "Acceptance criteria for new information systems, upgrades, and new versions shall be established and suitable tests of the system(s) carried out during development and prior to acceptance.", "level": 1, "isCategory": false},
+        {"reference": "09.j", "title": "Controls Against Malicious Code", "description": "Detection, prevention, and recovery controls to protect against malicious code and appropriate user awareness procedures shall be implemented.", "level": 1, "isCategory": false},
+        {"reference": "09.k", "title": "Controls Against Mobile Code", "description": "Where the use of mobile code is authorized, the configuration shall ensure that the authorized mobile code operates according to a clearly defined security policy, and unauthorized mobile code shall be prevented from executing.", "level": 1, "isCategory": false},
+        {"reference": "09.l", "title": "Information Back-up", "description": "Back-up copies of information and software shall be taken and tested regularly in accordance with the agreed backup policy.", "level": 1, "isCategory": false},
+        {"reference": "09.m", "title": "Network Controls", "description": "Networks shall be adequately managed and controlled, in order to be protected from threats, and to maintain security for the systems and applications using the network, including information in transit.", "level": 1, "isCategory": false},
+        {"reference": "09.n", "title": "Security of Network Services", "description": "Security features, service levels, and management requirements of all network services shall be identified and included in any network services agreement.", "level": 1, "isCategory": false},
+        {"reference": "09.o", "title": "Management of Removable Media", "description": "There shall be procedures in place for the management of removable media.", "level": 1, "isCategory": false},
+        {"reference": "09.p", "title": "Disposal of Media", "description": "Media shall be disposed of securely and safely when no longer required, using formal procedures.", "level": 1, "isCategory": false},
+        {"reference": "09.q", "title": "Information Handling Procedures", "description": "Procedures for the handling and storage of information shall be established to protect this information from unauthorized disclosure or misuse.", "level": 1, "isCategory": false},
+        {"reference": "09.r", "title": "Security of System Documentation", "description": "System documentation shall be protected against unauthorized access.", "level": 1, "isCategory": false},
+        {"reference": "09.s", "title": "Information Exchange Policies and Procedures", "description": "Formal exchange policies, procedures, and controls shall be in place to protect the exchange of information through the use of all types of communication facilities.", "level": 1, "isCategory": false},
+        {"reference": "09.t", "title": "Exchange Agreements", "description": "Agreements shall be established for the exchange of information and software between the organization and external parties.", "level": 1, "isCategory": false},
+        {"reference": "09.u", "title": "Physical Media in Transit", "description": "Media containing information shall be protected against unauthorized access, misuse, or corruption during transportation beyond an organization's physical boundaries.", "level": 1, "isCategory": false},
+        {"reference": "09.v", "title": "Electronic Messaging", "description": "Information involved in electronic messaging shall be appropriately protected.", "level": 1, "isCategory": false},
+        {"reference": "09.w", "title": "Business Information Systems", "description": "Policies and procedures shall be developed and implemented to protect information associated with the interconnection of business information systems.", "level": 1, "isCategory": false},
+        {"reference": "09.x", "title": "Electronic Commerce", "description": "Information involved in electronic commerce passing over public networks shall be protected from fraudulent activity, contract dispute, and unauthorized disclosure and modification.", "level": 1, "isCategory": false},
+        {"reference": "09.y", "title": "On-line Transactions", "description": "Information involved in on-line transactions shall be protected to prevent incomplete transmission, mis-routing, unauthorized message alteration, unauthorized disclosure, unauthorized message duplication, or replay.", "level": 1, "isCategory": false},
+        {"reference": "09.z", "title": "Publicly Available Information", "description": "The integrity of information being made available on a publicly available system shall be protected to prevent unauthorized modification.", "level": 1, "isCategory": false},
+        {"reference": "09.aa", "title": "Audit Logging", "description": "Audit logs recording user activities, exceptions, and information security events shall be produced and kept for an agreed period to assist in future investigations and access control monitoring.", "level": 1, "isCategory": false},
+        {"reference": "09.ab", "title": "Monitoring System Use", "description": "Procedures for monitoring use of information processing facilities shall be established and the results of the monitoring activities reviewed regularly.", "level": 1, "isCategory": false},
+        {"reference": "09.ac", "title": "Protection of Log Information", "description": "Logging facilities and log information shall be protected against tampering and unauthorized access.", "level": 1, "isCategory": false},
+        {"reference": "09.ad", "title": "Administrator and Operator Logs", "description": "System administrator and system operator activities shall be logged.", "level": 1, "isCategory": false},
+        {"reference": "09.ae", "title": "Fault Logging", "description": "Faults shall be logged, analyzed, and appropriate action taken.", "level": 1, "isCategory": false},
+        {"reference": "09.af", "title": "Clock Synchronization", "description": "The clocks of all relevant information processing systems within an organization or security domain shall be synchronized with an agreed accurate time source.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "10",
+      "title": "Information Systems Acquisition, Development, and Maintenance",
+      "description": "Ensure that security is an integral part of information systems throughout their lifecycle.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "10.a", "title": "Security Requirements Analysis and Specification", "description": "Statements of business requirements for new information systems, or enhancements to existing information systems shall specify the requirements for security controls.", "level": 1, "isCategory": false},
+        {"reference": "10.b", "title": "Input Data Validation", "description": "Data input to applications shall be validated to ensure that this data is correct and appropriate.", "level": 1, "isCategory": false},
+        {"reference": "10.c", "title": "Control of Internal Processing", "description": "Validation checks shall be incorporated into applications to detect any corruption of information through processing errors or deliberate acts.", "level": 1, "isCategory": false},
+        {"reference": "10.d", "title": "Message Integrity", "description": "Requirements for ensuring authenticity and protecting message integrity in applications shall be identified, and appropriate controls identified and implemented.", "level": 1, "isCategory": false},
+        {"reference": "10.e", "title": "Output Data Validation", "description": "Data output from an application shall be validated to ensure that the processing of stored information is correct and appropriate to the circumstances.", "level": 1, "isCategory": false},
+        {"reference": "10.f", "title": "Policy on the Use of Cryptographic Controls", "description": "A policy on the use of cryptographic controls for protection of information shall be developed and implemented.", "level": 1, "isCategory": false},
+        {"reference": "10.g", "title": "Key Management", "description": "Key management shall be in place to support the organization's use of cryptographic techniques.", "level": 1, "isCategory": false},
+        {"reference": "10.h", "title": "Control of Operational Software", "description": "There shall be procedures in place to control the installation of software on operational systems.", "level": 1, "isCategory": false},
+        {"reference": "10.i", "title": "Protection of System Test Data", "description": "Test data shall be selected carefully, and protected and controlled.", "level": 1, "isCategory": false},
+        {"reference": "10.j", "title": "Access Control to Program Source Code", "description": "Access to program source code shall be restricted.", "level": 1, "isCategory": false},
+        {"reference": "10.k", "title": "Change Control Procedures", "description": "The implementation of changes shall be controlled by the use of formal change control procedures.", "level": 1, "isCategory": false},
+        {"reference": "10.l", "title": "Technical Review of Applications After Operating System Changes", "description": "When operating systems are changed, business critical applications shall be reviewed and tested to ensure there is no adverse impact on organizational operations or security.", "level": 1, "isCategory": false},
+        {"reference": "10.m", "title": "Restrictions on Changes to Software Packages", "description": "Modifications to software packages shall be discouraged, limited to necessary changes, and all changes shall be strictly controlled.", "level": 1, "isCategory": false},
+        {"reference": "10.n", "title": "Information Leakage", "description": "Opportunities for information leakage shall be prevented.", "level": 1, "isCategory": false},
+        {"reference": "10.o", "title": "Outsourced Software Development", "description": "Outsourced software development shall be supervised and monitored by the organization.", "level": 1, "isCategory": false},
+        {"reference": "10.p", "title": "Control of Technical Vulnerabilities", "description": "Timely information about technical vulnerabilities of information systems being used shall be obtained, the organization's exposure to such vulnerabilities evaluated, and appropriate measures taken to address the associated risk.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "11",
+      "title": "Information Security Incident Management",
+      "description": "Ensure a consistent and effective approach to the management of information security incidents.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "11.a", "title": "Reporting Information Security Events", "description": "Information security events shall be reported through appropriate management channels as quickly as possible.", "level": 1, "isCategory": false},
+        {"reference": "11.b", "title": "Reporting Security Weaknesses", "description": "All employees, contractors, and third-party users of information systems and services shall be required to note and report any observed or suspected security weaknesses in systems or services.", "level": 1, "isCategory": false},
+        {"reference": "11.c", "title": "Responsibilities and Procedures", "description": "Management responsibilities and procedures shall be established to ensure a quick, effective, and orderly response to information security incidents.", "level": 1, "isCategory": false},
+        {"reference": "11.d", "title": "Learning from Information Security Incidents", "description": "There shall be mechanisms in place to enable the types, volumes, and costs of information security incidents to be quantified and monitored.", "level": 1, "isCategory": false},
+        {"reference": "11.e", "title": "Collection of Evidence", "description": "Where a follow-up action against a person or organization after an information security incident involves legal action (either civil or criminal), evidence shall be collected, retained, and presented to conform to the rules for evidence laid down in the relevant jurisdiction(s).", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "12",
+      "title": "Business Continuity Management",
+      "description": "Counteract interruptions to business activities and to protect critical business processes from the effects of major failures of information systems or disasters.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "12.a", "title": "Including Information Security in the Business Continuity Management Process", "description": "A managed process shall be developed and maintained for business continuity throughout the organization that addresses the information security requirements needed for the organization's business continuity.", "level": 1, "isCategory": false},
+        {"reference": "12.b", "title": "Business Continuity and Risk Assessment", "description": "Events that can cause interruptions to business processes shall be identified, along with the probability and impact of such interruptions and their consequences for information security.", "level": 1, "isCategory": false},
+        {"reference": "12.c", "title": "Developing and Implementing Continuity Plans Including Information Security", "description": "Plans shall be developed and implemented to maintain or restore operations and ensure availability of information at the required level and in the required time scales following interruption to, or failure of, critical business processes.", "level": 1, "isCategory": false},
+        {"reference": "12.d", "title": "Business Continuity Planning Framework", "description": "A single framework of business continuity plans shall be maintained to ensure all plans are consistent, to consistently address information security requirements, and to identify priorities for testing and maintenance.", "level": 1, "isCategory": false},
+        {"reference": "12.e", "title": "Testing, Maintaining, and Re-Assessing Business Continuity Plans", "description": "Business continuity plans shall be tested and updated regularly to ensure that they are up to date and effective.", "level": 1, "isCategory": false}
+      ]
+    },
+    {
+      "reference": "13",
+      "title": "Privacy Practices",
+      "description": "Ensure the protection of personal information and privacy rights in accordance with applicable laws and regulations.",
+      "level": 0,
+      "isCategory": true,
+      "children": [
+        {"reference": "13.a", "title": "Consent and Choice", "description": "The organization shall provide notice about its privacy practices and offer choices about collection, use, retention, and disclosure of personal information.", "level": 1, "isCategory": false},
+        {"reference": "13.b", "title": "Accountability for Personal Information", "description": "The organization shall define, document, communicate, and assign accountability for its privacy policies and procedures.", "level": 1, "isCategory": false},
+        {"reference": "13.c", "title": "Purpose Identification and Limitation", "description": "The organization shall identify the purpose for personal information collection before collection and limit the use, retention, and disclosure of personal information to that purpose.", "level": 1, "isCategory": false},
+        {"reference": "13.d", "title": "Collection Limitation", "description": "The organization shall limit the collection of personal information to that which is necessary for the identified purpose.", "level": 1, "isCategory": false},
+        {"reference": "13.e", "title": "Use, Retention, and Disposal Limitation", "description": "The organization shall limit the use of personal information to the identified purpose and retain personal information only as long as necessary to fulfill the stated purposes.", "level": 1, "isCategory": false},
+        {"reference": "13.f", "title": "Access Rights", "description": "The organization shall provide individuals with access to their personal information for review and update.", "level": 1, "isCategory": false},
+        {"reference": "13.g", "title": "Disclosure to Third Parties", "description": "The organization shall disclose personal information to third parties only for the purposes identified in the notice and with the implicit or explicit consent of the individual.", "level": 1, "isCategory": false},
+        {"reference": "13.h", "title": "Security for Privacy", "description": "The organization shall protect personal information against unauthorized access.", "level": 1, "isCategory": false},
+        {"reference": "13.i", "title": "Quality of Personal Information", "description": "The organization shall maintain accurate, complete, and relevant personal information for the purposes identified in the notice.", "level": 1, "isCategory": false},
+        {"reference": "13.j", "title": "Monitoring and Enforcement", "description": "The organization shall monitor compliance with its privacy policies and procedures and have procedures to address privacy-related complaints and disputes.", "level": 1, "isCategory": false}
+      ]
+    }
+  ]
+}

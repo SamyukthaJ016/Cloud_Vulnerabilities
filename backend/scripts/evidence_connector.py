@@ -19,8 +19,7 @@ from typing import Any, Dict
 
 
 BASE_URL = os.getenv("CLOUDGUARD_BASE_URL", "http://localhost:8000").rstrip("/")
-CONNECTOR_TOKEN = os.getenv("CONNECTOR_TOKEN") or os.getenv("EVIDENCE_CONNECTOR_TOKEN")
-CONNECTOR_USER_ID = os.getenv("CONNECTOR_USER_ID", "anonymous")
+CONNECTOR_TOKEN = os.getenv("EVIDENCE_CONNECTOR_TOKEN")
 INBOX_DIR = Path(os.getenv("EVIDENCE_CONNECTOR_INBOX", "/app/connectors/inbox"))
 PROCESSED_DIR = Path(os.getenv("EVIDENCE_CONNECTOR_PROCESSED", "/app/connectors/processed"))
 FAILED_DIR = Path(os.getenv("EVIDENCE_CONNECTOR_FAILED", "/app/connectors/failed"))
@@ -63,13 +62,14 @@ def normalize_payload(path: Path, raw: Any) -> Dict[str, Any]:
 
 
 def post_evidence(envelope: Dict[str, Any]) -> Dict[str, Any]:
+    if not CONNECTOR_TOKEN:
+        raise RuntimeError("EVIDENCE_CONNECTOR_TOKEN is required")
     body = json.dumps(envelope, default=str).encode("utf-8")
     headers = {
         "Content-Type": "application/json",
-        "x-cloudguard-user": CONNECTOR_USER_ID,
+        "X-Connector-ID": CONNECTOR_ID,
+        "Authorization": f"Bearer {CONNECTOR_TOKEN}",
     }
-    if CONNECTOR_TOKEN:
-        headers["x-connector-token"] = CONNECTOR_TOKEN
 
     request = urllib.request.Request(
         f"{BASE_URL}/api/evidence",
@@ -82,6 +82,9 @@ def post_evidence(envelope: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def post_heartbeat(status: str = "online") -> None:
+    if not CONNECTOR_TOKEN:
+        print("Evidence connector heartbeat skipped: EVIDENCE_CONNECTOR_TOKEN is required", file=sys.stderr)
+        return
     payload = {
         "worker_id": CONNECTOR_ID,
         "worker_type": "evidence",
@@ -96,10 +99,9 @@ def post_heartbeat(status: str = "online") -> None:
     }
     headers = {
         "Content-Type": "application/json",
-        "x-cloudguard-user": CONNECTOR_USER_ID,
+        "X-Connector-ID": CONNECTOR_ID,
+        "Authorization": f"Bearer {CONNECTOR_TOKEN}",
     }
-    if CONNECTOR_TOKEN:
-        headers["x-connector-token"] = CONNECTOR_TOKEN
 
     try:
         request = urllib.request.Request(
