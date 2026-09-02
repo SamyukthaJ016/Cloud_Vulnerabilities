@@ -47,6 +47,7 @@
                     onLoad: "login-required",
                     checkLoginIframe: false,
                     pkceMethod: "S256",
+                    responseMode: "query",
                     redirectUri,
                 }),
                 new Promise((_, reject) => {
