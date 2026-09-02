@@ -409,6 +409,40 @@ class AWSMCPServer(BaseMCPServer):
                     })
             except:
                 pass
+
+            # Check inline policies for wildcard administrative access.
+            try:
+                policy_names = self.iam.list_user_policies(UserName=username).get("PolicyNames", [])
+                for policy_name in policy_names:
+                    document = self.iam.get_user_policy(
+                        UserName=username,
+                        PolicyName=policy_name,
+                    ).get("PolicyDocument", {})
+                    statements = document.get("Statement", [])
+                    if isinstance(statements, dict):
+                        statements = [statements]
+                    for statement in statements:
+                        actions = statement.get("Action", [])
+                        resources = statement.get("Resource", [])
+                        actions = [actions] if isinstance(actions, str) else actions
+                        resources = [resources] if isinstance(resources, str) else resources
+                        if (
+                            statement.get("Effect") == "Allow"
+                            and "*" in actions
+                            and "*" in resources
+                        ):
+                            findings.append({
+                                "severity": "CRITICAL",
+                                "issue": "IAM User Has Wildcard Administrative Policy",
+                                "description": (
+                                    f"User {username} has inline policy {policy_name} with "
+                                    "Action '*' and Resource '*'."
+                                ),
+                                "recommendation": "Replace wildcard permissions with the minimum required actions and resources.",
+                            })
+                            break
+            except Exception as exc:
+                logger.warning(f"[AWS] Inline policy check failed for {username}: {exc}")
             
             # Check access keys
             try:
@@ -452,7 +486,8 @@ class AWSMCPServer(BaseMCPServer):
                     "group_name": sg["GroupName"],
                     "vpc_id": sg.get("VpcId"),
                     "ingress_rules": len(sg.get("IpPermissions", [])),
-                    "egress_rules": len(sg.get("IpPermissionsEgress", []))
+                    "egress_rules": len(sg.get("IpPermissionsEgress", [])),
+                    "ip_permissions": sg.get("IpPermissions", []),
                 })
             
             return {
@@ -463,6 +498,45 @@ class AWSMCPServer(BaseMCPServer):
         
         except Exception as e:
             return {"error": str(e), "resources": [], "count": 0}
+
+    def _check_security_group_security(self, group: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Return findings for internet-exposed AWS security group rules."""
+        findings: List[Dict[str, Any]] = []
+        risky_ports = {22: "SSH", 3389: "RDP", 3306: "MySQL", 5432: "PostgreSQL", 27017: "MongoDB"}
+
+        for permission in group.get("ip_permissions", []):
+            public_ipv4 = any(item.get("CidrIp") == "0.0.0.0/0" for item in permission.get("IpRanges", []))
+            public_ipv6 = any(item.get("CidrIpv6") == "::/0" for item in permission.get("Ipv6Ranges", []))
+            if not public_ipv4 and not public_ipv6:
+                continue
+
+            protocol = str(permission.get("IpProtocol", ""))
+            if protocol == "-1":
+                findings.append({
+                    "severity": "CRITICAL",
+                    "issue": "Security Group Allows All Internet Traffic",
+                    "description": f"Security group {group['group_id']} allows all protocols from the public internet.",
+                    "recommendation": "Replace the all-traffic rule with narrowly scoped ports and trusted source ranges.",
+                })
+                continue
+
+            from_port = permission.get("FromPort")
+            to_port = permission.get("ToPort")
+            if from_port is None or to_port is None:
+                continue
+            exposed = [name for port, name in risky_ports.items() if from_port <= port <= to_port]
+            if exposed:
+                findings.append({
+                    "severity": "HIGH",
+                    "issue": "Administrative Port Exposed to the Internet",
+                    "description": (
+                        f"Security group {group['group_id']} exposes {', '.join(exposed)} "
+                        "to 0.0.0.0/0 or ::/0."
+                    ),
+                    "recommendation": "Restrict administrative and database ports to approved private networks or a controlled bastion.",
+                })
+
+        return findings
 
     async def _check_cloudtrail(self) -> List[Dict[str, Any]]:
         """Check CloudTrail configuration"""
@@ -697,13 +771,17 @@ class AWSMCPServer(BaseMCPServer):
             # 5. Discover security groups
             sg_result = await self._discover_security_groups()
             for r in sg_result.get("resources", []):
-                all_resources.append({
+                sg_resource = {
                     "provider": "aws",
                     "resource_type": "security_group",
                     "name": r["group_id"],
                     "region": r.get("region", "us-east-1"),
                     "config": r
-                })
+                }
+                all_resources.append(sg_resource)
+                for finding in self._check_security_group_security(r):
+                    finding["resource"] = sg_resource
+                    results["findings"].append(finding)
 
             # Create Account Level resource for generic findings
             account_resource = {
@@ -858,5 +936,3 @@ def create_aws_server(config: Dict[str, Any]) -> AWSMCPServer:
     """Factory function to create AWS MCP server"""
     return AWSMCPServer(config)
 
-
-    

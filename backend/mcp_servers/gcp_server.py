@@ -399,20 +399,24 @@ class GCPMCPServer(BaseMCPServer):
                 # Check for overly permissive rules (0.0.0.0/0)
                 if '0.0.0.0/0' in fw.source_ranges and fw.direction == 'INGRESS' and fw.allowed:
                     for allowed in fw.allowed:
+                        protocol = str(
+                            getattr(allowed, "I_p_protocol", None)
+                            or getattr(allowed, "i_p_protocol", "")
+                        ).lower()
                         # Check for risky ports (SSH 22, RDP 3389, DBs, etc.)
                         risky_ports = ['22', '3389', '3306', '5432', '27017']
-                        if not allowed.ports or any(port in allowed.ports for port in risky_ports):
+                        if protocol == 'all':
+                            findings.append({
+                                "severity": "CRITICAL",
+                                "issue": "Full Ingress Access",
+                                "description": f"Firewall rule {fw.name} allows ALL traffic from 0.0.0.0/0",
+                                "resource": fw.name
+                            })
+                        elif not allowed.ports or any(port in allowed.ports for port in risky_ports):
                             findings.append({
                                 "severity": "HIGH",
                                 "issue": "Overly Permissive Firewall Rule",
                                 "description": f"Firewall rule {fw.name} allows traffic from 0.0.0.0/0 on sensitive ports",
-                                "resource": fw.name
-                            })
-                        elif 'all' in str(allowed.i_p_protocol).lower():
-                             findings.append({
-                                "severity": "CRITICAL",
-                                "issue": "Full Ingress Access",
-                                "description": f"Firewall rule {fw.name} allows ALL traffic from 0.0.0.0/0",
                                 "resource": fw.name
                             })
 

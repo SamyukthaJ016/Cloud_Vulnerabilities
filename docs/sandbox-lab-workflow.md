@@ -29,9 +29,9 @@ When the UI sends `demo_scan=true`, the backend forces `scan_after_deploy=true` 
 | Provider | Default state | What it tests | Cost |
 | --- | --- | --- | --- |
 | IaC | Enabled | Public storage, open admin ports, public database, wildcard IAM, CloudFormation exposure, privileged Kubernetes YAML/JSON, wildcard RBAC, exposed services, hardcoded Secret | Zero |
-| AWS | Disabled | Public S3 bucket policy, disabled public access block, wildcard IAM role policy | Near-zero if destroyed quickly |
-| GCP | Disabled | Public Cloud Storage IAM binding | Near-zero if destroyed quickly |
-| Kubernetes | Disabled | Privileged pod, wildcard RBAC, missing NetworkPolicy, NodePort service | Uses existing cluster capacity |
+| AWS | Disabled | Empty S3 bucket with public-access protections disabled, no-MFA IAM user with an inert wildcard policy, unattached security group with public administrative/all-traffic ingress | Near-zero if destroyed quickly |
+| GCP | Disabled | Empty public Cloud Storage bucket and isolated VPC firewall rules exposing administrative ports/all protocols | Near-zero if destroyed quickly |
+| Kubernetes | Disabled | Privileged pod, namespace RoleBinding to `cluster-admin`, permissive/missing NetworkPolicy, NodePort and LoadBalancer services | Uses existing cluster capacity |
 
 ## Required Environment Flags
 
@@ -120,7 +120,9 @@ Use a sandbox AWS account. The credential needs permission to:
 - call `sts:GetCallerIdentity`
 - create/delete the temporary S3 bucket
 - update bucket public access block and bucket policy
-- create/delete the temporary IAM role and inline policy
+- create/delete the temporary IAM user and inline policy
+- create/delete a temporary VPC and unattached security group
+- add public ingress rules to that temporary security group
 
 Keep the permissions scoped to resources prefixed with `cg-` where possible.
 
@@ -130,6 +132,8 @@ Use a sandbox GCP project. The service account needs permission to:
 
 - create/delete Cloud Storage buckets
 - update bucket IAM policy
+- create/delete an isolated VPC network
+- create/delete temporary firewall rules in that VPC
 
 ### Kubernetes
 
@@ -138,7 +142,7 @@ Use a sandbox cluster or namespace. The worker container uses the Kubernetes Pyt
 - a stored Kubernetes credential in Manage Credentials, or
 - `KUBECONFIG` available in the worker environment
 
-The lab creates a temporary namespace and deletes the namespace during cleanup.
+The lab creates a temporary namespace and deletes the namespace during cleanup. The credential also needs permission to create Pods, Services, ServiceAccounts, Roles, RoleBindings, and Secrets inside that namespace. The RoleBinding deliberately grants the lab service account namespace-scoped access through the built-in `cluster-admin` ClusterRole so the scanner can observe the unsafe binding without creating a cluster-wide binding.
 
 ## Cost Guidance
 
@@ -163,3 +167,4 @@ Never enable real cloud lab flags in production accounts. Use isolated sandbox a
 - AWS/GCP/Kubernetes lab creation depends on SDK/CLI availability and the permissions in the selected credential.
 - Kubernetes labs require a stored kubeconfig, a `KUBECONFIG` environment variable, or in-cluster configuration in the worker runtime.
 - The worker creates intentionally vulnerable resources only inside explicitly enabled sandbox environments.
+- The AWS IAM user receives no console password or access key, the security group is not attached to compute, and cloud storage contains no customer data.

@@ -2245,7 +2245,12 @@ def _sandbox_lab_catalog(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
             "lab_type": "public_s3_and_wildcard_iam",
             "cost": "near-zero if destroyed quickly",
             "deploys_real_cloud_resources": True,
-            "tests": ["S3 public policy", "disabled public access block", "wildcard IAM policy"],
+            "tests": [
+                "S3 public policy and disabled public access block",
+                "IAM user without MFA",
+                "wildcard IAM inline policy",
+                "public SSH, RDP, database, and all-protocol security-group rules",
+            ],
             **aws_readiness,
         },
         {
@@ -2253,7 +2258,11 @@ def _sandbox_lab_catalog(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
             "lab_type": "public_storage_bucket",
             "cost": "near-zero if destroyed quickly",
             "deploys_real_cloud_resources": True,
-            "tests": ["public Cloud Storage IAM binding", "asset inventory visibility"],
+            "tests": [
+                "public Cloud Storage IAM binding",
+                "public SSH, RDP, and database firewall rule",
+                "all-protocol public firewall rule",
+            ],
             **gcp_readiness,
         },
         {
@@ -2261,7 +2270,12 @@ def _sandbox_lab_catalog(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
             "lab_type": "privileged_namespace",
             "cost": "uses existing cluster capacity",
             "deploys_real_cloud_resources": True,
-            "tests": ["privileged pod", "wildcard RBAC", "missing NetworkPolicy", "NodePort service"],
+            "tests": [
+                "privileged pod and host networking",
+                "namespace RoleBinding to cluster-admin",
+                "missing or permissive NetworkPolicy",
+                "NodePort and LoadBalancer services",
+            ],
             **kubernetes_readiness,
         },
     ]
@@ -2659,9 +2673,15 @@ resource "aws_s3_bucket" "unencrypted_artifacts" {{
             {"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": prefix}},
             {
                 "apiVersion": "v1",
+                "kind": "ServiceAccount",
+                "metadata": {"name": "lab-admin", "namespace": prefix},
+            },
+            {
+                "apiVersion": "v1",
                 "kind": "Pod",
                 "metadata": {"name": "privileged-demo", "namespace": prefix},
                 "spec": {
+                    "serviceAccountName": "lab-admin",
                     "automountServiceAccountToken": True,
                     "hostNetwork": True,
                     "containers": [{
@@ -2681,6 +2701,17 @@ resource "aws_s3_bucket" "unencrypted_artifacts" {{
                 "kind": "Role",
                 "metadata": {"name": "wildcard-role", "namespace": prefix},
                 "rules": [{"apiGroups": ["*"], "resources": ["*"], "verbs": ["*"]}],
+            },
+            {
+                "apiVersion": "rbac.authorization.k8s.io/v1",
+                "kind": "RoleBinding",
+                "metadata": {"name": "lab-admin-binding", "namespace": prefix},
+                "subjects": [{"kind": "ServiceAccount", "name": "lab-admin", "namespace": prefix}],
+                "roleRef": {
+                    "apiGroup": "rbac.authorization.k8s.io",
+                    "kind": "ClusterRole",
+                    "name": "cluster-admin",
+                },
             },
             {
                 "apiVersion": "rbac.authorization.k8s.io/v1",
@@ -2810,11 +2841,14 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
     sts = session.client("sts")
     s3 = session.client("s3")
     iam = session.client("iam")
+    ec2 = session.client("ec2")
     account_id = sts.get_caller_identity().get("Account", "unknown")
     suffix = uuid.uuid4().hex[:8]
     bucket_name = f"{lab['resource_prefix']}-{suffix}".replace("_", "-")[:63]
-    role_name = f"{lab['resource_prefix']}-wildcard-role-{suffix}"[:64]
+    user_name = f"{lab['resource_prefix']}-no-mfa-{suffix}"[:64]
+    security_group_name = f"{lab['resource_prefix']}-open-admin-{suffix}"[:255]
     resources: List[Dict[str, Any]] = []
+    public_policy_applied = False
 
     try:
         create_bucket_kwargs: Dict[str, Any] = {"Bucket": bucket_name}
@@ -2832,42 +2866,86 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
                 "RestrictPublicBuckets": False,
             },
         )
-        s3.put_bucket_policy(
-            Bucket=bucket_name,
-            Policy=json.dumps(
+        try:
+            s3.put_bucket_policy(
+                Bucket=bucket_name,
+                Policy=json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "SandboxPublicRead",
+                                "Effect": "Allow",
+                                "Principal": "*",
+                                "Action": "s3:GetObject",
+                                "Resource": f"arn:aws:s3:::{bucket_name}/*",
+                            }
+                        ],
+                    }
+                ),
+            )
+            public_policy_applied = True
+        except Exception as exc:
+            # Account-level S3 Block Public Access may correctly prevent the policy.
+            logger.warning(f"AWS sandbox public bucket policy was blocked; continuing with bucket-level BPA disabled: {exc}")
+
+        vpc = ec2.create_vpc(
+            CidrBlock="10.244.0.0/16",
+            TagSpecifications=[{
+                "ResourceType": "vpc",
+                "Tags": [
+                    {"Key": "Name", "Value": f"{lab['resource_prefix']}-lab-vpc"},
+                    {"Key": "cloudguard-lab-id", "Value": lab["lab_id"]},
+                ],
+            }],
+        )["Vpc"]
+        vpc_id = vpc["VpcId"]
+        resources.append({"type": "vpc", "name": vpc_id, "region": region})
+
+        security_group_id = ec2.create_security_group(
+            GroupName=security_group_name,
+            Description="CloudGuard temporary vulnerable scanner lab",
+            VpcId=vpc_id,
+            TagSpecifications=[{
+                "ResourceType": "security-group",
+                "Tags": [{"Key": "cloudguard-lab-id", "Value": lab["lab_id"]}],
+            }],
+        )["GroupId"]
+        resources.append({
+            "type": "security_group",
+            "name": security_group_id,
+            "vpc_id": vpc_id,
+            "region": region,
+        })
+        ec2.authorize_security_group_ingress(
+            GroupId=security_group_id,
+            IpPermissions=[
                 {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Sid": "SandboxPublicRead",
-                            "Effect": "Allow",
-                            "Principal": "*",
-                            "Action": "s3:GetObject",
-                            "Resource": f"arn:aws:s3:::{bucket_name}/*",
-                        }
-                    ],
-                }
-            ),
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "CloudGuard lab open SSH"}],
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 3389,
+                    "ToPort": 3389,
+                    "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "CloudGuard lab open RDP"}],
+                },
+                {
+                    "IpProtocol": "-1",
+                    "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "CloudGuard lab all traffic"}],
+                },
+            ],
         )
 
-        iam.create_role(
-            RoleName=role_name,
-            AssumeRolePolicyDocument=json.dumps(
-                {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {"Service": "ec2.amazonaws.com"},
-                            "Action": "sts:AssumeRole",
-                        }
-                    ],
-                }
-            ),
+        iam.create_user(
+            UserName=user_name,
             Tags=[{"Key": "cloudguard-lab-id", "Value": lab["lab_id"]}],
         )
-        iam.put_role_policy(
-            RoleName=role_name,
+        resources.append({"type": "iam_user", "name": user_name, "region": "global"})
+        iam.put_user_policy(
+            UserName=user_name,
             PolicyName="CloudGuardSandboxWildcard",
             PolicyDocument=json.dumps(
                 {
@@ -2876,7 +2954,6 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
                 }
             ),
         )
-        resources.append({"type": "iam_role", "name": role_name, "region": "global"})
     except Exception:
         try:
             _destroy_aws_sandbox_resources(lab, resources)
@@ -2887,15 +2964,21 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
     findings = [
         {
             "severity": "HIGH",
-            "issue": "Public S3 bucket policy created for scanner validation",
+            "issue": "S3 public-access protections disabled for scanner validation",
             "resource": bucket_name,
             "expected_detection": "public bucket policy / public access block disabled",
         },
         {
             "severity": "CRITICAL",
-            "issue": "Wildcard IAM policy created for scanner validation",
-            "resource": role_name,
-            "expected_detection": "overly permissive IAM role inline policy",
+            "issue": "No-MFA IAM user with wildcard policy created for scanner validation",
+            "resource": user_name,
+            "expected_detection": "IAM user without MFA / wildcard inline policy",
+        },
+        {
+            "severity": "CRITICAL",
+            "issue": "Security group exposes administrative ports and all traffic",
+            "resource": security_group_id,
+            "expected_detection": "public SSH, RDP, and all-protocol ingress",
         },
     ]
     return {
@@ -2903,7 +2986,12 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
         "account_id": account_id,
         "resources": resources,
         "findings": findings,
-        "proof_payload": {"account_id": account_id, "region": region, "created_resources": resources},
+        "proof_payload": {
+            "account_id": account_id,
+            "region": region,
+            "public_bucket_policy_applied": public_policy_applied,
+            "created_resources": resources,
+        },
     }
 
 
@@ -2911,10 +2999,22 @@ def _destroy_aws_sandbox_resources(lab: Dict[str, Any], resources: Optional[List
     session, _region = _aws_session_for_lab(lab, require_enabled=False)
     s3 = session.client("s3")
     iam = session.client("iam")
+    ec2 = session.client("ec2")
     deleted: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
 
-    for resource in resources or lab.get("resources", []):
+    cleanup_order = {
+        "s3_bucket": 10,
+        "iam_user": 20,
+        "iam_role": 20,
+        "security_group": 30,
+        "vpc": 40,
+    }
+    ordered_resources = sorted(
+        resources or lab.get("resources", []),
+        key=lambda item: cleanup_order.get(item.get("type"), 100),
+    )
+    for resource in ordered_resources:
         try:
             if resource.get("type") == "s3_bucket":
                 bucket = resource["name"]
@@ -2944,6 +3044,20 @@ def _destroy_aws_sandbox_resources(lab: Dict[str, Any], resources: Optional[List
                     pass
                 iam.delete_role(RoleName=role_name)
                 deleted.append(resource)
+            elif resource.get("type") == "iam_user":
+                user_name = resource["name"]
+                for policy_name in iam.list_user_policies(UserName=user_name).get("PolicyNames", []):
+                    iam.delete_user_policy(UserName=user_name, PolicyName=policy_name)
+                for key in iam.list_access_keys(UserName=user_name).get("AccessKeyMetadata", []):
+                    iam.delete_access_key(UserName=user_name, AccessKeyId=key["AccessKeyId"])
+                iam.delete_user(UserName=user_name)
+                deleted.append(resource)
+            elif resource.get("type") == "security_group":
+                ec2.delete_security_group(GroupId=resource["name"])
+                deleted.append(resource)
+            elif resource.get("type") == "vpc":
+                ec2.delete_vpc(VpcId=resource["name"])
+                deleted.append(resource)
         except Exception as exc:
             errors.append({"resource": resource, "error": str(exc)})
     return {"deleted": deleted, "errors": errors}
@@ -2956,9 +3070,10 @@ async def _deploy_gcp_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
         raise RuntimeError("A GCP service account credential is required for GCP sandbox labs.")
     try:
         from google.cloud import storage
+        from google.cloud import compute_v1
         from google.oauth2 import service_account
     except ImportError as exc:
-        raise RuntimeError("google-cloud-storage is required for GCP sandbox labs") from exc
+        raise RuntimeError("google-cloud-storage and google-cloud-compute are required for GCP sandbox labs") from exc
 
     info = json.loads(credential.gcp_service_account_json)
     project_id = credential.gcp_project_id or info.get("project_id")
@@ -2969,29 +3084,93 @@ async def _deploy_gcp_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
     client = storage.Client(project=project_id, credentials=creds)
     location = (lab.get("region") or os.getenv("GCP_SANDBOX_LOCATION") or "ASIA-SOUTH1").upper()
     bucket_name = f"{lab['resource_prefix']}-{uuid.uuid4().hex[:8]}".replace("_", "-")
-    bucket = client.bucket(bucket_name)
-    bucket.storage_class = "STANDARD"
-    bucket = client.create_bucket(bucket, location=location)
-    policy = bucket.get_iam_policy(requested_policy_version=3)
-    policy.bindings.append({"role": "roles/storage.objectViewer", "members": {"allUsers"}})
-    bucket.set_iam_policy(policy)
+    network_name = f"{lab['resource_prefix']}-{uuid.uuid4().hex[:6]}-network"
+    resources: List[Dict[str, Any]] = []
 
-    resources = [{"type": "gcs_bucket", "name": bucket_name, "project_id": project_id, "location": location}]
-    findings = [
-        {
-            "severity": "HIGH",
-            "issue": "Public GCS bucket IAM binding created for scanner validation",
-            "resource": bucket_name,
-            "expected_detection": "allUsers has storage object viewer access",
+    try:
+        bucket = client.bucket(bucket_name)
+        bucket.storage_class = "STANDARD"
+        bucket = client.create_bucket(bucket, location=location)
+        resources.append({"type": "gcs_bucket", "name": bucket_name, "project_id": project_id, "location": location})
+        policy = bucket.get_iam_policy(requested_policy_version=3)
+        policy.bindings.append({"role": "roles/storage.objectViewer", "members": {"allUsers"}})
+        bucket.set_iam_policy(policy)
+
+        network_client = compute_v1.NetworksClient(credentials=creds)
+        firewall_client = compute_v1.FirewallsClient(credentials=creds)
+        network_operation = network_client.insert(
+            project=project_id,
+            network_resource=compute_v1.Network(
+                name=network_name,
+                auto_create_subnetworks=False,
+                description="CloudGuard temporary vulnerable scanner lab",
+            ),
+        )
+        resources.append({"type": "gcp_network", "name": network_name, "project_id": project_id})
+        network_operation.result(timeout=120)
+
+        firewall_specs = [
+            ("open-admin", "tcp", ["22", "3389", "5432"]),
+            ("open-all", "all", []),
+        ]
+        for suffix_name, protocol, ports in firewall_specs:
+            firewall_name = f"{lab['resource_prefix']}-{suffix_name}-{uuid.uuid4().hex[:4]}"
+            allowed = compute_v1.Allowed(I_p_protocol=protocol)
+            if ports:
+                allowed.ports = ports
+            firewall_operation = firewall_client.insert(
+                project=project_id,
+                firewall_resource=compute_v1.Firewall(
+                    name=firewall_name,
+                    description="CloudGuard temporary vulnerable scanner lab",
+                    direction="INGRESS",
+                    network=f"projects/{project_id}/global/networks/{network_name}",
+                    source_ranges=["0.0.0.0/0"],
+                    allowed=[allowed],
+                    target_tags=["cloudguard-sandbox-lab"],
+                ),
+            )
+            resources.append({
+                "type": "gcp_firewall",
+                "name": firewall_name,
+                "project_id": project_id,
+                "network": network_name,
+            })
+            firewall_operation.result(timeout=120)
+
+        findings = [
+            {
+                "severity": "HIGH",
+                "issue": "Public GCS bucket IAM binding created for scanner validation",
+                "resource": bucket_name,
+                "expected_detection": "allUsers has storage object viewer access",
+            },
+            {
+                "severity": "HIGH",
+                "issue": "Public administrative ports created for scanner validation",
+                "resource": network_name,
+                "expected_detection": "0.0.0.0/0 ingress to SSH, RDP, and database ports",
+            },
+            {
+                "severity": "CRITICAL",
+                "issue": "All-protocol public ingress created for scanner validation",
+                "resource": network_name,
+                "expected_detection": "all traffic allowed from 0.0.0.0/0",
+            },
+        ]
+        return {
+            "deploy_mode": "gcp_api",
+            "account_id": project_id,
+            "resources": resources,
+            "findings": findings,
+            "proof_payload": {"project_id": project_id, "location": location, "created_resources": resources},
         }
-    ]
-    return {
-        "deploy_mode": "gcp_api",
-        "account_id": project_id,
-        "resources": resources,
-        "findings": findings,
-        "proof_payload": {"project_id": project_id, "location": location, "created_resources": resources},
-    }
+    except Exception:
+        if resources:
+            cleanup = _destroy_gcp_sandbox_resources({**lab, "resources": resources})
+            if cleanup.get("errors"):
+                logger.warning(f"Partial GCP sandbox cleanup failed: {cleanup['errors']}")
+        raise
 
 
 def _destroy_gcp_sandbox_resources(lab: Dict[str, Any]) -> Dict[str, Any]:
@@ -3000,21 +3179,35 @@ def _destroy_gcp_sandbox_resources(lab: Dict[str, Any]) -> Dict[str, Any]:
         raise RuntimeError("A GCP service account credential is required for GCP sandbox cleanup.")
     try:
         from google.cloud import storage
+        from google.cloud import compute_v1
         from google.oauth2 import service_account
     except ImportError as exc:
-        raise RuntimeError("google-cloud-storage is required for GCP sandbox cleanup") from exc
+        raise RuntimeError("google-cloud-storage and google-cloud-compute are required for GCP sandbox cleanup") from exc
 
     info = json.loads(credential.gcp_service_account_json)
     project_id = credential.gcp_project_id or info.get("project_id")
     creds = service_account.Credentials.from_service_account_info(info)
     client = storage.Client(project=project_id, credentials=creds)
+    firewall_client = compute_v1.FirewallsClient(credentials=creds)
+    network_client = compute_v1.NetworksClient(credentials=creds)
     deleted: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
-    for resource in lab.get("resources", []):
+    cleanup_order = {"gcs_bucket": 10, "gcp_firewall": 20, "gcp_network": 30}
+    ordered_resources = sorted(
+        lab.get("resources", []),
+        key=lambda item: cleanup_order.get(item.get("type"), 100),
+    )
+    for resource in ordered_resources:
         try:
             if resource.get("type") == "gcs_bucket":
                 bucket = client.bucket(resource["name"])
                 bucket.delete(force=True)
+                deleted.append(resource)
+            elif resource.get("type") == "gcp_firewall":
+                firewall_client.delete(project=project_id, firewall=resource["name"]).result(timeout=120)
+                deleted.append(resource)
+            elif resource.get("type") == "gcp_network":
+                network_client.delete(project=project_id, network=resource["name"]).result(timeout=120)
                 deleted.append(resource)
         except Exception as exc:
             errors.append({"resource": resource, "error": str(exc)})
@@ -3061,6 +3254,8 @@ def _create_kubernetes_object(core_api, rbac_api, namespace: str, obj: Dict[str,
     try:
         if kind == "Namespace":
             core_api.create_namespace(body=obj)
+        elif kind == "ServiceAccount":
+            core_api.create_namespaced_service_account(namespace=metadata.get("namespace") or namespace, body=obj)
         elif kind == "Pod":
             core_api.create_namespaced_pod(namespace=metadata.get("namespace") or namespace, body=obj)
         elif kind == "Service":
@@ -3096,8 +3291,10 @@ async def _deploy_kubernetes_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
 
     resources = [
         {"type": "namespace", "name": namespace},
+        {"type": "service_account", "name": "lab-admin", "namespace": namespace},
         {"type": "pod", "name": "privileged-demo", "namespace": namespace},
         {"type": "role", "name": "wildcard-role", "namespace": namespace},
+        {"type": "role_binding", "name": "lab-admin-binding", "namespace": namespace},
         {"type": "service", "name": "exposed-nodeport", "namespace": namespace},
         {"type": "service", "name": "public-load-balancer", "namespace": namespace},
         {"type": "secret", "name": "hardcoded-demo-secret", "namespace": namespace},
@@ -3111,9 +3308,9 @@ async def _deploy_kubernetes_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
         },
         {
             "severity": "HIGH",
-            "issue": "Wildcard RBAC role created for scanner validation",
-            "resource": f"{namespace}/wildcard-role",
-            "expected_detection": "overly permissive namespace RBAC",
+            "issue": "Namespace binding to cluster-admin created for scanner validation",
+            "resource": f"{namespace}/lab-admin-binding",
+            "expected_detection": "RoleBinding grants cluster-admin",
         },
     ]
     return {
