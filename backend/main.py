@@ -26,6 +26,11 @@ from psycopg2.extras import Json
 
 # MCP & Cloud Architecture
 from backend.mcp.mcp_base import mcp_registry, MCPPlugin, ScanResult, CloudResource, SecurityFinding, Severity
+from backend.evidence_payloads import (
+    load_evidence_payload as _load_evidence_payload,
+    scan_result_evidence_payload as _scan_result_evidence_payload,
+    stored_finding_control as _stored_finding_control,
+)
 from backend.mcp.mcp_aws_plugin import AWSPlugin
 from backend.mcp.mcp_gcp_plugin import GCPPlugin
 
@@ -4138,6 +4143,7 @@ def _scan_job_result_payload(scan_result: Dict[str, Any]) -> Dict[str, Any]:
         {
             "deep_scan_enabled": scan_result.get("deep_scan_enabled", False),
             "user_credentials_used": scan_result.get("user_credentials_used", False),
+            "scan_results": [_scan_result_evidence_payload(result) for result in scan_results],
         }
     )
     return payload
@@ -4407,6 +4413,44 @@ def _extract_compliance_findings(payload: Any) -> List[Dict[str, Any]]:
     return findings
 
 
+def _stored_scan_findings(job_id: Optional[str], user_id: str, tenant_id: str) -> List[Dict[str, Any]]:
+    if not job_id:
+        return []
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT f.severity, f.description, r.name, r.type, s.cloud
+            FROM scan_jobs j
+            CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(j.scan_ids, '[]'::jsonb)) AS sid(value)
+            JOIN scans s ON s.id = sid.value::INTEGER
+                        AND s.user_id = j.user_id
+                        AND s.tenant_id = j.tenant_id
+            JOIN findings f ON f.scan_id = s.id
+            JOIN resources r ON r.id = f.resource_id AND r.scan_id = s.id
+            WHERE j.job_id = %s AND j.user_id = %s AND j.tenant_id = %s
+            ORDER BY f.id
+            """,
+            (job_id, user_id, tenant_id),
+        )
+        rows = cur.fetchall()
+
+    findings = []
+    for severity, description, resource_name, resource_type, cloud in rows:
+        description = str(description or "Stored CloudGuard finding")
+        title = description.split(":", 1)[0]
+        findings.append(
+            {
+                "control_id": _stored_finding_control(cloud, resource_type, description),
+                "severity": _normalize_severity(severity),
+                "title": title[:240],
+                "recommendation": "Review the affected resource in CloudGuard and apply the scanner remediation guidance.",
+                "resource": resource_name,
+            }
+        )
+    return findings
+
+
 def _blank_control(control_id: str, control_name: Optional[str] = None, framework: Optional[str] = None) -> Dict[str, Any]:
     return {
         "control_id": control_id,
@@ -4477,7 +4521,7 @@ def build_compliance_summary(user_id: str, tenant_id: str, framework: str = "all
             "storage_type": row[7],
             "uri": row[8],
             "checksum_sha256": row[9],
-            "payload": row[10] or {},
+            "payload": _load_evidence_payload(row[10] or {}, row[7], row[8], row[9]),
             "metadata": row[11] or {},
             "created_at": _iso_timestamp(row[12]),
         }
@@ -4518,6 +4562,8 @@ def build_compliance_summary(user_id: str, tenant_id: str, framework: str = "all
             control["sources"].append(source)
 
         extracted_findings = _extract_compliance_findings(evidence["payload"])
+        if not extracted_findings and evidence["artifact_type"] == "scan_result":
+            extracted_findings = _stored_scan_findings(evidence["job_id"], user_id, tenant_id)
         source_severities = severity_by_source.setdefault(
             source,
             {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0},
@@ -4785,7 +4831,7 @@ async def get_evidence_detail(evidence_id: str, req: Request):
         "storage_type": row[7],
         "uri": row[8],
         "checksum_sha256": row[9],
-        "payload": row[10],
+        "payload": _load_evidence_payload(row[10] or {}, row[7], row[8], row[9]),
         "metadata": row[11] or {},
         "created_at": _iso_timestamp(row[12]),
     }
