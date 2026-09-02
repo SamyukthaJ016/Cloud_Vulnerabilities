@@ -39,12 +39,26 @@
             realm: config.realm,
             clientId: config.client_id,
         });
-        await keycloak.init({
-            onLoad: "login-required",
-            checkLoginIframe: false,
-            pkceMethod: "S256",
-            redirectUri: window.location.href,
-        });
+        const redirectUri = `${window.location.origin}${window.location.pathname}`;
+        let authenticationTimeout;
+        try {
+            await Promise.race([
+                keycloak.init({
+                    onLoad: "login-required",
+                    checkLoginIframe: false,
+                    pkceMethod: "S256",
+                    redirectUri,
+                }),
+                new Promise((_, reject) => {
+                    authenticationTimeout = window.setTimeout(
+                        () => reject(new Error("CloudGuard authentication timed out")),
+                        15000,
+                    );
+                }),
+            ]);
+        } finally {
+            window.clearTimeout(authenticationTimeout);
+        }
         return keycloak;
     }
 
