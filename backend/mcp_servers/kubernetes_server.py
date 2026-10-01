@@ -287,24 +287,28 @@ class KubernetesMCPServer(BaseMCPServer):
             findings.extend(self._scan_manifest(resource, document))
 
         list_calls = [
-            ("namespaces", lambda: core.list_namespace().items),
-            ("pods", lambda: core.list_pod_for_all_namespaces().items),
-            ("services", lambda: core.list_service_for_all_namespaces().items),
-            ("secrets", lambda: core.list_secret_for_all_namespaces().items),
-            ("deployments", lambda: apps.list_deployment_for_all_namespaces().items),
-            ("statefulsets", lambda: apps.list_stateful_set_for_all_namespaces().items),
-            ("daemonsets", lambda: apps.list_daemon_set_for_all_namespaces().items),
-            ("jobs", lambda: batch.list_job_for_all_namespaces().items),
-            ("cronjobs", lambda: batch.list_cron_job_for_all_namespaces().items),
-            ("network_policies", lambda: networking.list_network_policy_for_all_namespaces().items),
-            ("cluster_role_bindings", lambda: rbac.list_cluster_role_binding().items),
-            ("role_bindings", lambda: rbac.list_role_binding_for_all_namespaces().items),
+            ("namespaces", "Namespace", "v1", lambda: core.list_namespace().items),
+            ("pods", "Pod", "v1", lambda: core.list_pod_for_all_namespaces().items),
+            ("services", "Service", "v1", lambda: core.list_service_for_all_namespaces().items),
+            ("secrets", "Secret", "v1", lambda: core.list_secret_for_all_namespaces().items),
+            ("deployments", "Deployment", "apps/v1", lambda: apps.list_deployment_for_all_namespaces().items),
+            ("statefulsets", "StatefulSet", "apps/v1", lambda: apps.list_stateful_set_for_all_namespaces().items),
+            ("daemonsets", "DaemonSet", "apps/v1", lambda: apps.list_daemon_set_for_all_namespaces().items),
+            ("jobs", "Job", "batch/v1", lambda: batch.list_job_for_all_namespaces().items),
+            ("cronjobs", "CronJob", "batch/v1", lambda: batch.list_cron_job_for_all_namespaces().items),
+            ("network_policies", "NetworkPolicy", "networking.k8s.io/v1", lambda: networking.list_network_policy_for_all_namespaces().items),
+            ("cluster_role_bindings", "ClusterRoleBinding", "rbac.authorization.k8s.io/v1", lambda: rbac.list_cluster_role_binding().items),
+            ("role_bindings", "RoleBinding", "rbac.authorization.k8s.io/v1", lambda: rbac.list_role_binding_for_all_namespaces().items),
         ]
 
-        for scope, loader in list_calls:
+        for scope, kind, api_version, loader in list_calls:
             try:
                 for item in loader():
-                    add_document(api_client.sanitize_for_serialization(item))
+                    document = api_client.sanitize_for_serialization(item)
+                    # List items can omit TypeMeta even when the list has it.
+                    document["kind"] = document.get("kind") or kind
+                    document["apiVersion"] = document.get("apiVersion") or api_version
+                    add_document(document)
             except Exception as exc:
                 record_error(scope, exc)
 
