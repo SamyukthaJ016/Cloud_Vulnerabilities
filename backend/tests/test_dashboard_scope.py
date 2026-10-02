@@ -21,6 +21,13 @@ def route(name, **dependencies):
 
 
 class DashboardScopeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_inline_iac_demo_resolves_proof_scan_id(self):
+        get = route('get_sandbox_lab', get_user_id=lambda _: 'user-a',
+                    _request_tenant_id=lambda *args: 'tenant-a',
+                    get_sandbox_lab_run=lambda *args, **kwargs: {'scan_job_id': None, 'proof_payload': {'proof': {'scan_id': 17}}},
+                    list_sandbox_lab_events=lambda _: [])
+        self.assertEqual((await get('lab-iac', object()))['lab']['scan_ids'], [17])
+
     async def test_lab_resolves_only_owned_job(self):
         lab_lookup = Mock(return_value={'scan_job_id': 'job-k8s'})
         job_lookup = Mock(return_value={'scan_ids': [22]})

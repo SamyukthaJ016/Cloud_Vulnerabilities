@@ -5029,6 +5029,11 @@ async def get_sandbox_lab(lab_id: str, req: Request, tenant_id: Optional[str] = 
         raise HTTPException(status_code=404, detail="Sandbox lab not found")
     job = get_scan_job(lab["scan_job_id"], user_id=user_id, tenant_id=resolved_tenant_id) if lab.get("scan_job_id") else None
     lab["scan_ids"] = job.get("scan_ids", []) if job else []
+    if not lab.get("scan_job_id"):
+        proof = lab.get("proof_payload") or {}
+        nested = proof.get("proof") or {}
+        scan_id = proof.get("scan_id") or nested.get("scan_id")
+        lab["scan_ids"] = [scan_id] if scan_id else (nested.get("scan_result") or proof.get("scan_result") or {}).get("scan_ids", [])
     return {"status": "ok", "lab": lab, "events": list_sandbox_lab_events(lab_id)}
 
 
