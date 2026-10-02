@@ -5027,6 +5027,8 @@ async def get_sandbox_lab(lab_id: str, req: Request, tenant_id: Optional[str] = 
     lab = get_sandbox_lab_run(lab_id, user_id=user_id, tenant_id=resolved_tenant_id)
     if not lab:
         raise HTTPException(status_code=404, detail="Sandbox lab not found")
+    job = get_scan_job(lab["scan_job_id"], user_id=user_id, tenant_id=resolved_tenant_id) if lab.get("scan_job_id") else None
+    lab["scan_ids"] = job.get("scan_ids", []) if job else []
     return {"status": "ok", "lab": lab, "events": list_sandbox_lab_events(lab_id)}
 
 
@@ -6047,12 +6049,13 @@ async def get_provider_breakdown(req: Request, scan_ids: Optional[str] = None):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/scan-history")
-async def get_scan_history(req: Request, days: int = 30):
+async def get_scan_history(req: Request, days: int = 30, scan_ids: Optional[str] = None):
     try:
         user_id = get_user_id(req)
         tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
+            ids = [int(value.strip()) for value in scan_ids.split(",")] if scan_ids else None
             cur.execute("""
                 SELECT
                     DATE(s.started_at) as scan_date,
@@ -6063,9 +6066,10 @@ async def get_scan_history(req: Request, days: int = 30):
                 LEFT JOIN findings f ON s.id = f.scan_id
                 WHERE s.user_id = %s AND s.tenant_id = %s
                   AND s.started_at >= NOW() - INTERVAL %s
+                  AND (%s::int[] IS NULL OR s.id = ANY(%s::int[]))
                 GROUP BY DATE(s.started_at)
                 ORDER BY scan_date ASC
-            """, (user_id, tenant_id, f"{days} days"))
+            """, (user_id, tenant_id, f"{days} days", ids, ids))
             results = cur.fetchall()
 
         return {
@@ -6085,10 +6089,12 @@ async def get_scan_history(req: Request, days: int = 30):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/latest-findings")
-async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[str] = None):
+async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[str] = None, offset: int = 0):
     try:
         user_id = get_user_id(req)
         tenant_id = _request_tenant_id(req, user_id=user_id)
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
         conn = get_conn()
         with conn.cursor() as cur:
             query = """
@@ -6100,7 +6106,7 @@ async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[
                     f.validated_by as tool,
                     f.created_at
                 FROM findings f
-                JOIN resources r ON f.resource_id = r.id
+                JOIN resources r ON f.resource_id = r.id AND r.scan_id = f.scan_id
                 JOIN scans s ON s.id = f.scan_id
             """
             params = [user_id, tenant_id]
@@ -6112,16 +6118,22 @@ async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[
                     query += " AND f.scan_id = ANY(%s)"
                     params.append(ids)
                 except ValueError:
-                    pass
+                    return {"status": "error", "message": "Invalid scan IDs", "data": []}
 
-            query += " ORDER BY f.created_at DESC LIMIT %s"
-            params.append(limit)
+            count_query = "SELECT COUNT(*) " + query[query.index("FROM findings f"):]
+            cur.execute(count_query, tuple(params))
+            total = cur.fetchone()[0]
+            query += " ORDER BY f.created_at DESC, f.id DESC LIMIT %s OFFSET %s"
+            params.extend([limit, offset])
 
             cur.execute(query, tuple(params))
             results = cur.fetchall()
 
         return {
             "status": "success",
+            "total": total,
+            "offset": offset,
+            "has_more": offset + len(results) < total,
             "data": [
                 {
                     "resource_name": resource_name,

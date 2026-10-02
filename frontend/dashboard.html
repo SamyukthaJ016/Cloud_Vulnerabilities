@@ -1215,38 +1215,61 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 `Last updated: ${now.toLocaleTimeString('en-US', options)}`;
         }
 
+        async function resolveDashboardScope(search, request = fetch) {
+            const params = new URLSearchParams(search);
+            const labId = params.get('labId');
+            let scanIds = params.get('scanIds') || params.get('scans') || params.get('scan_id');
+            if (labId) {
+                const response = await request(`/api/sandbox-labs/${encodeURIComponent(labId)}`);
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Could not load demo results');
+                scanIds = (result.lab?.scan_ids || []).join(',');
+                if (!scanIds) throw new Error('This demo has no completed scan results yet.');
+            }
+            if (!scanIds) return '';
+            if (!/^\d+(,\d+)*$/.test(scanIds)) throw new Error('Invalid scan selection');
+            return `?scan_ids=${encodeURIComponent(scanIds)}`;
+        }
+
+        async function fetchAllDashboardFindings(filter, request = fetch) {
+            const findings = [];
+            let more = true;
+            while (more) {
+                const response = await request(`/api/latest-findings${filter}${filter ? '&' : '?'}limit=200&offset=${findings.length}`);
+                const page = await response.json();
+                if (!response.ok || page.status !== 'success') throw new Error(page.message || 'Could not load findings');
+                const rows = page.data || [];
+                if (page.has_more && !rows.length) throw new Error('Incomplete findings response');
+                findings.push(...rows);
+                more = page.has_more === true;
+            }
+            return findings;
+        }
+
+        let dashboardLoading = false;
         async function loadDashboard() {
+            if (dashboardLoading) return;
+            dashboardLoading = true;
             try {
                 console.log('Loading dashboard data...');
-
-                // Read scanIds from URL with fallback to sessionStorage
-                const urlParams = new URLSearchParams(window.location.search);
-                let scanIds = urlParams.get('scanIds');
-
-                if (scanIds) {
-                    sessionStorage.setItem('last_scan_ids', scanIds);
-                    console.log('💾 Saving scanIds to session:', scanIds);
-                } else {
-                    scanIds = sessionStorage.getItem('last_scan_ids');
-                    if (scanIds) console.log('📂 Retrieved scanIds from session fallback:', scanIds);
-                }
-
-                const filter = scanIds ? `?scan_ids=${scanIds}` : '';
+                const filter = await resolveDashboardScope(window.location.search);
 
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
                 document.getElementById('security-score').textContent = '...';
                 document.getElementById('active-tools').textContent = '...';
 
-                const [summaryRes, providersRes, findingsRes] = await Promise.all([
+                const [summaryRes, providersRes, findings] = await Promise.all([
                     fetch(`/posture/dashboard${filter}`),
                     fetch(`/api/provider-breakdown${filter}`),
-                    fetch(`/api/latest-findings${filter}${scanIds ? '&' : '?'}limit=20`)
+                    fetchAllDashboardFindings(filter)
                 ]);
 
                 const summary = await summaryRes.json();
                 const providers = await providersRes.json();
-                const findings = await findingsRes.json();
+                if (!summaryRes.ok || !providersRes.ok || summary.status === 'error' || providers.status === 'error') {
+                    throw new Error('Could not load scan summary');
+                }
 
                 console.log('📊 Dashboard Summary:', summary);
                 console.log('☁️ Providers Breakdown:', providers);
@@ -1263,17 +1286,25 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 document.getElementById('active-tools').textContent =
                     Object.keys(summary.vulnerability_tools_available || {}).length;
 
-                await loadTrendChart();
+                await loadTrendChart(filter);
                 await loadCloudChart(providers.data || []);
                 await loadCloudProviders(providers.data || []);
 
-                await loadVulnerabilities(findings.data || []);
+                await loadVulnerabilities(findings);
+                filterVulnerabilities(currentFilter);
 
                 console.log('Dashboard loaded successfully');
 
             } catch (error) {
                 console.error('Dashboard load failed:', error);
-                showError('Failed to load dashboard data');
+                document.getElementById('vulnerability-list').replaceChildren();
+                document.getElementById('cloud-providers').replaceChildren();
+                for (const id of ['total-resources', 'total-findings', 'security-score', 'active-tools']) {
+                    document.getElementById(id).textContent = '--';
+                }
+                showError(error.message || 'Failed to load dashboard data');
+            } finally {
+                dashboardLoading = false;
             }
         }
 
@@ -1323,9 +1354,9 @@ gcloud compute instances delete-access-config ${resourceName} \\
             }
         }
 
-        async function loadTrendChart() {
+        async function loadTrendChart(filter = '') {
             try {
-                const response = await fetch('/api/scan-history?days=30');
+                const response = await fetch(`/api/scan-history${filter}${filter ? '&' : '?'}days=30`);
                 const data = await response.json();
 
                 const ctx = document.getElementById('trendChart');
@@ -1727,7 +1758,8 @@ gcloud compute instances delete-access-config ${resourceName} \\
             document.querySelectorAll('.severity-filter').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            const selected = document.querySelector(`.severity-filter[onclick="filterVulnerabilities('${severity}')"]`);
+            if (selected) selected.classList.add('active');
 
             const cards = document.querySelectorAll('.vulnerability-card');
             cards.forEach(card => {

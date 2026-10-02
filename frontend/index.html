@@ -1706,7 +1706,7 @@
         }
 
         function extractDemoScanIds(lab) {
-            const ids = [];
+            const ids = [...(lab?.scan_ids || [])];
             const proof = lab?.proof_payload || {};
             const directScanId = proof.scan_id || proof.proof?.scan_id;
             if (directScanId) ids.push(directScanId);
