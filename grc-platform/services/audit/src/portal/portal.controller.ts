@@ -20,6 +20,7 @@ import { Request } from 'express';
 import { PortalService } from './portal.service';
 import { PortalLoginDto, CreatePortalUserDto, UpdatePortalUserDto } from './dto/portal.dto';
 import { JwtAuthGuard, User, UserContext } from '../auth/dev-auth.guard';
+import { Roles, RolesGuard } from '@gigachad-grc/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('api')
@@ -81,7 +82,8 @@ export class PortalController {
    * SECURITY: Uses authenticated user's organizationId to prevent unauthorized access
    */
   @Get('audits/:auditId/portal/users')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'compliance_manager')
   async listPortalUsers(@Param('auditId') auditId: string, @User() user: UserContext) {
     return this.portalService.listPortalUsers(auditId, user.organizationId);
   }
@@ -91,7 +93,8 @@ export class PortalController {
    * SECURITY: Uses authenticated user's organizationId to prevent unauthorized access
    */
   @Post('audits/:auditId/portal/users')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'compliance_manager')
   async createPortalUser(
     @Param('auditId') auditId: string,
     @Body() dto: CreatePortalUserDto,
@@ -105,7 +108,8 @@ export class PortalController {
    * SECURITY: Uses authenticated user's organizationId to prevent unauthorized access
    */
   @Put('audits/:auditId/portal/users/:userId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'compliance_manager')
   async updatePortalUser(
     @Param('auditId') auditId: string,
     @Param('userId') userId: string,
@@ -120,7 +124,8 @@ export class PortalController {
    * SECURITY: Uses authenticated user's organizationId to prevent unauthorized access
    */
   @Delete('audits/:auditId/portal/users/:userId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'compliance_manager')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePortalUser(
     @Param('auditId') auditId: string,
@@ -135,7 +140,8 @@ export class PortalController {
    * SECURITY: Uses authenticated user's organizationId to prevent unauthorized access
    */
   @Get('audits/:auditId/portal/logs')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'compliance_manager')
   async getAccessLogs(
     @Param('auditId') auditId: string,
     @Query('limit') limit: string = '100',
@@ -149,7 +155,8 @@ export class PortalController {
    * SECURITY: Uses authenticated user's organizationId to prevent unauthorized access
    */
   @Post('audits/:auditId/portal/users/bulk')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'compliance_manager')
   async bulkCreatePortalUsers(
     @Param('auditId') auditId: string,
     @Body() users: CreatePortalUserDto[],

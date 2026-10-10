@@ -17,7 +17,9 @@ services:
       start_period: 20s
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    build:
+      context: ../..
+      dockerfile: deploy/dokploy/minio.Dockerfile
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -36,16 +38,20 @@ services:
       start_period: 20s
 
   minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production-lite
+    command: ["python", "backend/scripts/init_object_storage.py"]
+    environment:
+      OBJECT_STORAGE_ENDPOINT_URL: http://minio:9000
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-dokploy}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:?OBJECT_STORAGE_BUCKET is required}
+      OBJECT_STORAGE_ACCESS_KEY_ID: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD};
-      mc mb --ignore-existing local/${OBJECT_STORAGE_BUCKET};
-      exit 0;
-      "
 
   backend:
     build:
@@ -54,6 +60,7 @@ services:
       target: production-lite
     restart: unless-stopped
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
       QUEUE_BACKEND: postgres
       SCAN_JOB_INLINE_WORKER: "false"
@@ -61,6 +68,7 @@ services:
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
@@ -68,6 +76,7 @@ services:
       WORKER_TOKEN: ${WORKER_TOKEN:?WORKER_TOKEN is required}
       WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
       CLOUDGUARD_AUTH_REQUIRED: "true"
+      GRC_ONBOARDING_URL: ${GRC_ONBOARDING_URL:-}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:?KEYCLOAK_ISSUER is required}
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:?KEYCLOAK_AUDIENCE is required}
       KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:?KEYCLOAK_JWKS_URL is required}
@@ -90,7 +99,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       NODE_ENV: production
@@ -119,8 +128,11 @@ services:
     restart: always
     command: ["python", "-m", "backend.scheduler_worker"]
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       SCHEDULER_ENQUEUE_ONLY: "true"
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       WORKER_TOKEN: ${WORKER_TOKEN:?WORKER_TOKEN is required}
       SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-dokploy-scheduler-worker-1}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
@@ -148,8 +160,11 @@ services:
     restart: always
     command: ["python", "backend/scripts/local_scan_job_worker.py"]
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       SCAN_WORKER_ID: ${SCAN_WORKER_ID:-dokploy-scan-worker-1}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}
@@ -187,14 +202,18 @@ services:
     restart: always
     command: ["python", "backend/scripts/sandbox_lab_worker.py"]
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scanner_db}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
       SANDBOX_LAB_WORKER_ID: ${SANDBOX_LAB_WORKER_ID:-dokploy-sandbox-lab-worker-1}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
       SANDBOX_LAB_WORKER_POLL_INTERVAL: ${SANDBOX_LAB_WORKER_POLL_INTERVAL:-10}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
       SCAN_JOB_TIMEOUT_MINUTES: ${SCAN_JOB_TIMEOUT_MINUTES:-20}

@@ -34,10 +34,11 @@ describe('LocalStorageProvider', () => {
       }).toThrow('SECURITY: Path traversal detected - access denied');
     });
 
-    it('should reject path with encoded ../ sequences', () => {
-      expect(() => {
-        (storage as any).getFullPath('..%2F..%2F..%2Fetc/passwd');
-      }).toThrow('SECURITY: Path traversal detected - access denied');
+    it('keeps percent-encoded filenames literal and inside storage', () => {
+      const key = '..%2F..%2F..%2Fetc/passwd';
+      const resolved = (storage as any).getFullPath(key);
+      expect(path.relative(tempDir, resolved)).toBe(key);
+      expect(resolved.startsWith(tempDir + path.sep)).toBe(true);
     });
 
     it('should reject path starting with /', () => {

@@ -22,6 +22,7 @@ import {
   YAxis,
 } from 'recharts';
 import clsx from 'clsx';
+import { Button } from '@/components/ui/Button';
 import {
   cloudGuardApi,
   CloudGuardControl,
@@ -219,7 +220,7 @@ export default function CloudGuardConnector() {
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-surface-800 pt-4 text-sm">
           <span className={clsx(
             'inline-flex items-center gap-2 font-medium',
-            workers?.scan_workers_online ? 'text-emerald-300' : 'text-amber-300'
+            workers?.scan_workers_online ? 'text-emerald-700' : 'text-amber-700'
           )}>
             {workers?.scan_workers_online
               ? <CheckCircleIcon className="h-5 w-5" />
@@ -227,22 +228,23 @@ export default function CloudGuardConnector() {
             Scanner workers {workers?.scan_workers_online ? 'online' : 'offline'}
           </span>
           <span className="text-surface-600">Last refreshed {latestLabel(dashboard?.generated_at)}</span>
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => dashboardQuery.refetch()}
-            className="btn-secondary ml-auto inline-flex items-center gap-2"
+            className="ml-auto"
             disabled={dashboardQuery.isFetching}
           >
             <ArrowPathIcon className={clsx('h-4 w-4', dashboardQuery.isFetching && 'animate-spin')} />
             Refresh
-          </button>
+          </Button>
         </div>
       </section>
 
       {dashboardQuery.isError && (
         <section className="rounded-lg border border-rose-500/40 bg-rose-500/10 p-5">
           <div className="flex items-start gap-3">
-            <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 text-rose-300" />
+            <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 text-rose-700" />
             <div>
               <h2 className="font-semibold text-rose-100">CloudGuard data is unavailable</h2>
               <p className="mt-1 text-sm text-rose-200/80">
@@ -288,7 +290,7 @@ export default function CloudGuardConnector() {
           )}
           <div className="grid grid-cols-2 gap-2">
             {evidenceSplit.map((item) => (
-              <div key={item.name} className="flex items-center gap-2 text-xs text-surface-400">
+              <div key={item.name} className="flex items-center gap-2 text-xs text-surface-700">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />
                 {item.name}: {item.value}
               </div>
@@ -387,7 +389,7 @@ export default function CloudGuardConnector() {
 
       <section className="card p-5">
         <div className="flex items-center gap-2">
-          <ExclamationTriangleIcon className="h-5 w-5 text-amber-300" />
+          <ExclamationTriangleIcon className="h-5 w-5 text-amber-700" />
           <h2 className="text-lg font-semibold text-surface-100">What To Fix First</h2>
         </div>
         {fixFirst.length ? (
@@ -410,7 +412,7 @@ export default function CloudGuardConnector() {
                     <td className="px-4 py-3 font-bold text-surface-100">#{item.priority}</td>
                     <td className="px-4 py-3 font-medium text-surface-100">{item.finding}</td>
                     <td className="px-4 py-3 text-surface-500">{item.source}</td>
-                    <td className="px-4 py-3 text-surface-300">{item.control}</td>
+                    <td className="px-4 py-3 text-surface-700">{item.control}</td>
                     <td className="px-4 py-3"><RiskPill value={item.risk} /></td>
                     <td className="px-4 py-3"><StatusPill value={item.audit} /></td>
                     <td className="px-4 py-3 text-surface-500">{item.fix}</td>
@@ -448,12 +450,12 @@ export default function CloudGuardConnector() {
 function StatusPill({ value }: { value: string }) {
   const style =
     ['Connected', 'Ready', 'Approved'].includes(value)
-      ? 'bg-emerald-500/15 text-emerald-300'
+      ? 'bg-emerald-500/15 text-emerald-700'
       : ['Failed', 'Offline'].includes(value)
-        ? 'bg-rose-500/15 text-rose-300'
+        ? 'bg-rose-500/15 text-rose-700'
         : value === 'No Evidence'
-          ? 'bg-surface-700 text-surface-400'
-          : 'bg-amber-500/15 text-amber-300';
+          ? 'bg-surface-700 text-surface-700'
+          : 'bg-amber-500/15 text-amber-700';
 
   return <span className={clsx('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', style)}>{value}</span>;
 }

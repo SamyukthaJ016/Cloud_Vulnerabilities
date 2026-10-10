@@ -364,7 +364,7 @@ export default function FrameworkDetail() {
             </div>
             <Link
               to="/evidence/11111111-1111-4111-8111-111111111111"
-              className="btn btn-secondary whitespace-nowrap"
+              className="inline-flex h-9 items-center rounded-md border border-surface-400 bg-surface-200 px-4 text-surface-900 hover:bg-surface-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 whitespace-nowrap"
             >
               View CloudGuard evidence
             </Link>

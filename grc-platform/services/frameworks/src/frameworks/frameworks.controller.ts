@@ -206,8 +206,8 @@ export class FrameworksController {
   @ApiParam({ name: 'id', description: 'Framework ID' })
   @ApiBody({ type: CreateRequirementDto })
   @ApiResponse({ status: 201, description: 'Requirement created successfully' })
-  async createRequirement(@Param('id') id: string, @Body() dto: CreateRequirementDto) {
-    return this.frameworksService.createRequirement(id, dto);
+  async createRequirement(@CurrentUser() user: UserContext, @Param('id') id: string, @Body() dto: CreateRequirementDto) {
+    return this.frameworksService.createRequirement(id, user.organizationId, dto);
   }
 
   @Post(':id/requirements/bulk-upload')
@@ -221,8 +221,8 @@ export class FrameworksController {
   @ApiOperation({ summary: 'Bulk upload requirements from CSV or Excel file' })
   @ApiParam({ name: 'id', description: 'Framework ID' })
   @ApiResponse({ status: 201, description: 'Requirements uploaded successfully' })
-  async bulkUploadRequirements(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
-    return this.frameworksService.bulkUploadRequirements(id, file);
+  async bulkUploadRequirements(@CurrentUser() user: UserContext, @Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    return this.frameworksService.bulkUploadRequirements(id, user.organizationId, file);
   }
 
   @Get(':id/requirements/tree')
@@ -248,12 +248,12 @@ export class FrameworksController {
   @ApiParam({ name: 'id', description: 'Framework ID' })
   @ApiParam({ name: 'requirementId', description: 'Requirement ID' })
   @ApiBody({ type: UpdateRequirementOwnerDto })
-  async updateRequirement(
+  async updateRequirement(@CurrentUser() user: UserContext,
     @Param('id') id: string,
     @Param('requirementId') requirementId: string,
     @Body() dto: UpdateRequirementOwnerDto
   ) {
-    return this.frameworksService.updateRequirement(id, requirementId, dto);
+    return this.frameworksService.updateRequirement(id, user.organizationId, requirementId, dto);
   }
 
   @Get(':id/readiness')

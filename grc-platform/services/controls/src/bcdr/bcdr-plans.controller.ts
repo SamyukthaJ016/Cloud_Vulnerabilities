@@ -206,7 +206,7 @@ export class BCDRPlansController {
     @CurrentUser() user: UserContext,
     @Body() body: { controlId: string; notes?: string },
   ) {
-    return this.plansService.linkControl(id, body.controlId, user.userId, body.notes);
+    return this.plansService.linkControl(id, user.organizationId, body.controlId, user.userId, body.notes);
   }
 
   @Delete(':id/controls/:controlId')
@@ -214,10 +214,10 @@ export class BCDRPlansController {
   @ApiParam({ name: 'id', description: 'Plan ID' })
   @ApiParam({ name: 'controlId', description: 'Control ID' })
   @RequirePermission(Resource.BCDR, Action.UPDATE)
-  async unlinkControl(
+  async unlinkControl(@CurrentUser() user: UserContext,
     @Param('id') id: string,
     @Param('controlId') controlId: string,
   ) {
-    return this.plansService.unlinkControl(id, controlId);
+    return this.plansService.unlinkControl(id, user.organizationId, controlId);
   }
 }

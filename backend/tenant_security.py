@@ -40,7 +40,17 @@ class ConnectorIdentity:
 
 def cloudguard_auth_required() -> bool:
     """Return whether browser/API requests must carry a Keycloak JWT."""
-    return os.getenv("CLOUDGUARD_AUTH_REQUIRED", "false").lower() == "true"
+    production = any(os.getenv(key, "").lower() == "production" for key in ("APP_ENV", "NODE_ENV"))
+    return production or os.getenv("CLOUDGUARD_AUTH_REQUIRED", "false").lower() == "true"
+
+
+def validate_auth_configuration() -> None:
+    """Fail startup on an incomplete or explicitly disabled production identity setup."""
+    production = any(os.getenv(key, "").lower() == "production" for key in ("APP_ENV", "NODE_ENV"))
+    if production and os.getenv("CLOUDGUARD_AUTH_REQUIRED", "true").lower() != "true":
+        raise RuntimeError("CLOUDGUARD_AUTH_REQUIRED cannot be disabled in production")
+    if cloudguard_auth_required():
+        _keycloak_settings()
 
 
 def _require_valid_tenant_id(value: object, label: str = "tenant_id") -> str:
@@ -73,7 +83,7 @@ def _keycloak_settings() -> tuple[str, str, str]:
     return issuer, audience, jwks_url
 
 
-def verify_keycloak_request(request: Request) -> RequestIdentity:
+def verify_keycloak_claims(request: Request) -> dict:
     """Verify a Keycloak access token and return its server-trusted identity."""
     token = _bearer_token(request.headers)
     if not token:
@@ -98,6 +108,12 @@ def verify_keycloak_request(request: Request) -> RequestIdentity:
     user_id = claims.get("sub")
     if not isinstance(user_id, str) or not user_id:
         raise HTTPException(status_code=401, detail="Token subject is required")
+    return claims
+
+
+def verify_keycloak_request(request: Request) -> RequestIdentity:
+    claims = verify_keycloak_claims(request)
+    user_id = claims["sub"]
     tenant_id = _require_valid_tenant_id(claims.get("organization_id"), "organization_id")
     email = claims.get("email") or claims.get("preferred_username") or ""
     return RequestIdentity(user_id=user_id, tenant_id=tenant_id, email=str(email))

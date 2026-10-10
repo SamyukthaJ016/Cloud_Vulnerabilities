@@ -11,7 +11,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: ${DATABASE_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       SCAN_WORKER_ID: ${SCAN_WORKER_ID:-e2e-scan-worker-1}
       SCAN_WORKER_POLL_INTERVAL: ${SCAN_WORKER_POLL_INTERVAL:-10}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
@@ -74,10 +76,13 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: ${DATABASE_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}

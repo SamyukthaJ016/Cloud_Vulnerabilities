@@ -348,7 +348,7 @@ Create an optimal plan to achieve the goal.
     def _get_historical_context(self, goal: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Query memory for relevant historical context"""
         try:
-            summary = memory_system.get_dashboard_summary()
+            summary = memory_system.for_owner(context.get("tenant_id"), context.get("user_id")).get_dashboard_summary()
             
             # Get recurring issues
             from backend.database import get_conn
@@ -357,11 +357,11 @@ Create an optimal plan to achieve the goal.
                 cur.execute("""
                     SELECT issue, COUNT(*) as count
                     FROM finding_memory
-                    WHERE status = 'recurring' AND occurrence_count > 2
+                    WHERE tenant_id = %s AND user_id = %s AND status = 'recurring' AND occurrence_count > 2
                     GROUP BY issue
                     ORDER BY count DESC
                     LIMIT 5
-                """)
+                """, (context.get("tenant_id"), context.get("user_id")))
                 recurring = [{"issue": r[0], "count": r[1]} for r in cur.fetchall()]
             
             return {
@@ -575,8 +575,8 @@ class AgenticExecutor:
         query = action.parameters.get("query", "")
         
         # Get relevant historical data
-        summary = memory_system.get_dashboard_summary()
-        open_tasks = memory_system.get_open_tasks()[:10]
+        summary = memory_system.for_owner(context.get("tenant_id"), context.get("user_id")).get_dashboard_summary()
+        open_tasks = memory_system.for_owner(context.get("tenant_id"), context.get("user_id")).get_open_tasks()[:10]
         
         return {
             "summary": summary,

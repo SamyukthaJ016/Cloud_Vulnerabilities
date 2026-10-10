@@ -5470,6 +5470,8 @@ model CustomFieldDefinition {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  createdBy String? @map("created_by")
+
   // Relations
   values CustomFieldValue[]
 
@@ -5486,6 +5488,8 @@ model CustomFieldValue {
   value      Json
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
+
+  createdBy String? @map("created_by")
 
   // Relations
   field CustomFieldDefinition @relation(fields: [fieldId], references: [id], onDelete: Cascade)
@@ -5508,6 +5512,7 @@ model UserDelegation {
   delegateName   String    @map("delegate_name")
   startDate      DateTime  @map("start_date")
   endDate        DateTime  @map("end_date")
+  scopes         String[] @default([])
   scope          String // all, approvals, tasks, reviews, specific
   entityTypes    String[]  @default([]) @map("entity_types")
   entityIds      String[]  @default([]) @map("entity_ids")
@@ -5533,6 +5538,10 @@ model UserDelegation {
 model RetentionPolicy {
   id                  String    @id @default(uuid())
   organizationId      String    @map("organization_id")
+  name                String @default("")
+  status              String @default("draft")
+  createdBy           String? @map("created_by")
+  nextRunAt           DateTime? @map("next_run_at")
   entityType          String    @map("entity_type") // audit_logs, evidence, etc.
   periodValue         Int       @map("period_value")
   periodUnit          String    @map("period_unit") // days, months, years
@@ -5549,7 +5558,7 @@ model RetentionPolicy {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
-  @@unique([organizationId, entityType])
+  @@index([organizationId, entityType])
   @@index([organizationId, isEnabled])
   @@map("retention_policies")
 }

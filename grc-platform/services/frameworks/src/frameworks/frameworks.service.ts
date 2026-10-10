@@ -177,8 +177,17 @@ export class FrameworksService {
     return { success: true };
   }
 
+  private async requireOwnedFramework(id: string, organizationId: string) {
+    if (!organizationId) throw new NotFoundException('Framework not found');
+    const framework = await this.prisma.framework.findFirst({
+      where: { id, organizationId, deletedAt: null },
+    });
+    if (!framework) throw new NotFoundException('Editable framework not found');
+    return framework;
+  }
+
   async createRequirement(
-    frameworkId: string,
+    frameworkId: string, organizationId: string,
     dto: {
       reference: string;
       title: string;
@@ -190,7 +199,7 @@ export class FrameworksService {
     }
   ) {
     // Verify framework exists
-    await this.findOne(frameworkId);
+    await this.requireOwnedFramework(frameworkId, organizationId);
 
     // If parentId is provided, verify it exists and belongs to this framework
     if (dto.parentId) {
@@ -241,9 +250,9 @@ export class FrameworksService {
     return requirement;
   }
 
-  async bulkUploadRequirements(frameworkId: string, file: Express.Multer.File) {
+  async bulkUploadRequirements(frameworkId: string, organizationId: string, file: Express.Multer.File) {
     // Verify framework exists
-    await this.findOne(frameworkId);
+    await this.requireOwnedFramework(frameworkId, organizationId);
 
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -403,7 +412,7 @@ export class FrameworksService {
   }
 
   async getRequirementTree(frameworkId: string, organizationId?: string) {
-    await this.findOne(frameworkId);
+    await this.findOne(frameworkId, organizationId);
 
     // Get all requirements with control implementations
     const allRequirements = await this.prisma.frameworkRequirement.findMany({
@@ -544,7 +553,7 @@ export class FrameworksService {
   }
 
   async updateRequirement(
-    frameworkId: string,
+    frameworkId: string, organizationId: string,
     requirementId: string,
     dto: {
       ownerId?: string | null;
@@ -553,18 +562,22 @@ export class FrameworksService {
       priority?: string;
     }
   ) {
+    await this.requireOwnedFramework(frameworkId, organizationId);
     // Verify requirement exists
     const existing = await this.prisma.frameworkRequirement.findFirst({
-      where: { id: requirementId, frameworkId },
+      where: { id: requirementId, frameworkId, framework: { organizationId, deletedAt: null } },
     });
 
     if (!existing) {
       throw new NotFoundException(`Requirement with ID ${requirementId} not found`);
     }
 
+    if (dto.ownerId && !await this.prisma.user.findFirst({ where: { id: dto.ownerId, organizationId } })) {
+      throw new NotFoundException('Requirement owner not found');
+    }
     // Update the requirement
     const updated = await this.prisma.frameworkRequirement.update({
-      where: { id: requirementId },
+      where: { id: requirementId, frameworkId, framework: { organizationId, deletedAt: null } },
       data: {
         ownerId: dto.ownerId === null ? null : dto.ownerId,
         ownerNotes: dto.ownerNotes,
@@ -587,7 +600,7 @@ export class FrameworksService {
   }
 
   async calculateReadiness(frameworkId: string, organizationId: string) {
-    await this.findOne(frameworkId);
+    await this.findOne(frameworkId, organizationId);
 
     // Get all requirements with their mapped controls and implementation status
     const requirements = await this.prisma.frameworkRequirement.findMany({

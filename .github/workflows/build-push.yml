@@ -112,15 +112,15 @@ jobs:
         id: dockerfile
         run: |
           if [ "${{ matrix.service }}" == "frontend" ]; then
-            echo "path=frontend/Dockerfile" >> $GITHUB_OUTPUT
+            echo "path=grc-platform/frontend/Dockerfile" >> $GITHUB_OUTPUT
           else
-            echo "path=services/${{ matrix.service }}/Dockerfile" >> $GITHUB_OUTPUT
+            echo "path=grc-platform/services/${{ matrix.service }}/Dockerfile" >> $GITHUB_OUTPUT
           fi
 
       - name: Build and push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
-          context: .
+          context: ./grc-platform
           file: ${{ steps.dockerfile.outputs.path }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}

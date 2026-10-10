@@ -32,6 +32,8 @@ from backend.evidence_payloads import (
     stored_finding_control as _stored_finding_control,
 )
 from backend.mcp.mcp_aws_plugin import AWSPlugin
+from backend.aws_sandbox import allowed_aws_sandbox_accounts, verify_aws_sandbox_identity
+from backend.credentials.aws_assume_role import get_aws_session
 from backend.mcp.mcp_gcp_plugin import GCPPlugin
 
 # MCP Server Architecture
@@ -42,6 +44,7 @@ from backend.mcp_servers.iac_server import create_iac_server
 from backend.mcp_servers.kubernetes_server import create_kubernetes_server
 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.mcp_scanner import mcp_scanner
+from backend.mcp_runtime import isolated_mcp_runtime, isolated_scan, bind_mcp_owner
 
 # Vulnerability Scanning
 from backend.vulnerability.vulnerability_scanner import VulnerabilityScanner, ScanTarget
@@ -79,12 +82,15 @@ from backend.cloudfox.cloudfox_scanner import (
 from backend.migration_manager import run_migrations
 from backend.tenant_security import (
     cloudguard_auth_required,
+    validate_auth_configuration,
+    verify_keycloak_claims,
     require_connector_identity,
     request_identity,
 )
 
 
 load_dotenv()
+validate_auth_configuration()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp_scanner")
@@ -137,7 +143,7 @@ class CloudGuardIdentityMiddleware(BaseHTTPMiddleware):
     credentials inside their handlers. They never inherit browser identity.
     """
 
-    _public_paths = {"/health", "/api/auth/config"}
+    _public_paths = {"/health", "/api/auth/config", "/api/auth/onboard", "/history", "/scheduled_scans", "/schedules"}
     _machine_routes = (
         "/api/connectors/",
         "/api/workers/",
@@ -170,7 +176,8 @@ class CloudGuardIdentityMiddleware(BaseHTTPMiddleware):
                 request.state.identity = request_identity(request)
             except HTTPException as exc:
                 return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
-        return await call_next(request)
+        async with isolated_mcp_runtime():
+            return await call_next(request)
 
 
 app.add_middleware(CloudGuardIdentityMiddleware)
@@ -204,7 +211,6 @@ async def startup_event():
     multi_agent_analyzer = get_multi_agent_analyzer(os.getenv("OPENAI_API_KEY"))
 
     logger.info("🧠 Initializing Persistent Memory System...")
-    memory_system._ensure_tables_exist()
 
     logger.info("✅ Enhanced AI systems ready")
     logger.info("🚀 CloudGuard with MCP Server Architecture")
@@ -558,6 +564,32 @@ async def cloudguard_auth_config():
     }
 
 
+@app.post("/api/auth/onboard")
+async def onboard_account(req: Request):
+    claims = verify_keycloak_claims(req)
+    if claims.get("email_verified") is not True:
+        raise HTTPException(status_code=403, detail="Verify your email before creating an organization")
+    url = os.getenv("GRC_ONBOARDING_URL", "").strip()
+    if not url:
+        raise HTTPException(status_code=503, detail="Account setup is not configured")
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+            result = await client.post(url, headers={"Authorization": req.headers["authorization"]})
+        if result.status_code not in (200, 201):
+            raise HTTPException(status_code=result.status_code if result.status_code in (401, 403, 409) else 503,
+                                detail="Account setup could not be completed. Verify your email and retry.")
+        return result.json()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail="Account setup is temporarily unavailable") from exc
+
+
+@app.get("/login", response_class=HTMLResponse)
+@app.get("/signup", response_class=HTMLResponse)
+async def account_page():
+    return HTMLResponse(read_frontend_asset("auth.html"))
+
+
 def _wrap_text(text: str, width: int = 95):
     text = text.replace("\r", " ").replace("\n", " ")
     return textwrap.wrap(text, width=width)
@@ -580,6 +612,14 @@ def build_scan_report(scan_id: int, user_id: str, tenant_id: str) -> dict:
         for r in rows
         if r[5]
     ]
+
+    return {
+        "scan_id": scan_id,
+        "providers": sorted({r[2].lower() for r in rows if r[2]}),
+        "total_resources": len({r[0] for r in rows}),
+        "total_findings": len(findings),
+        "findings": findings,
+    }
 
 
 # ============================================================
@@ -653,22 +693,6 @@ async def run_schedule_now(schedule_id: int, background_tasks: BackgroundTasks, 
     }
 
 
-load_dotenv()
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("mcp_scanner")
-
-
-
-OPENAI_AGENT_MODEL = os.getenv("OPENAI_AGENT_MODEL") or os.getenv("AI_MODEL", "gpt-4o-mini")
-
-openai_client = create_optional_openai_client()
-orchestrator_client = openai_client
-ai_engine = AIRecommendationEngine(api_key=os.getenv("OPENAI_API_KEY"))
-
-vuln_scanner = VulnerabilityScanner()
-vuln_integration = CloudVulnerabilityIntegration()
-
 # Initialize multi-agent analyzer
 multi_agent_analyzer = None
 
@@ -684,15 +708,13 @@ multi_agent_analyzer = None
 
 async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], credential_id: Optional[int] = None):
     """Ensure MCP servers are initialized for the user's selected providers."""
+    bind_mcp_owner(user_id)
     logger.info(f"🔄 (Re)initializing MCP servers for user {user_id} and requested providers: {providers}")
 
     for provider in providers:
         if provider == "aws":
             # Use specific credential if provided, otherwise use default
-            if credential_id:
-                aws_cred = credential_manager.get_credential_by_id(user_id, credential_id)
-            else:
-                aws_cred = credential_manager.get_default_credential(user_id, "aws")
+            aws_cred = credential_manager.resolve_scan_credential(user_id, "aws", credential_id)
 
             if (not aws_cred):
                 logger.warning(f"⚠️ No AWS credentials found in DB for user {user_id}")
@@ -735,7 +757,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
 
             # 🔥 THIS IS CRITICAL
             mcp_registry.register("aws", server)
-            if not mcp_server_manager.get_server("cloudfox"):
+            if not cloudguard_auth_required() and user_id == "anonymous" and not mcp_server_manager.get_server("cloudfox"):
                 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 
                 cloudfox_server = create_cloudfox_server({
@@ -751,7 +773,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
 
         elif provider == "gcp":
             logger.info(f"[ServerInit] Attempting to retrieve default GCP credential for user: {user_id}")
-            gcp_cred = credential_manager.get_default_credential(user_id, "gcp")
+            gcp_cred = credential_manager.resolve_scan_credential(user_id, "gcp", credential_id)
 
             if not gcp_cred:
                 logger.warning(f"⚠️ No GCP credentials found in DB for user {user_id}")
@@ -779,6 +801,8 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
             logger.info(f"✅ GCP MCP Server initialized and registered for project: {gcp_cred.gcp_project_id}")
 
         elif provider == "cloudfox":
+            if cloudguard_auth_required() or user_id != "anonymous":
+                raise ValueError("Host-profile CloudFox scanning is available only in local anonymous mode")
             if mcp_server_manager.get_server("cloudfox"):
                 continue
 
@@ -791,7 +815,7 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
             logger.info("✅ CloudFox MCP server initialized")
 
         elif provider == "kubernetes":
-            kube_cred = credential_manager.get_default_credential(user_id, "kubernetes")
+            kube_cred = credential_manager.resolve_scan_credential(user_id, "kubernetes", credential_id)
 
             if not kube_cred:
                 logger.warning(f"⚠️ No Kubernetes kubeconfig found in DB for user {user_id}")
@@ -845,73 +869,76 @@ async def initialize_mcp_servers_for_user(user_id: str, providers: list[str], cr
             logger.info("✅ IaC scanner initialized")
 
 def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
-    """Convert raw MCP response dict to ScanResult object"""
+    """Normalize MCP results without dropping findings or provider errors."""
     if isinstance(data, ScanResult):
         return data
 
-    raw_resources = data.get("resources", [])
-    # 🛡️ DEFENSIVE: Handle cases where resources might be a dict instead of a list
+    raw_errors = data.get("errors") or []
+    errors = list(raw_errors) if isinstance(raw_errors, list) else [str(raw_errors)]
+    if data.get("error"):
+        errors.append(str(data["error"]))
+
+    def resource_from(raw):
+        if isinstance(raw, CloudResource):
+            return raw
+        if not isinstance(raw, dict):
+            raise ValueError("Invalid MCP resource")
+        return CloudResource(
+            provider=provider,
+            resource_type=raw.get("resource_type") or raw.get("type", "unknown"),
+            name=raw.get("name", "unknown"),
+            region=raw.get("region", "global"),
+            config=raw.get("config") or {},
+            is_public=raw.get("is_public", False),
+            tags=raw.get("tags") or {},
+        )
+
+    raw_resources = data.get("resources") or []
     if isinstance(raw_resources, dict):
-        logger.warning(f"⚠️ Provider {provider} returned resources as dict, converting to list")
-        resources_list = []
-        for r_type, count in raw_resources.items():
-            if isinstance(count, int):
-                # If it's just a count, we can't do much, but let's at least not crash
-                resources_list.append({
-                    "provider": provider,
-                    "resource_type": r_type,
-                    "name": f"{r_type}_count_{count}",
-                    "config": {"count": count}
-                })
-            else:
-                resources_list.append(count)
-        raw_resources = resources_list
-
+        raw_resources = list(raw_resources.values())
     resources = []
-    for r in raw_resources:
+    for raw in raw_resources:
+        # Some MCP tools return resource counts instead of inventory objects.
+        if isinstance(raw, int):
+            continue
         try:
-            if isinstance(r, dict):
-                # Ensure provider is set
-                if "provider" not in r: r["provider"] = provider
-                resources.append(CloudResource(**r))
-            else:
-                resources.append(r)
-        except Exception as e:
-            logger.error(f"❌ Failed to parse resource: {e}")
+            resources.append(resource_from(raw))
+        except (TypeError, ValueError) as exc:
+            errors.append(f"Invalid resource: {exc}")
 
-    findings_data = data.get("findings", [])
     findings = []
-    for f in findings_data:
+    for raw in data.get("findings") or []:
+        if isinstance(raw, SecurityFinding):
+            findings.append(raw)
+            continue
         try:
-            if isinstance(f, dict):
-                # 🛡️ DEFENSIVE: Fix missing mandatory fields for SecurityFinding
-                if "provider" not in f: f["provider"] = provider
-
-                # Handle nested resource
-                if isinstance(f.get("resource"), dict):
-                    res_dict = f["resource"]
-                    if "provider" not in res_dict: res_dict["provider"] = provider
-                    f["resource"] = CloudResource(**res_dict)
-                elif not f.get("resource"):
-                    # Create a dummy resource if missing
-                    f["resource"] = CloudResource(provider=provider, resource_type="unknown", name="unknown")
-
-                # Ensure recommendation exists
-                if "recommendation" not in f:
-                    f["recommendation"] = "No recommendation provided by scanner."
-
-                # Handle severity enum
-                if isinstance(f.get("severity"), str):
-                    try:
-                        f["severity"] = Severity(f["severity"].upper())
-                    except:
-                        f["severity"] = Severity.MEDIUM
-
-                findings.append(SecurityFinding(**f))
+            raw_resource = raw.get("resource")
+            if isinstance(raw_resource, (dict, CloudResource)):
+                resource = resource_from(raw_resource)
             else:
-                findings.append(f)
-        except Exception as e:
-            logger.error(f"❌ Failed to parse finding: {e}")
+                name = raw_resource or raw.get("resource_name") or "unknown"
+                resource = next((item for item in resources if item.name == name), None)
+                if resource is None:
+                    resource = CloudResource(provider=provider, resource_type="unknown", name=str(name))
+            severity = raw.get("severity", Severity.MEDIUM)
+            if not isinstance(severity, Severity):
+                try:
+                    severity = Severity(str(severity).upper())
+                except ValueError:
+                    severity = Severity.MEDIUM
+            findings.append(SecurityFinding(
+                resource=resource,
+                severity=severity,
+                issue=raw.get("issue", "Security Issue"),
+                description=raw.get("description", ""),
+                recommendation=raw.get("recommendation", "No recommendation provided by scanner."),
+                cve_id=raw.get("cve_id"),
+                compliance=raw.get("compliance") or [],
+                detection_tool=raw.get("detection_tool") or raw.get("tool") or "MCP-SERVER",
+                tool_category=raw.get("tool_category"),
+            ))
+        except (AttributeError, TypeError, ValueError) as exc:
+            errors.append(f"Invalid finding: {exc}")
 
     return ScanResult(
         provider=provider,
@@ -919,7 +946,7 @@ def _mcp_to_scan_result(provider: str, data: dict | ScanResult) -> ScanResult:
         resources=resources,
         findings=findings,
         scan_duration=data.get("scan_duration", 0.0),
-        errors=data.get("errors", [])
+        errors=errors,
     )
 
 async def run_gpt_agent(prompt: str) -> str:
@@ -943,6 +970,7 @@ async def run_gpt_agent(prompt: str) -> str:
         logger.error("GPT Agent error: %s", e)
         return f"Agent error: {e}"
 
+@isolated_scan
 async def run_multi_cloud_scan_internal(
     providers: list[str],
     account_ids: dict[str, str],
@@ -1247,8 +1275,11 @@ def generate_dashboard_url(scan_ids: List[int]) -> str:
 # Add this helper function for scan completion
 def format_scan_completion_response(scan_ids: List[int], scan_results: List[ScanResult], ai_analysis: dict):
     """Format standard scan completion response"""
+    errors = {r.provider: r.errors for r in scan_results if r.errors}
+    status = "completed" if not errors else ("failed" if len(errors) == len(scan_results) else "partial")
     return {
-        "status": "completed",
+        "status": status,
+        "errors": errors,
         "scan_ids": scan_ids,
         "dashboard_url": generate_dashboard_url(scan_ids),
         "timestamp": datetime.utcnow().isoformat(),
@@ -2211,6 +2242,13 @@ def _sandbox_provider_readiness(provider: str, user_id: Optional[str], credentia
         )
     if not credential_status["ready"]:
         blockers.append(credential_status["reason"])
+    if provider == "aws":
+        try:
+            if not allowed_aws_sandbox_accounts():
+                blockers.append("Configure SANDBOX_AWS_ACCOUNT_IDS with the approved isolated AWS account ID.")
+        except RuntimeError as exc:
+            blockers.append(str(exc))
+    enabled = enabled and not blockers
     reason = credential_status["reason"] if enabled else " ".join(blockers)
     return {
         "enabled": enabled,
@@ -2353,6 +2391,18 @@ def create_sandbox_lab_run(user_id: str, tenant_id: str, request: SandboxLabRequ
     readiness = _sandbox_provider_readiness(provider, user_id, request.credential_id)
     if not readiness["enabled"]:
         raise HTTPException(status_code=403, detail=readiness["reason"])
+
+    if provider == "aws":
+        credential = (
+            credential_manager.get_credential_by_id(user_id, int(request.credential_id))
+            if request.credential_id
+            else credential_manager.get_default_credential(user_id, provider)
+        )
+        if credential:
+            request.credential_id = credential.id
+            if request.region and request.region != (credential.aws_region or "us-east-1"):
+                raise HTTPException(status_code=400, detail="AWS demo region must match the saved scanner credential region.")
+            request.region = credential.aws_region or "us-east-1"
 
     ttl_minutes = max(1, min(int(request.ttl_minutes or 5), 240))
     lab_id = f"lab-{uuid.uuid4().hex}"
@@ -2508,9 +2558,10 @@ def claim_next_sandbox_lab() -> Optional[Dict[str, Any]]:
 def _credential_for_lab(lab: Dict[str, Any]) -> Optional[CloudCredential]:
     credential_id = lab.get("credential_id")
     provider = lab["provider"]
-    if credential_id:
-        return credential_manager.get_credential_by_id(lab["user_id"], int(credential_id))
-    return credential_manager.get_default_credential(lab["user_id"], provider)
+    credential = credential_manager.resolve_scan_credential(lab["user_id"], provider, int(credential_id) if credential_id else None)
+    if not credential and cloudguard_auth_required():
+        raise ValueError("An owned cloud credential is required for this lab")
+    return credential
 
 
 def _require_provider_enabled(provider: str) -> None:
@@ -2824,43 +2875,54 @@ def _aws_session_for_lab(lab: Dict[str, Any], require_enabled: bool = True):
         _require_provider_enabled("aws")
     credential = _credential_for_lab(lab)
     region = lab.get("region") or getattr(credential, "aws_region", None) or os.getenv("AWS_REGION") or "us-east-1"
+    if require_enabled and credential and region != (credential.aws_region or "us-east-1"):
+        raise RuntimeError("AWS demo region must match the saved scanner credential region.")
     try:
         import boto3
     except ImportError as exc:
         raise RuntimeError("boto3 is required for AWS sandbox labs") from exc
 
-    kwargs: Dict[str, Any] = {"region_name": region}
+    credentials = None
     if credential and credential.aws_access_key_id and credential.aws_secret_access_key:
-        kwargs.update(
-            {
-                "aws_access_key_id": credential.aws_access_key_id,
-                "aws_secret_access_key": credential.aws_secret_access_key,
-                "aws_session_token": credential.aws_session_token,
-            }
-        )
-    return boto3.Session(**kwargs), region
+        credentials = {
+            "access_key_id": credential.aws_access_key_id,
+            "secret_access_key": credential.aws_secret_access_key,
+            "session_token": credential.aws_session_token,
+            "role_arn": credential.aws_role_arn,
+        }
+    return get_aws_session(region, credentials), region
 
 
 async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
     session, region = _aws_session_for_lab(lab)
     sts = session.client("sts")
+    account_id = verify_aws_sandbox_identity(sts)
     s3 = session.client("s3")
     iam = session.client("iam")
     ec2 = session.client("ec2")
-    account_id = sts.get_caller_identity().get("Account", "unknown")
     suffix = uuid.uuid4().hex[:8]
     bucket_name = f"{lab['resource_prefix']}-{suffix}".replace("_", "-")[:63]
     user_name = f"{lab['resource_prefix']}-no-mfa-{suffix}"[:64]
     security_group_name = f"{lab['resource_prefix']}-open-admin-{suffix}"[:255]
     resources: List[Dict[str, Any]] = []
     public_policy_applied = False
+    tags = [
+        {"Key": "cloudguard-lab-id", "Value": lab["lab_id"]},
+        {"Key": "cloudguard-expires-at", "Value": lab["expires_at"]},
+    ]
+
+    def record_resource(resource):
+        resource["account_id"] = account_id
+        resources.append(resource)
+        update_sandbox_lab(lab["lab_id"], resources=resources)
 
     try:
         create_bucket_kwargs: Dict[str, Any] = {"Bucket": bucket_name}
         if region != "us-east-1":
             create_bucket_kwargs["CreateBucketConfiguration"] = {"LocationConstraint": region}
         s3.create_bucket(**create_bucket_kwargs)
-        resources.append({"type": "s3_bucket", "name": bucket_name, "region": region})
+        record_resource({"type": "s3_bucket", "name": bucket_name, "region": region})
+        s3.put_bucket_tagging(Bucket=bucket_name, Tagging={"TagSet": tags})
 
         s3.put_public_access_block(
             Bucket=bucket_name,
@@ -2900,12 +2962,12 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
                 "ResourceType": "vpc",
                 "Tags": [
                     {"Key": "Name", "Value": f"{lab['resource_prefix']}-lab-vpc"},
-                    {"Key": "cloudguard-lab-id", "Value": lab["lab_id"]},
+                    *tags,
                 ],
             }],
         )["Vpc"]
         vpc_id = vpc["VpcId"]
-        resources.append({"type": "vpc", "name": vpc_id, "region": region})
+        record_resource({"type": "vpc", "name": vpc_id, "region": region})
 
         security_group_id = ec2.create_security_group(
             GroupName=security_group_name,
@@ -2913,10 +2975,10 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
             VpcId=vpc_id,
             TagSpecifications=[{
                 "ResourceType": "security-group",
-                "Tags": [{"Key": "cloudguard-lab-id", "Value": lab["lab_id"]}],
+                "Tags": tags,
             }],
         )["GroupId"]
-        resources.append({
+        record_resource({
             "type": "security_group",
             "name": security_group_id,
             "vpc_id": vpc_id,
@@ -2938,6 +3000,12 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
                     "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "CloudGuard lab open RDP"}],
                 },
                 {
+                    "IpProtocol": "tcp",
+                    "FromPort": 5432,
+                    "ToPort": 5432,
+                    "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "CloudGuard lab open database"}],
+                },
+                {
                     "IpProtocol": "-1",
                     "IpRanges": [{"CidrIp": "0.0.0.0/0", "Description": "CloudGuard lab all traffic"}],
                 },
@@ -2946,9 +3014,9 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
 
         iam.create_user(
             UserName=user_name,
-            Tags=[{"Key": "cloudguard-lab-id", "Value": lab["lab_id"]}],
+            Tags=tags,
         )
-        resources.append({"type": "iam_user", "name": user_name, "region": "global"})
+        record_resource({"type": "iam_user", "name": user_name, "region": "global"})
         iam.put_user_policy(
             UserName=user_name,
             PolicyName="CloudGuardSandboxWildcard",
@@ -3000,8 +3068,22 @@ async def _deploy_aws_sandbox_lab(lab: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _cleanup_resource_absent(exc: Exception) -> bool:
+    response = getattr(exc, "response", {}) or {}
+    code = response.get("Error", {}).get("Code") if isinstance(response, dict) else None
+    return code in {"NoSuchBucket", "NoSuchEntity", "NoSuchEntityException", "InvalidGroup.NotFound", "InvalidVpcID.NotFound"} or getattr(exc, "status", None) == 404 or getattr(exc, "code", None) == 404
+
+
 def _destroy_aws_sandbox_resources(lab: Dict[str, Any], resources: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    resources = resources if resources is not None else lab.get("resources", [])
+    if not resources:
+        return {"deleted": [], "errors": []}
     session, _region = _aws_session_for_lab(lab, require_enabled=False)
+    account_ids = {resource["account_id"] for resource in resources if resource.get("account_id")}
+    if len(account_ids) > 1:
+        raise RuntimeError("AWS lab resources contain multiple account IDs; cleanup refused.")
+    expected_account_id = next(iter(account_ids), None)
+    verify_aws_sandbox_identity(session.client("sts"), expected_account_id, require_allowlisted=not bool(expected_account_id))
     s3 = session.client("s3")
     iam = session.client("iam")
     ec2 = session.client("ec2")
@@ -3016,7 +3098,7 @@ def _destroy_aws_sandbox_resources(lab: Dict[str, Any], resources: Optional[List
         "vpc": 40,
     }
     ordered_resources = sorted(
-        resources or lab.get("resources", []),
+        resources,
         key=lambda item: cleanup_order.get(item.get("type"), 100),
     )
     for resource in ordered_resources:
@@ -3064,7 +3146,10 @@ def _destroy_aws_sandbox_resources(lab: Dict[str, Any], resources: Optional[List
                 ec2.delete_vpc(VpcId=resource["name"])
                 deleted.append(resource)
         except Exception as exc:
-            errors.append({"resource": resource, "error": str(exc)})
+            if _cleanup_resource_absent(exc):
+                deleted.append({**resource, "already_absent": True})
+            else:
+                errors.append({"resource": resource, "error": str(exc)})
     return {"deleted": deleted, "errors": errors}
 
 
@@ -3215,7 +3300,10 @@ def _destroy_gcp_sandbox_resources(lab: Dict[str, Any]) -> Dict[str, Any]:
                 network_client.delete(project=project_id, network=resource["name"]).result(timeout=120)
                 deleted.append(resource)
         except Exception as exc:
-            errors.append({"resource": resource, "error": str(exc)})
+            if _cleanup_resource_absent(exc):
+                deleted.append(resource)
+            else:
+                errors.append({"resource": resource, "error": str(exc)})
     return {"deleted": deleted, "errors": errors}
 
 
@@ -3230,20 +3318,18 @@ def _kube_clients_for_lab(lab: Dict[str, Any], require_enabled: bool = True):
     credential = _credential_for_lab(lab)
     context = getattr(credential, "kubernetes_context", None) if credential else None
     if credential and credential.kubernetes_kubeconfig:
-        lab_dir = _sandbox_lab_dir(lab["lab_id"])
-        lab_dir.mkdir(parents=True, exist_ok=True)
-        kubeconfig_path = lab_dir / "kubeconfig"
-        kubeconfig_path.write_text(credential.kubernetes_kubeconfig, encoding="utf-8")
-        config.load_kube_config(config_file=str(kubeconfig_path), context=context)
+        from backend.mcp_servers.kubernetes_server import build_kubernetes_api_client
+        api_client = build_kubernetes_api_client(credential.kubernetes_kubeconfig, context)
     elif os.getenv("KUBECONFIG"):
-        config.load_kube_config(config_file=os.getenv("KUBECONFIG"), context=context)
+        api_client = config.new_client_from_config(config_file=os.getenv("KUBECONFIG"), context=context)
     else:
         try:
-            config.load_incluster_config()
+            configuration = client.Configuration()
+            config.load_incluster_config(client_configuration=configuration)
+            api_client = client.ApiClient(configuration=configuration)
         except Exception as exc:
             raise RuntimeError("KUBECONFIG, stored Kubernetes credential, or in-cluster config is required.") from exc
 
-    api_client = client.ApiClient()
     return api_client, client.CoreV1Api(api_client), client.RbacAuthorizationV1Api(api_client)
 
 
@@ -3573,69 +3659,89 @@ async def destroy_sandbox_lab(
     if lab["status"] in {"destroyed", "cancelled"}:
         return lab
 
-    add_sandbox_lab_event(lab_id, "destroying", f"Destroying sandbox lab: {reason}")
-    lab = update_sandbox_lab(lab_id, status="destroying")
-    if lab.get("remediation_action_id"):
+    from backend.cleanup_lease import sandbox_cleanup_lease
+    with sandbox_cleanup_lease(lab_id) as acquired:
+        if not acquired:
+            return get_sandbox_lab_run(lab_id, user_id=user_id, tenant_id=tenant_id)
+        # Re-read after taking the lease; another worker may have finished.
+        lab = get_sandbox_lab_run(lab_id, user_id=user_id, tenant_id=tenant_id)
+        if lab["status"] in {"destroyed", "cancelled"}:
+            return lab
         try:
-            decide_remediation_action(
-                lab["user_id"],
-                lab["tenant_id"],
-                lab["remediation_action_id"],
-                RemediationDecisionRequest(decision="start", note=f"Sandbox cleanup started: {reason}"),
+            add_sandbox_lab_event(lab_id, "destroying", f"Destroying sandbox lab: {reason}")
+            lab = update_sandbox_lab(lab_id, status="destroying")
+            if lab.get("remediation_action_id"):
+                try:
+                    decide_remediation_action(
+                        lab["user_id"],
+                        lab["tenant_id"],
+                        lab["remediation_action_id"],
+                        RemediationDecisionRequest(decision="start", note=f"Sandbox cleanup started: {reason}"),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Could not mark sandbox remediation as executing: {exc}")
+
+            cleanup = _destroy_sandbox_lab_resources(lab)
+            evidence_payload = {
+                "lab_id": lab_id,
+                "provider": lab["provider"],
+                "reason": reason,
+                "cleanup": cleanup,
+                "retry_cleanup": bool(cleanup.get("errors")),
+                "destroyed_at": datetime.utcnow().isoformat(),
+            }
+            cleanup_evidence = {}
+            try:
+                cleanup_evidence = store_evidence_artifact(
+                    lab["user_id"],
+                    lab["tenant_id"],
+                    EvidenceIngestionRequest(
+                        control_id=f"sandbox.{lab['provider']}.cleanup",
+                        control_name=f"{lab['provider'].upper()} sandbox cleanup proof",
+                        source_system="CloudGuard Sandbox Lab",
+                        scanner_type=lab["provider"],
+                        artifact_type="sandbox_cleanup_proof",
+                        filename=f"{lab_id}-cleanup.json",
+                        payload=evidence_payload,
+                        metadata={"tenant_id": lab["tenant_id"], "lab_id": lab_id, "reason": reason},
+                    ),
+                )
+            except Exception as exc:
+                evidence_payload["evidence_error"] = str(exc)
+                logger.exception("Cleanup proof could not be externalized; retaining it on the lab record")
+
+
+            if lab.get("remediation_action_id"):
+                try:
+                    decide_remediation_action(
+                        lab["user_id"],
+                        lab["tenant_id"],
+                        lab["remediation_action_id"],
+                        RemediationDecisionRequest(
+                            decision="complete" if not cleanup.get("errors") else "fail",
+                            note="Sandbox cleanup finished" if not cleanup.get("errors") else "Sandbox cleanup finished with errors",
+                            evidence_id=cleanup_evidence.get("evidence_id"),
+                            result_payload=evidence_payload,
+                        ),
+                    )
+                except Exception as exc:
+                    logger.warning(f"Could not finalize sandbox remediation action: {exc}")
+
+            final_status = "destroyed" if not cleanup.get("errors") else "failed"
+            lab = update_sandbox_lab(
+                lab_id,
+                status=final_status,
+                cleanup_payload=evidence_payload,
+                destroyed_at=datetime.utcnow() if final_status == "destroyed" else None,
+                completed_at=datetime.utcnow(),
+                error=json.dumps(cleanup.get("errors")) if cleanup.get("errors") else None,
             )
+            add_sandbox_lab_event(lab_id, final_status, "Sandbox cleanup completed", evidence_payload)
+            return lab
         except Exception as exc:
-            logger.warning(f"Could not mark sandbox remediation as executing: {exc}")
-
-    cleanup = _destroy_sandbox_lab_resources(lab)
-    evidence_payload = {
-        "lab_id": lab_id,
-        "provider": lab["provider"],
-        "reason": reason,
-        "cleanup": cleanup,
-        "destroyed_at": datetime.utcnow().isoformat(),
-    }
-    cleanup_evidence = store_evidence_artifact(
-        lab["user_id"],
-        lab["tenant_id"],
-        EvidenceIngestionRequest(
-            control_id=f"sandbox.{lab['provider']}.cleanup",
-            control_name=f"{lab['provider'].upper()} sandbox cleanup proof",
-            source_system="CloudGuard Sandbox Lab",
-            scanner_type=lab["provider"],
-            artifact_type="sandbox_cleanup_proof",
-            filename=f"{lab_id}-cleanup.json",
-            payload=evidence_payload,
-            metadata={"tenant_id": lab["tenant_id"], "lab_id": lab_id, "reason": reason},
-        ),
-    )
-
-    if lab.get("remediation_action_id"):
-        try:
-            decide_remediation_action(
-                lab["user_id"],
-                lab["tenant_id"],
-                lab["remediation_action_id"],
-                RemediationDecisionRequest(
-                    decision="complete" if not cleanup.get("errors") else "fail",
-                    note="Sandbox cleanup finished" if not cleanup.get("errors") else "Sandbox cleanup finished with errors",
-                    evidence_id=cleanup_evidence["evidence_id"],
-                    result_payload=evidence_payload,
-                ),
-            )
-        except Exception as exc:
-            logger.warning(f"Could not finalize sandbox remediation action: {exc}")
-
-    final_status = "destroyed" if not cleanup.get("errors") else "failed"
-    lab = update_sandbox_lab(
-        lab_id,
-        status=final_status,
-        cleanup_payload=evidence_payload,
-        destroyed_at=datetime.utcnow() if final_status == "destroyed" else None,
-        completed_at=datetime.utcnow(),
-        error=json.dumps(cleanup.get("errors")) if cleanup.get("errors") else None,
-    )
-    add_sandbox_lab_event(lab_id, final_status, "Sandbox cleanup completed", evidence_payload)
-    return lab
+            update_sandbox_lab(lab_id, status="failed", error=str(exc),
+                               cleanup_payload={"retry_cleanup": True, "errors": [str(exc)]})
+            raise
 
 
 async def reconcile_sandbox_labs() -> Dict[str, Any]:
@@ -3648,8 +3754,10 @@ async def reconcile_sandbox_labs() -> Dict[str, Any]:
             f"""
             SELECT {SANDBOX_LAB_COLUMNS}
             FROM sandbox_lab_runs
-            WHERE status IN ('requested','provisioning','deployed','scanning','scan_completed','completed','failed')
-              AND expires_at <= NOW()
+            WHERE (status IN ('requested','provisioning','deployed','scanning','scan_completed','completed','failed')
+                   AND expires_at <= NOW())
+               OR status = 'destroying'
+               OR (status = 'failed' AND cleanup_payload->>'retry_cleanup' = 'true')
             ORDER BY expires_at ASC
             LIMIT 25
             """
@@ -3662,7 +3770,7 @@ async def reconcile_sandbox_labs() -> Dict[str, Any]:
             update_sandbox_lab(lab["lab_id"], status="expired", completed_at=datetime.utcnow(), error="Lab request expired before provisioning.")
             add_sandbox_lab_event(lab["lab_id"], "expired", "Lab request expired before provisioning")
             expired_requested += 1
-        elif lab["auto_destroy"]:
+        elif lab["auto_destroy"] or lab["status"] == "destroying" or lab.get("cleanup_payload", {}).get("retry_cleanup"):
             labs_to_destroy.append(lab)
 
     conn = get_conn()
@@ -3697,8 +3805,11 @@ async def reconcile_sandbox_labs() -> Dict[str, Any]:
     errors: List[Dict[str, Any]] = []
     for lab in labs_to_destroy:
         try:
-            await destroy_sandbox_lab(lab["lab_id"], lab["user_id"], lab["tenant_id"], reason="ttl_or_scan_completed")
-            destroyed.append(lab["lab_id"])
+            cleaned = await destroy_sandbox_lab(lab["lab_id"], lab["user_id"], lab["tenant_id"], reason="ttl_or_scan_completed")
+            if cleaned["status"] == "destroyed":
+                destroyed.append(lab["lab_id"])
+            elif cleaned.get("error"):
+                errors.append({"lab_id": lab["lab_id"], "error": cleaned["error"]})
         except Exception as exc:
             logger.warning(f"Sandbox cleanup failed for {lab['lab_id']}: {exc}")
             errors.append({"lab_id": lab["lab_id"], "error": str(exc)})
@@ -4150,9 +4261,19 @@ def _scan_job_result_payload(scan_result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def store_evidence_artifact(user_id: str, tenant_id: str, request: EvidenceIngestionRequest) -> Dict[str, Any]:
+    if not user_id or not tenant_id:
+        raise ValueError("Evidence requires tenant and user ownership")
     payload = request.payload or {}
     metadata = request.metadata or {}
     evidence_id = request.evidence_id or f"ev-{uuid.uuid4().hex}"
+    conn = get_conn()
+    with conn.cursor() as cur:
+        cur.execute("SELECT user_id, tenant_id FROM evidence_artifacts WHERE evidence_id = %s", (evidence_id,))
+        owner = cur.fetchone()
+        if owner and tuple(owner) != (user_id, tenant_id):
+            raise HTTPException(status_code=409, detail="Evidence ID is unavailable")
+    if request.job_id and not get_scan_job(request.job_id, user_id=user_id, tenant_id=tenant_id):
+        raise HTTPException(status_code=404, detail="Scan job not found")
     payload_bytes = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     checksum = hashlib.sha256(payload_bytes).hexdigest()
     storage_type = "database"
@@ -4170,7 +4291,7 @@ def store_evidence_artifact(user_id: str, tenant_id: str, request: EvidenceInges
             object_secret_key = os.getenv("OBJECT_STORAGE_SECRET_ACCESS_KEY") or os.getenv("AWS_SECRET_ACCESS_KEY")
             storage_provider = os.getenv("OBJECT_STORAGE_PROVIDER", "s3-compatible")
             key_prefix = (os.getenv("OBJECT_STORAGE_PREFIX") or os.getenv("EVIDENCE_S3_PREFIX") or "cloudguard/evidence").strip("/")
-            key = f"{key_prefix}/{tenant_id}/{user_id}/{evidence_id}.json"
+            key = f"{key_prefix}/{tenant_id}/{user_id}/{evidence_id}/{checksum}.json"
             client_kwargs = {
                 "service_name": "s3",
                 "region_name": object_region,
@@ -4229,6 +4350,8 @@ def store_evidence_artifact(user_id: str, tenant_id: str, request: EvidenceInges
                 checksum_sha256 = EXCLUDED.checksum_sha256,
                 payload = EXCLUDED.payload,
                 metadata = EXCLUDED.metadata
+            WHERE evidence_artifacts.user_id = EXCLUDED.user_id
+              AND evidence_artifacts.tenant_id = EXCLUDED.tenant_id
             RETURNING evidence_id, uri, checksum_sha256, created_at
             """,
             (
@@ -4252,6 +4375,8 @@ def store_evidence_artifact(user_id: str, tenant_id: str, request: EvidenceInges
         )
         row = cur.fetchone()
         conn.commit()
+        if not row:
+            raise HTTPException(status_code=409, detail="Evidence ID is unavailable")
 
     return {
         "evidence_id": row[0],
@@ -4745,6 +4870,7 @@ async def process_scan_job(job_id: Optional[str] = None) -> Dict[str, Any]:
 
     logger.info(f"🧾 Processing scan job {job['job_id']} for providers={job['providers']}")
 
+    result_payload = None
     try:
         scan_result = await run_multi_cloud_scan_internal(
             providers=job["providers"],
@@ -4757,6 +4883,8 @@ async def process_scan_job(job_id: Optional[str] = None) -> Dict[str, Any]:
         )
         result_payload = _scan_job_result_payload(scan_result)
         _store_scan_job_evidence(job, result_payload)
+        if result_payload.get("errors"):
+            raise RuntimeError("Provider scan failures: " + json.dumps(result_payload["errors"]))
         return update_scan_job(
             job["job_id"],
             "completed",
@@ -4779,7 +4907,7 @@ async def process_scan_job(job_id: Optional[str] = None) -> Dict[str, Any]:
             )
 
         next_status = "queued" if job["attempts"] < job["max_attempts"] else "dead_letter"
-        return update_scan_job(job["job_id"], next_status, error=str(exc), last_error=str(exc))
+        return update_scan_job(job["job_id"], next_status, result=result_payload, scan_ids=(result_payload or {}).get("scan_ids", []), error=str(exc), last_error=str(exc))
 
 
 @app.post("/api/evidence")
@@ -5027,6 +5155,13 @@ async def get_sandbox_lab(lab_id: str, req: Request, tenant_id: Optional[str] = 
     lab = get_sandbox_lab_run(lab_id, user_id=user_id, tenant_id=resolved_tenant_id)
     if not lab:
         raise HTTPException(status_code=404, detail="Sandbox lab not found")
+    job = get_scan_job(lab["scan_job_id"], user_id=user_id, tenant_id=resolved_tenant_id) if lab.get("scan_job_id") else None
+    lab["scan_ids"] = job.get("scan_ids", []) if job else []
+    if not lab.get("scan_job_id"):
+        proof = lab.get("proof_payload") or {}
+        nested = proof.get("proof") or {}
+        scan_id = proof.get("scan_id") or nested.get("scan_id")
+        lab["scan_ids"] = [scan_id] if scan_id else (nested.get("scan_result") or proof.get("scan_result") or {}).get("scan_ids", [])
     return {"status": "ok", "lab": lab, "events": list_sandbox_lab_events(lab_id)}
 
 
@@ -5645,7 +5780,9 @@ async def intelligent_scan(request: ScanRequest, req: Request):
             scan_id = await _store_mcp_scan_result(
                 provider=provider,
                 result=result,
-                credential_id=scan_results["credential_mapping"].get(provider)
+                credential_id=scan_results["credential_mapping"].get(provider),
+                user_id=user_id,
+                tenant_id=_request_tenant_id(req, user_id=user_id),
             )
             stored_ids.append(scan_id)
 
@@ -5660,10 +5797,20 @@ async def intelligent_scan(request: ScanRequest, req: Request):
             logger.error(f"AI analysis failed: {e}")
             ai_analysis = {"error": "AI unavailable"}
 
+        provider_errors = {
+            failure["provider"]: [failure.get("reason", "Provider failed")]
+            for failure in scan_results.get("providers_failed", [])
+        }
+        for provider, result in scan_results["results"].items():
+            errors = _mcp_to_scan_result(provider, result).errors
+            if errors:
+                provider_errors[provider] = errors
+        successful = set(scan_results["results"]) - set(provider_errors)
         return {
-            "status": "completed",
+            "status": "partial" if provider_errors and successful else "failed" if provider_errors else "completed",
+            "errors": provider_errors,
             "scan_ids": stored_ids,
-            "providers_scanned": providers,
+            "providers_scanned": scan_results["providers_scanned"],
             "deep_scan_enabled": request.deep_scan,
             "architecture": "MCP-SERVER",
             "total_resources": sum(len(r.get("resources", {})) for r in scan_results["results"].values()),
@@ -6047,12 +6194,13 @@ async def get_provider_breakdown(req: Request, scan_ids: Optional[str] = None):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/scan-history")
-async def get_scan_history(req: Request, days: int = 30):
+async def get_scan_history(req: Request, days: int = 30, scan_ids: Optional[str] = None):
     try:
         user_id = get_user_id(req)
         tenant_id = _request_tenant_id(req, user_id=user_id)
         conn = get_conn()
         with conn.cursor() as cur:
+            ids = [int(value.strip()) for value in scan_ids.split(",")] if scan_ids else None
             cur.execute("""
                 SELECT
                     DATE(s.started_at) as scan_date,
@@ -6063,9 +6211,10 @@ async def get_scan_history(req: Request, days: int = 30):
                 LEFT JOIN findings f ON s.id = f.scan_id
                 WHERE s.user_id = %s AND s.tenant_id = %s
                   AND s.started_at >= NOW() - INTERVAL %s
+                  AND (%s::int[] IS NULL OR s.id = ANY(%s::int[]))
                 GROUP BY DATE(s.started_at)
                 ORDER BY scan_date ASC
-            """, (user_id, tenant_id, f"{days} days"))
+            """, (user_id, tenant_id, f"{days} days", ids, ids))
             results = cur.fetchall()
 
         return {
@@ -6085,10 +6234,12 @@ async def get_scan_history(req: Request, days: int = 30):
         return {"status": "error", "message": str(e), "data": []}
 
 @app.get("/api/latest-findings")
-async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[str] = None):
+async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[str] = None, offset: int = 0):
     try:
         user_id = get_user_id(req)
         tenant_id = _request_tenant_id(req, user_id=user_id)
+        limit = max(1, min(limit, 200))
+        offset = max(0, offset)
         conn = get_conn()
         with conn.cursor() as cur:
             query = """
@@ -6100,7 +6251,7 @@ async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[
                     f.validated_by as tool,
                     f.created_at
                 FROM findings f
-                JOIN resources r ON f.resource_id = r.id
+                JOIN resources r ON f.resource_id = r.id AND r.scan_id = f.scan_id
                 JOIN scans s ON s.id = f.scan_id
             """
             params = [user_id, tenant_id]
@@ -6112,16 +6263,22 @@ async def get_latest_findings(req: Request, limit: int = 10, scan_ids: Optional[
                     query += " AND f.scan_id = ANY(%s)"
                     params.append(ids)
                 except ValueError:
-                    pass
+                    return {"status": "error", "message": "Invalid scan IDs", "data": []}
 
-            query += " ORDER BY f.created_at DESC LIMIT %s"
-            params.append(limit)
+            count_query = "SELECT COUNT(*) " + query[query.index("FROM findings f"):]
+            cur.execute(count_query, tuple(params))
+            total = cur.fetchone()[0]
+            query += " ORDER BY f.created_at DESC, f.id DESC LIMIT %s OFFSET %s"
+            params.extend([limit, offset])
 
             cur.execute(query, tuple(params))
             results = cur.fetchall()
 
         return {
             "status": "success",
+            "total": total,
+            "offset": offset,
+            "has_more": offset + len(results) < total,
             "data": [
                 {
                     "resource_name": resource_name,
@@ -6408,7 +6565,7 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
     tenant_id = _request_tenant_id(req, user_id=user_id)
 
     # Initialize MCP servers
-    await initialize_mcp_servers_for_user(user_id, request.providers)
+    await initialize_mcp_servers_for_user(user_id, request.providers, request.credential_id)
 
     scan_results: list[ScanResult] = []
     stored_ids: list[int] = []
@@ -6443,6 +6600,10 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
             )
             stored_ids.append(scan_id)
 
+            # An incomplete scan cannot resolve previously open findings.
+            if scan_result_obj.errors:
+                continue
+
             # 🆕 PROCESS WITH MEMORY SYSTEM
             findings_for_memory = [
                 {
@@ -6456,7 +6617,7 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
                 for f in scan_result_obj.findings
             ]
 
-            memory_stats = memory_system.process_scan_findings(
+            memory_stats = memory_system.for_owner(tenant_id, user_id).process_scan_findings(
                 scan_id=scan_id,
                 findings=findings_for_memory
             )
@@ -6476,10 +6637,13 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
         multi_agent_result = {"error": str(e)}
 
     # Get memory dashboard summary
-    memory_summary = memory_system.get_dashboard_summary()
+    memory_summary = memory_system.for_owner(tenant_id, user_id).get_dashboard_summary()
 
+    provider_errors = {result.provider: result.errors for result in scan_results if result.errors}
+    successful = any(not result.errors for result in scan_results)
     response = {
-        "status": "completed",
+        "status": "partial" if provider_errors and successful else "failed" if provider_errors else "completed",
+        "errors": provider_errors,
         "architecture": "multi-agent + persistent memory",
         "scan_ids": stored_ids,
         "timestamp": datetime.utcnow().isoformat(),
@@ -6506,13 +6670,15 @@ async def multi_cloud_scan_enhanced(request: MultiCloudScanRequest, req: Request
 # ============================================================
 
 @app.get("/api/memory/dashboard")
-async def get_memory_dashboard():
+async def get_memory_dashboard(req: Request):
     """Get persistent memory dashboard summary"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     try:
-        summary = memory_system.get_dashboard_summary()
+        summary = memory_system.for_owner(tenant_id, user_id).get_dashboard_summary()
 
         # Get top open tasks
-        open_tasks = memory_system.get_open_tasks()[:10]
+        open_tasks = memory_system.for_owner(tenant_id, user_id).get_open_tasks()[:10]
 
         return {
             "status": "success",
@@ -6527,15 +6693,18 @@ async def get_memory_dashboard():
 
 @app.get("/api/memory/tasks")
 async def get_security_tasks(
+    req: Request,
     priority: Optional[str] = None,
     status: Optional[str] = None
 ):
     """Get security remediation tasks"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     try:
         from backend.ai.persistent_memory import TaskPriority
 
         priority_filter = TaskPriority[priority.upper()] if priority else None
-        tasks = memory_system.get_open_tasks(priority=priority_filter)
+        tasks = memory_system.for_owner(tenant_id, user_id).get_open_tasks(priority=priority_filter)
 
         if status:
             tasks = [t for t in tasks if t["status"] == status]
@@ -6551,10 +6720,12 @@ async def get_security_tasks(
 
 
 @app.get("/api/memory/finding/{finding_hash}")
-async def get_finding_history(finding_hash: str):
+async def get_finding_history(finding_hash: str, req: Request):
     """Get complete history of a security finding"""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     try:
-        history = memory_system.get_finding_history(finding_hash)
+        history = memory_system.for_owner(tenant_id, user_id).get_finding_history(finding_hash)
 
         if not history:
             raise HTTPException(status_code=404, detail="Finding not found")
@@ -6572,11 +6743,17 @@ async def get_finding_history(finding_hash: str):
 
 @app.post("/api/memory/task/{task_id}/update")
 async def update_task_status(
+    req: Request,
     task_id: int,
     status: str,
     note: Optional[str] = None
 ):
     """Update task status"""
+    from backend.ai.persistent_memory import TaskStatus
+    if status not in {item.value for item in TaskStatus}:
+        raise HTTPException(status_code=400, detail="Invalid task status")
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
     try:
         conn = get_conn()
         with conn.cursor() as cur:
@@ -6586,9 +6763,9 @@ async def update_task_status(
                 SET status = %s,
                     updated_at = NOW(),
                     resolved_at = CASE WHEN %s = 'resolved' THEN NOW() ELSE resolved_at END
-                WHERE id = %s
+                WHERE id = %s AND tenant_id = %s AND user_id = %s
                 RETURNING finding_hash
-            """, (status, status, task_id))
+            """, (status, status, task_id, tenant_id, user_id))
 
             result = cur.fetchone()
             if not result:
@@ -6598,7 +6775,7 @@ async def update_task_status(
 
             # Add note if provided
             if note:
-                memory_system._add_note(
+                memory_system.for_owner(tenant_id, user_id)._add_note(
                     finding_hash=finding_hash,
                     note_type="remediation",
                     content=note,
@@ -7089,79 +7266,19 @@ async def list_mcp_servers():
 
 @app.post("/api/mcp/servers/{provider}/initialize")
 async def initialize_mcp_server(provider: str, credentials: Dict[str, Any]):
-    """Initialize an MCP server for a cloud provider"""
-    try:
-        if provider == "aws":
-            server = create_aws_server(credentials)
-            mcp_server_manager.register_server(server)
-            await server.start()
-
-            return {
-                "status": "initialized",
-                "provider": provider,
-                "server_info": server.get_info()
-            }
-
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Provider '{provider}' not supported yet"
-            )
-
-    except Exception as e:
-        logger.error(f"Failed to initialize MCP server: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=410, detail="Raw MCP management is retired; use credential-scoped scan jobs")
 
 @app.post("/api/mcp/servers/{provider}/request")
 async def send_mcp_request(provider: str, request: Dict[str, Any]):
-    """Send a request to an MCP server"""
-    try:
-        message = MCPMessage(
-            method=request.get("method"),
-            params=request.get("params", {}),
-            id=request.get("id")
-        )
-
-        response = await mcp_server_manager.send_request(provider, message)
-
-        return response.to_dict()
-
-    except Exception as e:
-        logger.error(f"MCP request failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=410, detail="Raw MCP management is retired; use credential-scoped scan jobs")
 
 @app.get("/api/mcp/servers/{provider}/tools")
 async def list_mcp_tools(provider: str):
-    """List tools available from an MCP server"""
-    try:
-        message = MCPMessage(method="tools/list")
-        response = await mcp_server_manager.send_request(provider, message)
-
-        return response.to_dict()
-
-    except Exception as e:
-        logger.error(f"Failed to list tools: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=410, detail="Raw MCP management is retired; use credential-scoped scan jobs")
 
 @app.post("/api/mcp/servers/{provider}/tools/{tool_name}")
 async def call_mcp_tool(provider: str, tool_name: str, arguments: Dict[str, Any] = {}):
-    """Call a tool on an MCP server"""
-    try:
-        message = MCPMessage(
-            method="tools/call",
-            params={
-                "name": f"{provider}/{tool_name}",
-                "arguments": arguments
-            }
-        )
-
-        response = await mcp_server_manager.send_request(provider, message)
-
-        return response.to_dict()
-
-    except Exception as e:
-        logger.error(f"Tool call failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=410, detail="Raw MCP management is retired; use credential-scoped scan jobs")
 
 
 async def store_scan_result(
@@ -7230,7 +7347,7 @@ async def store_scan_result(
                     f.vuln_metadata,
                 )
 
-        finish_scan_record(scan_id)
+        finish_scan_record(scan_id, status="failed" if result.errors else "completed")
         logger.info(f"Stored scan {scan_id}")
         return scan_id
     except Exception:
@@ -7392,7 +7509,10 @@ async def _store_mcp_scan_result(
 
     # Store resources
     resource_id_map = {}
-    for resource in result.get("resources", {}).values():
+    raw_resources = result.get("resources") or []
+    if isinstance(raw_resources, dict):
+        raw_resources = raw_resources.values()
+    for resource in raw_resources:
         if isinstance(resource, dict):
             resource_id = store_resource(
                 scan_id=scan_id,
@@ -7424,64 +7544,9 @@ async def _store_mcp_scan_result(
                 source=validated_by  # Mark CloudFox findings
             )
 
-    finish_scan_record(scan_id)
+    finish_scan_record(scan_id, status="failed" if result.get("errors") or result.get("error") else "completed")
     logger.info(f"✅ Stored MCP scan result: scan_id={scan_id}, cloudfox_findings={len([f for f in result.get('findings', []) if f.get('source') == 'cloudfox'])}")
     return scan_id
-
-def _mcp_to_scan_result(provider: str, mcp_result: Dict[str, Any]):
-    """
-    Convert MCP result to ScanResult object for AI analysis
-    """
-
-
-    # Convert resources
-    resources_raw = mcp_result.get("resources", [])
-    if isinstance(resources_raw, dict):
-        resources_list = list(resources_raw.values())
-    else:
-        resources_list = resources_raw
-
-    resources = []
-    for res in resources_list:
-        if isinstance(res, dict):
-            resources.append(CloudResource(
-                provider=provider,
-                resource_type=res.get("resource_type") or res.get("type", "unknown"),
-                name=res.get("name", "unnamed"),
-                region=res.get("region", "global"),
-                config=res.get("config", {}),
-                is_public=res.get("is_public", False)
-            ))
-
-    # Convert findings
-    findings = []
-    for f in mcp_result.get("findings", []):
-        # Find corresponding resource
-        resource = next(
-            (r for r in resources if r.name == f.get("resource", {}).get("name")),
-            resources[0] if resources else None
-        )
-
-        if resource:
-            findings.append(SecurityFinding(
-                resource=resource,
-                severity=Severity[f.get("severity", "MEDIUM")],
-                issue=f.get("issue", "Security Issue"),
-                description=f.get("description", ""),
-                recommendation=f.get("recommendation", ""),
-                compliance=f.get("compliance", []),
-                detection_tool=f.get("detection_tool") or f.get("tool") or "MCP-SERVER",
-                tool_category=f.get("tool_category")
-            ))
-
-    return ScanResult(
-        provider=provider,
-        account_id=mcp_result.get("account_id", "default"),
-        resources=resources,
-        findings=findings,
-        scan_duration=mcp_result.get("scan_duration", 0.0),
-        errors=mcp_result.get("errors", [])
-    )
 
 # ============================================================
 # APPLICATION STARTUP
@@ -7523,7 +7588,6 @@ async def startup_enhanced():
     multi_agent_analyzer = get_multi_agent_analyzer(os.getenv("OPENAI_API_KEY"))
 
     logger.info("🧠 Initializing Persistent Memory System...")
-    memory_system._ensure_tables_exist()
 
     logger.info("✅ Enhanced AI systems ready")
 

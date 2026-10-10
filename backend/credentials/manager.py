@@ -58,6 +58,10 @@ class CloudCredential:
 
 
 
+class CredentialDecryptionError(ValueError):
+    """Stored credentials cannot be read with this process's encryption key."""
+
+
 class CredentialManager:
     """Manages secure storage and retrieval of cloud credentials"""
     
@@ -68,7 +72,7 @@ class CredentialManager:
 
         raw_encryption_key = os.getenv("ENCRYPTION_KEY", "").strip()
         if not raw_encryption_key:
-            if os.getenv("NODE_ENV") == "production":
+            if any(os.getenv(key, "").lower() == "production" for key in ("NODE_ENV", "APP_ENV")) or os.getenv("CREDENTIAL_ENCRYPTION_REQUIRED", "false").lower() == "true":
                 raise ValueError("ENCRYPTION_KEY is required in production")
             logger.warning("ENCRYPTION_KEY is not set; local development credentials are not encrypted")
             self.encryption_key = None
@@ -102,8 +106,11 @@ class CredentialManager:
         if not encrypted_text.startswith("v1:"):
             return encrypted_text
         if not self.cipher:
-            raise ValueError("ENCRYPTION_KEY is required to decrypt stored credentials")
-        return self.cipher.decrypt(encrypted_text[3:].encode("utf-8")).decode("utf-8")
+            raise CredentialDecryptionError("ENCRYPTION_KEY is required to decrypt stored credentials")
+        try:
+            return self.cipher.decrypt(encrypted_text[3:].encode("utf-8")).decode("utf-8")
+        except Exception as exc:
+            raise CredentialDecryptionError("Stored credentials cannot be decrypted; verify the shared ENCRYPTION_KEY") from exc
     
     def _get_connection(self):
         """Get database connection"""
@@ -354,11 +361,7 @@ class CredentialManager:
                      'gcp_service_account_json', 'openai_api_key', 'azure_client_secret',
                      'kubernetes_kubeconfig']:
                 if credential_dict.get(field):
-                    try:
-                        credential_dict[field] = self.decrypt(credential_dict[field])
-                    except Exception as e:
-                        logger.warning(f"Failed to decrypt field {field}: {e}")
-                        credential_dict[field] = None
+                    credential_dict[field] = self.decrypt(credential_dict[field])
         
         # 🔥 Remove fields that aren't part of CloudCredential constructor
             fields_to_remove = [
@@ -412,6 +415,8 @@ class CredentialManager:
 
 
         
+        except CredentialDecryptionError:
+            raise
         except Exception as e:
             logger.error(f"Failed to get credential {credential_id}: {e}")
             return None
@@ -473,6 +478,14 @@ class CredentialManager:
             cur.close()
             conn.close()
     
+    def resolve_scan_credential(self, user_id: str, provider: str, credential_id: Optional[int] = None) -> Optional[CloudCredential]:
+        if credential_id is None:
+            return self.get_default_credential(user_id, provider)
+        credential = self.get_credential_by_id(user_id, credential_id)
+        if not credential or credential.user_id != user_id or credential.cloud_provider != provider:
+            raise ValueError("Selected credential is unavailable for this user and provider")
+        return credential
+
     def get_default_credential(self, user_id: str, provider: str) -> Optional[CloudCredential]:
         """Get user's default credential for a provider"""
         conn = self._get_connection()

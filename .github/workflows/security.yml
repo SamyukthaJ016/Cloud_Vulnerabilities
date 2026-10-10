@@ -42,7 +42,7 @@ jobs:
             p/typescript
             p/nodejs
             p/react
-            .semgrep/
+            grc-platform/.semgrep/
         env:
           SEMGREP_RULES: >-
             p/security-audit
@@ -114,20 +114,23 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: grc-platform/package-lock.json
 
       - name: Install dependencies
         # --ignore-scripts skips prisma generate (and other postinstall hooks).
         # npm audit only needs the dep tree; skipping postinstall avoids
         # the "Unexpected end of JSON input" error from Prisma's engine
         # checksum fetch on hardened runners.
+        working-directory: grc-platform
         run: npm ci --ignore-scripts
 
       - name: Verify npm package signatures (BLOCKING)
         # Sigstore attestation check. See pr-validation.yml for rationale.
+        working-directory: grc-platform
         run: npm audit signatures
 
       - name: Run npm audit (blocking on high/critical)
+        working-directory: grc-platform
         run: |
           echo "## Dependency Audit Results" >> $GITHUB_STEP_SUMMARY
           npm audit --audit-level=high 2>&1 | tee audit-results.txt
@@ -140,6 +143,7 @@ jobs:
           echo "✅ No high/critical vulnerabilities found" >> $GITHUB_STEP_SUMMARY
 
       - name: Check for known vulnerable packages
+        working-directory: grc-platform
         run: |
           # Check for packages with known severe vulnerabilities
           VULNERABLE_PACKAGES="lodash@<4.17.21 minimist@<1.2.6 node-fetch@<2.6.7 axios@<0.21.2"
@@ -178,8 +182,8 @@ jobs:
       - name: Build Docker image for scanning
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
-          context: .
-          file: services/${{ matrix.service }}/Dockerfile
+          context: ./grc-platform
+          file: grc-platform/services/${{ matrix.service }}/Dockerfile
           push: false
           load: true
           tags: grc-${{ matrix.service }}:scan
@@ -196,10 +200,10 @@ jobs:
           severity: 'CRITICAL,HIGH'
           exit-code: '1' # BLOCKING: Fail on critical/high vulnerabilities
           ignore-unfixed: true
-          # .trivyignore at the repo root mirrors the GitHub code-scanning
+          # grc-platform/.trivyignore mirrors the GitHub code-scanning
           # dismissals that Trivy itself does not honor. Each entry there
           # documents the rationale for the dismissal.
-          trivyignores: '.trivyignore'
+          trivyignores: 'grc-platform/.trivyignore'
         continue-on-error: false
 
       - name: Upload Trivy scan results
@@ -230,7 +234,7 @@ jobs:
       - name: Run Checkov on Terraform
         uses: bridgecrewio/checkov-action@4048c972aae68d0b983a48bb3479aab2d877b898 # v12.3102.0
         with:
-          directory: terraform/
+          directory: grc-platform/terraform/
           framework: terraform
           output_format: cli,sarif
           output_file_path: console,checkov-terraform.sarif
@@ -258,7 +262,7 @@ jobs:
       - name: Run Checkov on Docker Compose
         uses: bridgecrewio/checkov-action@4048c972aae68d0b983a48bb3479aab2d877b898 # v12.3102.0
         with:
-          file: docker-compose.yml
+          file: grc-platform/docker-compose.yml
           framework: dockerfile
           output_format: cli
           soft_fail: false
@@ -293,15 +297,17 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: grc-platform/package-lock.json
 
       - name: Install dependencies
         # --ignore-scripts skips prisma generate (and other postinstall hooks).
         # license-checker reads package.json + node_modules layout; it doesn't
         # need generated Prisma client. Avoids the same Prisma JSON error.
+        working-directory: grc-platform
         run: npm ci --ignore-scripts
 
       - name: Check licenses
+        working-directory: grc-platform
         run: |
           npx license-checker --production --onlyAllow "MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;CC0-1.0;Unlicense;0BSD;CC-BY-3.0;CC-BY-4.0;Python-2.0;BlueOak-1.0.0" --excludePrivatePackages || {
             echo "::warning::Some packages have non-standard licenses. Please review."
@@ -335,7 +341,7 @@ jobs:
         uses: github/codeql-action/init@458d36d7d4f47d0dd16ca424c1d3cda0060f1360 # v3.35.5
         with:
           languages: ${{ matrix.language }}
-          config-file: ./.github/codeql/codeql-config.yml
+          config-file: ./grc-platform/.github/codeql/codeql-config.yml
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@458d36d7d4f47d0dd16ca424c1d3cda0060f1360 # v3.35.5
@@ -373,16 +379,10 @@ jobs:
           echo "| CodeQL | ${{ needs.codeql.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Determine overall status
-          if [ "${{ needs.sast.result }}" == "failure" ] || \
-             [ "${{ needs.secrets.result }}" == "failure" ] || \
-             [ "${{ needs.dependencies.result }}" == "failure" ] || \
-             [ "${{ needs.container.result }}" == "failure" ] || \
-             [ "${{ needs.iac.result }}" == "failure" ]; then
-            echo "❌ **Security checks failed. PR cannot be merged.**" >> $GITHUB_STEP_SUMMARY
-            echo ""
-            echo "::error::One or more security checks failed. Please review the findings above."
-            exit 1
-          fi
-
-          echo "✅ **All security checks passed.**" >> $GITHUB_STEP_SUMMARY
+          for result in ${{ join(needs.*.result, ' ') }}; do
+            if [ "$result" != success ]; then
+              echo "::error::A security job did not succeed ($result)"
+              exit 1
+            fi
+          done
+          echo "All security jobs passed" >> "$GITHUB_STEP_SUMMARY"

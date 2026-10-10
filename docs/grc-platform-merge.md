@@ -96,7 +96,7 @@ The CloudGuard GRC page now displays only live connector data. If the connector 
 Run CloudGuard from the repository root:
 
 ```bash
-docker compose up --build
+docker compose --profile dev up --build
 ```
 
 Run the GRC platform separately:

@@ -44,6 +44,7 @@ SANDBOX_LAB_WORKER_POLL_INTERVAL=10
 
 SANDBOX_IAC_DEPLOY=true
 SANDBOX_AWS_DEPLOY=false
+SANDBOX_AWS_ACCOUNT_IDS=
 SANDBOX_GCP_DEPLOY=false
 SANDBOX_KUBERNETES_DEPLOY=false
 ```
@@ -115,7 +116,14 @@ curl -X POST http://localhost:8000/api/sandbox-labs/lab-id-here/destroy \
 
 ### AWS
 
-Use a sandbox AWS account. The credential needs permission to:
+Use a dedicated sandbox AWS account.
+
+See [the AWS demo setup checklist and scoped write-policy template](../deploy/aws-lab/README.md).
+Set `SANDBOX_AWS_ACCOUNT_IDS` to the approved sandbox account IDs. The worker
+checks STS identity before provisioning and refuses accounts outside this list
+and root credentials. Resource IDs are saved incrementally for partial cleanup.
+
+The credential needs permission to:
 
 - call `sts:GetCallerIdentity`
 - create/delete the temporary S3 bucket

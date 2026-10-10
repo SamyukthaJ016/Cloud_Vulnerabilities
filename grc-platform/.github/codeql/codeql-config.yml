@@ -24,10 +24,11 @@ paths-ignore:
 
   # Documentation
   - 'docs/**'
+  - 'grc-platform/docs/**'
   - '*.md'
 
   # Static training content (client-side JS with no security implications)
-  - 'frontend/public/training/**'
+  - 'grc-platform/frontend/public/training/**'
 
   # Coverage and reports
   - 'coverage/**'

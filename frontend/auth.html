@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CloudGuard · Your account</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f8f6f0;color:#172d29;font:16px/1.6 system-ui,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}main{width:100%;max-width:440px}header{text-align:center;margin-bottom:28px}.mark{display:inline-grid;place-items:center;background:#174e42;color:white;border-radius:16px;width:56px;height:56px;font-weight:800}h1{font-size:30px;line-height:1.2;margin:18px 0 10px}p{color:#51635d}.card{background:white;border:1px solid #dce2da;border-radius:20px;padding:30px;box-shadow:0 16px 50px #173e3410}button,input{font:inherit;width:100%;border-radius:9px;padding:12px 16px}button{cursor:pointer;border:1px solid #becdc4;background:#fff;color:#172d29;font-weight:600}button.primary{background:#174e42;color:#fff;border-color:#174e42}button:disabled{opacity:.55;cursor:wait}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #579483;outline-offset:3px}input{border:1px solid #a8b9b1;margin:8px 0 16px}label{font-size:14px;font-weight:600}.divider{text-align:center;color:#61736b;margin:18px 0}.note{font-size:13px;margin-top:18px}a{color:#174e42}footer{text-align:center;font-size:14px;margin-top:24px}[hidden]{display:none!important}[role=alert]{background:#fff0eb;color:#9e3020;padding:12px;border-radius:8px;margin-bottom:16px}.retry{margin-top:12px}
+  </style>
+  <script src="/cloudguard-ui.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><span class="mark" aria-hidden="true">CG</span><h1 id="title">Welcome back</h1><p id="subtitle">Your cloud security workspace, all in one place.</p></header>
+    <section class="card" aria-labelledby="title">
+      <p id="error" role="alert" hidden></p>
+      <button id="google" disabled>Continue with Google</button>
+      <div class="divider">or</div>
+      <form id="email-form" hidden>
+        <label for="email">Email address</label><input id="email" type="email" autocomplete="email" maxlength="254" required>
+        <button class="primary" type="submit" disabled>Continue with email</button>
+        <p class="note">Verify your email and finish setting up your account. Your own organization will be created automatically.</p>
+      </form>
+      <button id="sso" class="primary" disabled>Sign in with SSO</button>
+      <button id="logout" class="retry" hidden>Use another account</button>
+      <footer id="switch">New here? <a href="/signup">Create an account</a></footer>
+    </section>
+    <footer>CloudGuard · Multi-cloud security and compliance</footer>
+  </main>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const signup = location.pathname === '/signup';
+      const error = document.getElementById('error');
+      const buttons = [...document.querySelectorAll('button')];
+      if (signup) {
+        document.title = 'Create your account · CloudGuard';
+        document.getElementById('title').textContent = 'Create your account';
+        document.getElementById('google').textContent = 'Sign up with Google';
+        document.getElementById('email-form').hidden = false;
+        document.getElementById('sso').hidden = true;
+        document.getElementById('switch').innerHTML = 'Already have an account? <a href="/login">Sign in</a>';
+      }
+      function showError(message) { error.textContent = message; error.hidden = false; }
+      await window.cloudguardAccountReady;
+      if (window.cloudguardAccountError) showError(window.cloudguardAccountError);
+      const account = window.cloudguardAccount;
+      if (!account?.enabled) {
+        showError('Account sign-in is not configured yet. Please contact your administrator.');
+        return;
+      }
+      buttons.forEach(button => button.disabled = false);
+      document.getElementById('logout').hidden = !window.cloudguardAccountError;
+      document.getElementById('logout').onclick = () => account.logout();
+      async function begin(options) {
+        buttons.forEach(button => button.disabled = true);
+        try { await account.login(options); }
+        catch { showError('Unable to start sign-in. Please try again.'); buttons.forEach(button => button.disabled = false); }
+      }
+      document.getElementById('google').onclick = () => begin({ google: true });
+      document.getElementById('sso').onclick = () => begin({});
+      document.getElementById('email-form').onsubmit = event => { event.preventDefault(); begin({ register: true, email: document.getElementById('email').value }); };
+    });
+  </script>
+</body>
+</html>

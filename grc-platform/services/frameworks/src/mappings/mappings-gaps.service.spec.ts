@@ -1,3 +1,4 @@
+import { STORAGE_PROVIDER } from '@gigachad-grc/shared';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MappingsService } from './mappings.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,6 +30,7 @@ describe('MappingsService — findGaps', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MappingsService,
+        { provide: STORAGE_PROVIDER, useValue: { upload: jest.fn(), download: jest.fn() } },
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: MappingHistoryService, useValue: mockHistoryService },
         { provide: AuditService, useValue: mockAuditService },

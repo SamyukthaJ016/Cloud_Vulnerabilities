@@ -12,6 +12,7 @@ ENV/
 # Local env file (secrets)
 .env
 .env.*
+!.env.digitalocean.example
 *.env
 .env.digitalocean.local
 

@@ -19,16 +19,20 @@ import {
 import { CommunicationPlansService } from './communication-plans.service';
 import { CreateCommunicationPlanDto, UpdateCommunicationPlanDto, CreateContactDto } from './dto/bcdr.dto';
 import { CurrentUser, UserContext } from '@gigachad-grc/shared';
+import { PermissionGuard } from '../auth/permission.guard';
+import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { Resource, Action } from '../permissions/dto/permission.dto';
 import { JwtAuthGuard } from '../auth/dev-auth.guard';
 
 @ApiTags('bcdr/communication')
 @ApiBearerAuth()
 @Controller('api/bcdr/communication')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class CommunicationPlansController {
   constructor(private readonly communicationService: CommunicationPlansService) {}
 
   @Get()
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'List communication plans' })
   @ApiResponse({ status: 200, description: 'List of communication plans' })
   async findAll(
@@ -41,6 +45,7 @@ export class CommunicationPlansController {
   }
 
   @Get('escalation')
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'Get contacts grouped by escalation level' })
   async getContactsByEscalation(
     @CurrentUser() user: UserContext,
@@ -50,6 +55,7 @@ export class CommunicationPlansController {
   }
 
   @Get(':id')
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'Get communication plan details' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
   async findOne(
@@ -60,6 +66,7 @@ export class CommunicationPlansController {
   }
 
   @Post()
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Create a communication plan' })
   @ApiResponse({ status: 201, description: 'Plan created' })
   async create(
@@ -76,6 +83,7 @@ export class CommunicationPlansController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Update a communication plan' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
   async update(
@@ -94,6 +102,7 @@ export class CommunicationPlansController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Delete a communication plan' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
   async delete(
@@ -111,6 +120,7 @@ export class CommunicationPlansController {
 
   // Contacts
   @Post(':id/contacts')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Add a contact to the plan' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
   async addContact(
@@ -118,35 +128,40 @@ export class CommunicationPlansController {
     @CurrentUser() user: UserContext,
     @Body() dto: CreateContactDto,
   ) {
-    return this.communicationService.addContact(id, user.userId, dto);
-  }
-
-  @Put(':id/contacts/:contactId')
-  @ApiOperation({ summary: 'Update a contact' })
-  @ApiParam({ name: 'id', description: 'Plan ID' })
-  @ApiParam({ name: 'contactId', description: 'Contact ID' })
-  async updateContact(
-    @Param('contactId') contactId: string,
-    @Body() updates: Partial<CreateContactDto> & { isActive?: boolean },
-  ) {
-    return this.communicationService.updateContact(contactId, updates);
-  }
-
-  @Delete(':id/contacts/:contactId')
-  @ApiOperation({ summary: 'Delete a contact' })
-  @ApiParam({ name: 'id', description: 'Plan ID' })
-  @ApiParam({ name: 'contactId', description: 'Contact ID' })
-  async deleteContact(@Param('contactId') contactId: string) {
-    return this.communicationService.deleteContact(contactId);
+    return this.communicationService.addContact(id, user.organizationId, user.userId, dto);
   }
 
   @Put(':id/contacts/reorder')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Reorder contacts' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
-  async reorderContacts(
+  async reorderContacts(@CurrentUser() user: UserContext,
     @Param('id') id: string,
     @Body() body: { contactIds: string[] },
   ) {
-    return this.communicationService.reorderContacts(id, body.contactIds);
+    return this.communicationService.reorderContacts(id, user.organizationId, body.contactIds);
   }
+
+  @Put(':id/contacts/:contactId')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
+  @ApiOperation({ summary: 'Update a contact' })
+  @ApiParam({ name: 'id', description: 'Plan ID' })
+  @ApiParam({ name: 'contactId', description: 'Contact ID' })
+  async updateContact(@Param('id') id: string, @CurrentUser() user: UserContext,
+    @Param('contactId') contactId: string,
+    @Body() updates: Partial<CreateContactDto> & { isActive?: boolean },
+  ) {
+    return this.communicationService.updateContact(id, user.organizationId, contactId, updates);
+  }
+
+  @Delete(':id/contacts/:contactId')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
+  @ApiOperation({ summary: 'Delete a contact' })
+  @ApiParam({ name: 'id', description: 'Plan ID' })
+  @ApiParam({ name: 'contactId', description: 'Contact ID' })
+  async deleteContact(@Param('id') id: string, @CurrentUser() user: UserContext, @Param('contactId') contactId: string) {
+    return this.communicationService.deleteContact(id, user.organizationId, contactId);
+  }
+
+
 }

@@ -86,93 +86,22 @@ class PersistentMemorySystem:
     Persistent memory system that tracks security state across scans
     """
     
-    def __init__(self):
-        self._ensure_tables_exist()
-    
-    def _ensure_tables_exist(self):
-        """Create memory tables if they don't exist"""
-        conn = get_conn()
-        try:
-            with conn.cursor() as cur:
-                # Use advisory lock to prevent race conditions during migration
-                cur.execute("SELECT pg_advisory_lock(123456789)")
-                try:
-                    # Finding memory table
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS finding_memory (
-                            id SERIAL PRIMARY KEY,
-                            finding_hash VARCHAR(64) UNIQUE NOT NULL,
-                            first_seen TIMESTAMP NOT NULL,
-                            last_seen TIMESTAMP NOT NULL,
-                            occurrence_count INTEGER DEFAULT 1,
-                            resource_name VARCHAR(500),
-                            provider VARCHAR(50),
-                            issue TEXT,
-                            severity VARCHAR(20),
-                            status VARCHAR(50) DEFAULT 'new',
-                            scan_ids JSONB DEFAULT '[]',
-                            metadata JSONB DEFAULT '{}'
-                        )
-                    """)
-                    
-                    # Security tasks table
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS security_tasks (
-                            id SERIAL PRIMARY KEY,
-                            finding_id INTEGER REFERENCES findings(id),
-                            finding_hash VARCHAR(64),
-                            resource_name VARCHAR(500),
-                            provider VARCHAR(50),
-                            issue TEXT,
-                            description TEXT,
-                            recommendation TEXT,
-                            priority VARCHAR(20),
-                            status VARCHAR(50) DEFAULT 'open',
-                            created_at TIMESTAMP DEFAULT NOW(),
-                            updated_at TIMESTAMP DEFAULT NOW(),
-                            resolved_at TIMESTAMP,
-                            related_tasks JSONB DEFAULT '[]',
-                            metadata JSONB DEFAULT '{}'
-                        )
-                    """)
-                    
-                    # Security notes table
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS security_notes (
-                            id SERIAL PRIMARY KEY,
-                            finding_hash VARCHAR(64),
-                            task_id INTEGER REFERENCES security_tasks(id),
-                            note_type VARCHAR(50),
-                            content TEXT,
-                            author VARCHAR(200) DEFAULT 'system',
-                            created_at TIMESTAMP DEFAULT NOW(),
-                            tags JSONB DEFAULT '[]'
-                        )
-                    """)
-                    
-                    # Knowledge base table (for learned patterns)
-                    cur.execute("""
-                        CREATE TABLE IF NOT EXISTS security_knowledge (
-                            id SERIAL PRIMARY KEY,
-                            pattern_type VARCHAR(100),
-                            pattern_data JSONB,
-                            confidence FLOAT DEFAULT 0.5,
-                            evidence_count INTEGER DEFAULT 1,
-                            last_updated TIMESTAMP DEFAULT NOW(),
-                            metadata JSONB DEFAULT '{}'
-                        )
-                    """)
-                    
-                    conn.commit()
-                    logger.info("✅ Persistent memory tables initialized")
-                finally:
-                    cur.execute("SELECT pg_advisory_unlock(123456789)")
-                    
-        except Exception as e:
-            # If tables already exist or another worker did it, just log and continue
-            logger.warning(f"⚠️ Table initialization noticed existing structures or race: {e}")
-            conn.rollback()
-    
+    def __init__(self, tenant_id=None, user_id=None, account_id=None, provider=None):
+        self.tenant_id = tenant_id
+        self.user_id = user_id
+        self.account_id = account_id
+        self.provider = provider
+
+    def for_owner(self, tenant_id: str, user_id: str, account_id=None, provider=None):
+        if not tenant_id or not user_id:
+            raise ValueError("Memory requires tenant and user ownership")
+        return PersistentMemorySystem(tenant_id, user_id, account_id, provider)
+
+    def _get_conn(self):
+        if not self.tenant_id or not self.user_id:
+            raise ValueError("Unscoped memory access is forbidden")
+        return get_conn()
+
     def process_scan_findings(self, scan_id: int, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Process new scan findings and update memory
@@ -190,8 +119,15 @@ class PersistentMemorySystem:
             "tasks_created": 0
         }
         
-        conn = get_conn()
+        conn = self._get_conn()
         
+        with conn.cursor() as cur:
+            cur.execute("SELECT account_id, cloud FROM scans WHERE id = %s AND tenant_id = %s AND user_id = %s AND status = 'completed'", (scan_id, self.tenant_id, self.user_id))
+            scan = cur.fetchone()
+            if not scan:
+                raise ValueError("A completed scan owned by this tenant and user is required")
+        self = self.for_owner(self.tenant_id, self.user_id, scan[0], scan[1])
+
         # Track which findings we've seen in this scan
         current_finding_hashes = set()
         
@@ -257,19 +193,19 @@ class PersistentMemorySystem:
         import hashlib
         
         # Use resource + issue + provider as unique identifier
-        identifier = f"{finding.get('provider')}::{finding.get('resource_name')}::{finding.get('issue')}"
-        return hashlib.sha256(identifier.encode()).hexdigest()[:16]
+        identifier = json.dumps([self.tenant_id, self.user_id, self.account_id, finding.get('provider'), finding.get('resource_name'), finding.get('issue')])
+        return hashlib.sha256(identifier.encode()).hexdigest()
     
     def _get_finding_memory(self, finding_hash: str) -> Optional[FindingMemory]:
         """Retrieve finding memory from database"""
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT finding_hash, first_seen, last_seen, occurrence_count,
                        resource_name, provider, issue, severity, status, scan_ids
                 FROM finding_memory
-                WHERE finding_hash = %s
-            """, (finding_hash,))
+                WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
+            """, (self.tenant_id, self.user_id) + (finding_hash,))
             
             row = cur.fetchone()
             if not row:
@@ -285,19 +221,19 @@ class PersistentMemorySystem:
                 issue=row[6],
                 severity=row[7],
                 status=row[8],
-                scan_ids=json.loads(row[9]) if row[9] else [],
+                scan_ids=(json.loads(row[9]) if isinstance(row[9], str) else row[9]) or [],
                 notes=[]
             )
     
     def _create_finding_memory(self, finding_hash: str, scan_id: int, finding: Dict[str, Any]):
         """Create new finding memory entry"""
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO finding_memory
-                (finding_hash, first_seen, last_seen, resource_name, provider, issue, severity, scan_ids)
-                VALUES (%s, NOW(), NOW(), %s, %s, %s, %s, %s::jsonb)
-            """, (
+                (tenant_id, user_id, account_id, finding_hash, first_seen, last_seen, resource_name, provider, issue, severity, scan_ids)
+                VALUES (%s, %s, %s, %s, NOW(), NOW(), %s, %s, %s, %s, %s::jsonb)
+            """, (self.tenant_id, self.user_id, self.account_id) + (
                 finding_hash,
                 finding.get('resource_name'),
                 finding.get('provider'),
@@ -308,7 +244,7 @@ class PersistentMemorySystem:
     
     def _update_finding_memory(self, finding_hash: str, scan_id: int, status: str):
         """Update existing finding memory"""
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE finding_memory
@@ -316,12 +252,12 @@ class PersistentMemorySystem:
                     occurrence_count = occurrence_count + 1,
                     status = %s,
                     scan_ids = scan_ids || %s::jsonb
-                WHERE finding_hash = %s
-            """, (status, json.dumps([scan_id]), finding_hash))
+                WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
+            """, (status, json.dumps([scan_id]), self.tenant_id, self.user_id, finding_hash))
     
     def _check_resolved_findings(self, scan_id: int, current_hashes: set) -> int:
         """Check for findings that were present before but not in current scan"""
-        conn = get_conn()
+        conn = self._get_conn()
         resolved_count = 0
         
         with conn.cursor() as cur:
@@ -329,9 +265,9 @@ class PersistentMemorySystem:
             cur.execute("""
                 SELECT finding_hash, resource_name, issue
                 FROM finding_memory
-                WHERE status IN ('new', 'recurring', 'regressed')
+                WHERE tenant_id = %s AND user_id = %s AND account_id = %s AND provider = %s AND status IN ('new', 'recurring', 'regressed')
                   AND last_seen < (SELECT started_at FROM scans WHERE id = %s)
-            """, (scan_id,))
+            """, (self.tenant_id, self.user_id, self.account_id, self.provider) + (scan_id,))
             
             for row in cur.fetchall():
                 finding_hash, resource_name, issue = row
@@ -341,8 +277,8 @@ class PersistentMemorySystem:
                     cur.execute("""
                         UPDATE finding_memory
                         SET status = 'resolved'
-                        WHERE finding_hash = %s
-                    """, (finding_hash,))
+                        WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
+                    """, (self.tenant_id, self.user_id) + (finding_hash,))
                     
                     # Resolve associated tasks
                     cur.execute("""
@@ -350,9 +286,9 @@ class PersistentMemorySystem:
                         SET status = 'resolved',
                             resolved_at = NOW(),
                             updated_at = NOW()
-                        WHERE finding_hash = %s
+                        WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
                           AND status IN ('open', 'in_progress')
-                    """, (finding_hash,))
+                    """, (self.tenant_id, self.user_id) + (finding_hash,))
                     
                     resolved_count += 1
                     logger.info(f"✅ RESOLVED: {issue} on {resource_name}")
@@ -371,13 +307,13 @@ class PersistentMemorySystem:
         """Create a security remediation task"""
         finding_hash = self._generate_finding_hash(finding)
         
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             # Check if task already exists for this finding
             cur.execute("""
                 SELECT id FROM security_tasks
-                WHERE finding_hash = %s AND status IN ('open', 'in_progress')
-            """, (finding_hash,))
+                WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s AND status IN ('open', 'in_progress')
+            """, (self.tenant_id, self.user_id) + (finding_hash,))
             
             if cur.fetchone():
                 logger.debug(f"Task already exists for {finding_hash}")
@@ -386,10 +322,10 @@ class PersistentMemorySystem:
             # Create new task
             cur.execute("""
                 INSERT INTO security_tasks
-                (finding_hash, resource_name, provider, issue, description, recommendation, priority, status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, 'open')
+                (tenant_id, user_id, finding_hash, resource_name, provider, issue, description, recommendation, priority, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'open')
                 RETURNING id
-            """, (
+            """, (self.tenant_id, self.user_id) + (
                 finding_hash,
                 finding.get('resource_name'),
                 finding.get('provider'),
@@ -414,32 +350,34 @@ class PersistentMemorySystem:
     
     def _add_note(self, finding_hash: str, note_type: str, content: str, author: str = "system"):
         """Add a note to a finding"""
-        conn = get_conn()
+        if not self._get_finding_memory(finding_hash):
+            raise ValueError("Finding not found")
+        conn = self._get_conn()
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO security_notes
-                (finding_hash, note_type, content, author)
-                VALUES (%s, %s, %s, %s)
-            """, (finding_hash, note_type, content, author))
+                (tenant_id, user_id, finding_hash, note_type, content, author)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (self.tenant_id, self.user_id) + (finding_hash, note_type, content, author))
     
     def get_open_tasks(self, priority: Optional[TaskPriority] = None) -> List[Dict[str, Any]]:
         """Get all open security tasks"""
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             query = """
                 SELECT id, finding_hash, resource_name, provider, issue,
                        description, recommendation, priority, status,
                        created_at, updated_at
                 FROM security_tasks
-                WHERE status IN ('open', 'in_progress')
+                WHERE tenant_id = %s AND user_id = %s AND status IN ('open', 'in_progress')
             """
             
             if priority:
                 query += " AND priority = %s"
-                cur.execute(query + " ORDER BY created_at DESC", (priority.value,))
+                cur.execute(query + " ORDER BY created_at DESC", (self.tenant_id, self.user_id, priority.value))
             else:
                 query += " ORDER BY CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, created_at DESC"
-                cur.execute(query)
+                cur.execute(query, (self.tenant_id, self.user_id))
             
             tasks = []
             for row in cur.fetchall():
@@ -461,15 +399,15 @@ class PersistentMemorySystem:
     
     def get_finding_history(self, finding_hash: str) -> Dict[str, Any]:
         """Get complete history of a finding"""
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             # Get memory
             cur.execute("""
                 SELECT finding_hash, first_seen, last_seen, occurrence_count,
                        resource_name, provider, issue, severity, status, scan_ids
                 FROM finding_memory
-                WHERE finding_hash = %s
-            """, (finding_hash,))
+                WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
+            """, (self.tenant_id, self.user_id) + (finding_hash,))
             
             memory_row = cur.fetchone()
             if not memory_row:
@@ -479,9 +417,9 @@ class PersistentMemorySystem:
             cur.execute("""
                 SELECT note_type, content, author, created_at
                 FROM security_notes
-                WHERE finding_hash = %s
+                WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
                 ORDER BY created_at DESC
-            """, (finding_hash,))
+            """, (self.tenant_id, self.user_id) + (finding_hash,))
             
             notes = [
                 {
@@ -497,9 +435,9 @@ class PersistentMemorySystem:
             cur.execute("""
                 SELECT id, priority, status, created_at, resolved_at
                 FROM security_tasks
-                WHERE finding_hash = %s
+                WHERE tenant_id = %s AND user_id = %s AND finding_hash = %s
                 ORDER BY created_at DESC
-            """, (finding_hash,))
+            """, (self.tenant_id, self.user_id) + (finding_hash,))
             
             tasks = [
                 {
@@ -522,22 +460,22 @@ class PersistentMemorySystem:
                 "issue": memory_row[6],
                 "severity": memory_row[7],
                 "status": memory_row[8],
-                "scan_ids": json.loads(memory_row[9]) if memory_row[9] else [],
+                "scan_ids": (json.loads(memory_row[9]) if isinstance(memory_row[9], str) else memory_row[9]) or [],
                 "notes": notes,
                 "tasks": tasks
             }
     
     def get_dashboard_summary(self) -> Dict[str, Any]:
         """Get summary for dashboard"""
-        conn = get_conn()
+        conn = self._get_conn()
         with conn.cursor() as cur:
             # Open tasks by priority
             cur.execute("""
                 SELECT priority, COUNT(*)
                 FROM security_tasks
-                WHERE status IN ('open', 'in_progress')
+                WHERE tenant_id = %s AND user_id = %s AND status IN ('open', 'in_progress')
                 GROUP BY priority
-            """)
+            """, (self.tenant_id, self.user_id))
             
             tasks_by_priority = {row[0]: row[1] for row in cur.fetchall()}
             
@@ -545,24 +483,24 @@ class PersistentMemorySystem:
             cur.execute("""
                 SELECT COUNT(*)
                 FROM finding_memory
-                WHERE status = 'recurring' AND occurrence_count > 3
-            """)
+                WHERE tenant_id = %s AND user_id = %s AND status = 'recurring' AND occurrence_count > 3
+            """, (self.tenant_id, self.user_id))
             chronic_issues = cur.fetchone()[0]
             
             # Recently resolved
             cur.execute("""
                 SELECT COUNT(*)
                 FROM finding_memory
-                WHERE status = 'resolved' AND last_seen > NOW() - INTERVAL '7 days'
-            """)
+                WHERE tenant_id = %s AND user_id = %s AND status = 'resolved' AND last_seen > NOW() - INTERVAL '7 days'
+            """, (self.tenant_id, self.user_id))
             recently_resolved = cur.fetchone()[0]
             
             # Regressions
             cur.execute("""
                 SELECT COUNT(*)
                 FROM finding_memory
-                WHERE status = 'regressed'
-            """)
+                WHERE tenant_id = %s AND user_id = %s AND status = 'regressed'
+            """, (self.tenant_id, self.user_id))
             regressions = cur.fetchone()[0]
             
             return {

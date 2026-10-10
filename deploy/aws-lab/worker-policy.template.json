@@ -1,0 +1,65 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LabBucketLifecycle",
+      "Effect": "Allow",
+      "Action": ["s3:CreateBucket", "s3:DeleteBucket", "s3:PutBucketTagging", "s3:PutBucketPublicAccessBlock", "s3:PutBucketPolicy", "s3:DeleteBucketPolicy"],
+      "Resource": "arn:aws:s3:::cg-*"
+    },
+    {
+      "Sid": "LabUserLifecycle",
+      "Effect": "Allow",
+      "Action": ["iam:CreateUser", "iam:TagUser", "iam:PutUserPolicy", "iam:DeleteUserPolicy", "iam:ListUserPolicies", "iam:ListAccessKeys", "iam:DeleteAccessKey", "iam:DeleteUser"],
+      "Resource": "arn:aws:iam::SANDBOX_ACCOUNT_ID:user/cg-????????????-no-mfa-*"
+    },
+    {
+      "Sid": "NoUsableCredentialsForLabUsers",
+      "Effect": "Deny",
+      "Action": ["iam:CreateAccessKey", "iam:CreateLoginProfile", "iam:UpdateLoginProfile"],
+      "Resource": "arn:aws:iam::SANDBOX_ACCOUNT_ID:user/cg-????????????-no-mfa-*"
+    },
+    {
+      "Sid": "CreateTaggedLabVpc",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVpc",
+      "Resource": "arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:vpc/*",
+      "Condition": {"StringLike": {"aws:RequestTag/cloudguard-lab-id": "lab-*"}}
+    },
+    {
+      "Sid": "CreateTaggedLabSecurityGroup",
+      "Effect": "Allow",
+      "Action": "ec2:CreateSecurityGroup",
+      "Resource": "arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:security-group/*",
+      "Condition": {"StringLike": {"aws:RequestTag/cloudguard-lab-id": "lab-*"}}
+    },
+    {
+      "Sid": "CreateGroupInsideLabVpc",
+      "Effect": "Allow",
+      "Action": "ec2:CreateSecurityGroup",
+      "Resource": "arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:vpc/*",
+      "Condition": {"StringLike": {"ec2:ResourceTag/cloudguard-lab-id": "lab-*"}}
+    },
+    {
+      "Sid": "TagResourcesOnlyDuringCreation",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": ["arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:vpc/*", "arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:security-group/*"],
+      "Condition": {"StringEquals": {"ec2:CreateAction": ["CreateVpc", "CreateSecurityGroup"]}}
+    },
+    {
+      "Sid": "ConfigureAndDeleteLabSecurityGroups",
+      "Effect": "Allow",
+      "Action": ["ec2:AuthorizeSecurityGroupIngress", "ec2:DeleteSecurityGroup"],
+      "Resource": "arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:security-group/*",
+      "Condition": {"StringLike": {"ec2:ResourceTag/cloudguard-lab-id": "lab-*"}}
+    },
+    {
+      "Sid": "DeleteTaggedLabVpcs",
+      "Effect": "Allow",
+      "Action": "ec2:DeleteVpc",
+      "Resource": "arn:aws:ec2:SANDBOX_REGION:SANDBOX_ACCOUNT_ID:vpc/*",
+      "Condition": {"StringLike": {"ec2:ResourceTag/cloudguard-lab-id": "lab-*"}}
+    }
+  ]
+}

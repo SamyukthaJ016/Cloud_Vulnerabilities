@@ -239,7 +239,7 @@ describe('FrameworksService', () => {
         level: 0,
       });
 
-      const result = await service.createRequirement('fw-123', mockCreateDto);
+      const result = await service.createRequirement('fw-123', 'org-123', mockCreateDto);
 
       expect(mockPrismaService.frameworkRequirement.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -270,7 +270,7 @@ describe('FrameworksService', () => {
         level: 2,
       });
 
-      await service.createRequirement('fw-123', {
+      await service.createRequirement('fw-123', 'org-123', {
         ...mockCreateDto,
         parentId: 'parent-123',
       });

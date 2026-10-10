@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
+import { CustomFieldDefinition, CustomFieldValue, Prisma } from '@prisma/client';
 import {
   CreateCustomFieldDto,
   UpdateCustomFieldDto,
@@ -49,10 +50,6 @@ interface CustomFieldValueRecord {
   updatedAt: Date;
 }
 
-// In-memory stores
-const fieldStore = new Map<string, CustomFieldRecord>();
-const valueStore = new Map<string, CustomFieldValueRecord>(); // Key: `${fieldId}:${entityId}`
-
 @Injectable()
 export class CustomFieldsService {
   private readonly logger = new Logger(CustomFieldsService.name);
@@ -65,7 +62,7 @@ export class CustomFieldsService {
     dto: CreateCustomFieldDto
   ): Promise<CustomFieldDto> {
     // Check for duplicate slug
-    const existing = Array.from(fieldStore.values()).find(
+    const existing = (await this.loadFields(organizationId)).find(
       (f) =>
         f.organizationId === organizationId &&
         f.entityType === dto.entityType &&
@@ -99,7 +96,12 @@ export class CustomFieldsService {
       updatedAt: now,
     };
 
-    fieldStore.set(id, field);
+    try {
+      await this.prisma.customFieldDefinition.create({ data: { id, ...this.fieldData(field) } });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002') throw new ConflictException('Field slug already exists');
+      throw error;
+    }
     this.logger.log(`Created custom field ${id} (${dto.slug}) for ${dto.entityType}`);
 
     return this.toFieldDto(field);
@@ -110,7 +112,7 @@ export class CustomFieldsService {
     fieldId: string,
     dto: UpdateCustomFieldDto
   ): Promise<CustomFieldDto> {
-    const field = fieldStore.get(fieldId);
+    const field = await this.loadField(organizationId, fieldId);
     if (!field || field.organizationId !== organizationId) {
       throw new NotFoundException(`Custom field ${fieldId} not found`);
     }
@@ -128,29 +130,23 @@ export class CustomFieldsService {
       updatedAt: new Date(),
     };
 
-    fieldStore.set(fieldId, updated);
+    await this.prisma.customFieldDefinition.update({ where: { id: fieldId, organizationId }, data: this.fieldData(updated) });
     return this.toFieldDto(updated);
   }
 
   async deleteField(organizationId: string, fieldId: string): Promise<void> {
-    const field = fieldStore.get(fieldId);
+    const field = await this.loadField(organizationId, fieldId);
     if (!field || field.organizationId !== organizationId) {
       throw new NotFoundException(`Custom field ${fieldId} not found`);
     }
 
-    // Delete all values for this field
-    for (const [key, value] of valueStore.entries()) {
-      if (value.fieldId === fieldId) {
-        valueStore.delete(key);
-      }
-    }
-
-    fieldStore.delete(fieldId);
+    // Values are removed by the database foreign-key cascade.
+    await this.prisma.customFieldDefinition.delete({ where: { id: fieldId, organizationId } });
     this.logger.log(`Deleted custom field ${fieldId}`);
   }
 
   async getField(organizationId: string, fieldId: string): Promise<CustomFieldDto> {
-    const field = fieldStore.get(fieldId);
+    const field = await this.loadField(organizationId, fieldId);
     if (!field || field.organizationId !== organizationId) {
       throw new NotFoundException(`Custom field ${fieldId} not found`);
     }
@@ -163,7 +159,7 @@ export class CustomFieldsService {
       limit: query.limit,
     });
 
-    let fields = Array.from(fieldStore.values()).filter((f) => f.organizationId === organizationId);
+    let fields = (await this.loadFields(organizationId)).filter((f) => f.organizationId === organizationId);
 
     if (query.entityType) {
       fields = fields.filter((f) => f.entityType === query.entityType);
@@ -193,10 +189,11 @@ export class CustomFieldsService {
     entityId: string,
     dto: SetCustomFieldValueDto
   ): Promise<CustomFieldValueDto> {
+    await this.requireEntity(organizationId, entityType, entityId);
     // Find field by ID or slug
-    let field = fieldStore.get(dto.fieldIdOrSlug);
+    let field = await this.loadField(organizationId, dto.fieldIdOrSlug);
     if (!field) {
-      field = Array.from(fieldStore.values()).find(
+      field = (await this.loadFields(organizationId)).find(
         (f) =>
           f.organizationId === organizationId &&
           f.entityType === entityType &&
@@ -215,10 +212,9 @@ export class CustomFieldsService {
     // Validate value
     this.validateFieldValue(field, dto.value);
 
-    const key = `${field.id}:${entityId}`;
     const now = new Date();
 
-    const existing = valueStore.get(key);
+    const existing = await this.loadValue(field.id, entityType, entityId);
     const valueRecord: CustomFieldValueRecord = {
       id: existing?.id || crypto.randomUUID(),
       fieldId: field.id,
@@ -229,7 +225,11 @@ export class CustomFieldsService {
       updatedAt: now,
     };
 
-    valueStore.set(key, valueRecord);
+    await this.prisma.customFieldValue.upsert({
+      where: { fieldId_entityType_entityId: { fieldId: field.id, entityType, entityId } },
+      create: { ...valueRecord, entityType },
+      update: { value: valueRecord.value, updatedAt: now },
+    });
 
     return this.toValueDto(field, valueRecord);
   }
@@ -239,15 +239,15 @@ export class CustomFieldsService {
     entityType: CustomFieldEntityType,
     entityId: string
   ): Promise<EntityCustomFieldsDto> {
-    const fields = Array.from(fieldStore.values()).filter(
+    await this.requireEntity(organizationId, entityType, entityId);
+    const fields = (await this.loadFields(organizationId)).filter(
       (f) => f.organizationId === organizationId && f.entityType === entityType && f.isActive
     );
 
     const values: CustomFieldValueDto[] = [];
 
     for (const field of fields) {
-      const key = `${field.id}:${entityId}`;
-      const valueRecord = valueStore.get(key);
+        const valueRecord = await this.loadValue(field.id, entityType, entityId);
 
       if (valueRecord) {
         values.push(this.toValueDto(field, valueRecord));
@@ -277,9 +277,10 @@ export class CustomFieldsService {
     entityId: string,
     fieldIdOrSlug: string
   ): Promise<void> {
-    let field = fieldStore.get(fieldIdOrSlug);
+    await this.requireEntity(organizationId, entityType, entityId);
+    let field = await this.loadField(organizationId, fieldIdOrSlug);
     if (!field) {
-      field = Array.from(fieldStore.values()).find(
+      field = (await this.loadFields(organizationId)).find(
         (f) =>
           f.organizationId === organizationId &&
           f.entityType === entityType &&
@@ -291,8 +292,61 @@ export class CustomFieldsService {
       throw new NotFoundException(`Custom field '${fieldIdOrSlug}' not found`);
     }
 
-    const key = `${field.id}:${entityId}`;
-    valueStore.delete(key);
+    if (field.entityType !== entityType) throw new BadRequestException('Field does not apply to this entity type');
+    await this.prisma.customFieldValue.deleteMany({ where: { fieldId: field.id, entityType, entityId, field: { organizationId } } });
+  }
+
+  private async requireEntity(organizationId: string, entityType: CustomFieldEntityType, id: string) {
+    const where = { id, organizationId };
+    const entity = await (() => {
+      switch (entityType) {
+        case CustomFieldEntityType.Control: return this.prisma.control.findFirst({ where });
+        case CustomFieldEntityType.Policy: return this.prisma.policy.findFirst({ where });
+        case CustomFieldEntityType.Risk: return this.prisma.risk.findFirst({ where });
+        case CustomFieldEntityType.Evidence: return this.prisma.evidence.findFirst({ where });
+        case CustomFieldEntityType.Task: return this.prisma.task.findFirst({ where });
+        case CustomFieldEntityType.Vendor: return this.prisma.vendor.findFirst({ where });
+      }
+    })();
+    if (!entity) throw new NotFoundException('Entity not found');
+  }
+
+  private fromField(row: CustomFieldDefinition): CustomFieldRecord {
+    return {
+      id: row.id, organizationId: row.organizationId, name: row.label,
+      slug: row.name.includes(':') ? row.name.split(':').slice(1).join(':') : row.name,
+      fieldType: row.fieldType as CustomFieldType, entityType: row.entityTypes[0] as CustomFieldEntityType,
+      description: row.description ?? undefined, defaultValue: typeof row.defaultValue === 'string' ? row.defaultValue : undefined,
+      options: Array.isArray(row.options) ? row.options as string[] : undefined,
+      isRequired: row.isRequired, placeholder: row.placeholder ?? undefined, displayOrder: row.order,
+      isActive: row.isActive, createdBy: row.createdBy ?? '', createdAt: row.createdAt, updatedAt: row.updatedAt,
+    };
+  }
+
+  private fieldData(field: CustomFieldRecord): Prisma.CustomFieldDefinitionUncheckedCreateInput {
+    return {
+      organizationId: field.organizationId, name: `${field.entityType}:${field.slug}`, label: field.name,
+      fieldType: field.fieldType, entityTypes: [field.entityType], description: field.description,
+      defaultValue: field.defaultValue ?? Prisma.DbNull, options: field.options ?? Prisma.DbNull,
+      isRequired: field.isRequired, placeholder: field.placeholder, order: field.displayOrder,
+      isActive: field.isActive, createdBy: field.createdBy, updatedAt: field.updatedAt,
+    };
+  }
+
+  private async loadFields(organizationId: string): Promise<CustomFieldRecord[]> {
+    return (await this.prisma.customFieldDefinition.findMany({ where: { organizationId } })).map(row => this.fromField(row));
+  }
+
+  private async loadField(organizationId: string, id: string): Promise<CustomFieldRecord | undefined> {
+    const row = await this.prisma.customFieldDefinition.findFirst({ where: { id, organizationId } });
+    return row ? this.fromField(row) : undefined;
+  }
+
+  private async loadValue(fieldId: string, entityType: string, entityId: string): Promise<CustomFieldValueRecord | undefined> {
+    const row: CustomFieldValue | null = await this.prisma.customFieldValue.findUnique({
+      where: { fieldId_entityType_entityId: { fieldId, entityType, entityId } },
+    });
+    return row ? { ...row, createdBy: row.createdBy ?? '', value: String(row.value ?? '') } : undefined;
   }
 
   private validateFieldValue(field: CustomFieldRecord, value: string): void {

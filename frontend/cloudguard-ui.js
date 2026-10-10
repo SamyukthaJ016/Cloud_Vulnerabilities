@@ -1,5 +1,6 @@
 (function () {
     const originalFetch = window.fetch.bind(window);
+    const isAuthPage = ["/login", "/signup"].includes(window.location.pathname);
     const OIDC_STATE_KEY = "cloudguard.oidc.state";
     const OIDC_VERIFIER_KEY = "cloudguard.oidc.verifier";
     const OIDC_TOKENS_KEY = "cloudguard.oidc.tokens";
@@ -60,13 +61,13 @@
         window.history.replaceState(window.history.state, "", url.toString());
     }
 
-    async function beginAuthorization(config, keycloakUrl, redirectUri) {
+    async function beginAuthorization(config, keycloakUrl, redirectUri, options = {}) {
         const state = randomUrlSafeValue();
         const verifier = randomUrlSafeValue();
         window.sessionStorage.setItem(OIDC_STATE_KEY, state);
         window.sessionStorage.setItem(OIDC_VERIFIER_KEY, verifier);
 
-        const authorizationUrl = new URL(oidcEndpoint(keycloakUrl, config.realm, "auth"));
+        const authorizationUrl = new URL(oidcEndpoint(keycloakUrl, config.realm, options.register ? "registrations" : "auth"));
         authorizationUrl.search = new URLSearchParams({
             client_id: config.client_id,
             redirect_uri: redirectUri,
@@ -77,6 +78,8 @@
             code_challenge: await pkceChallenge(verifier),
             code_challenge_method: "S256",
         }).toString();
+        if (options.google) authorizationUrl.searchParams.set("kc_idp_hint", "google");
+        if (options.email) authorizationUrl.searchParams.set("login_hint", options.email);
         window.location.assign(authorizationUrl.toString());
         return new Promise(() => {});
     }
@@ -98,7 +101,10 @@
         const response = await originalFetch("/api/auth/config", { credentials: "same-origin" });
         if (!response.ok) throw new Error("Unable to load CloudGuard authentication configuration");
         const config = await response.json();
-        if (!config.enabled) return null;
+        if (!config.enabled) {
+            window.cloudguardAccount = { enabled: false };
+            return null;
+        }
         if (!config.url || !config.realm || !config.client_id) {
             throw new Error("CloudGuard Keycloak configuration is incomplete");
         }
@@ -111,6 +117,16 @@
         }
 
         const redirectUri = `${window.location.origin}${window.location.pathname}`;
+        window.cloudguardAccount = {
+            enabled: true,
+            login: (options = {}) => beginAuthorization(config, keycloakUrl, `${window.location.origin}/login`, options),
+            logout: () => {
+                window.sessionStorage.removeItem(OIDC_TOKENS_KEY);
+                const url = new URL(oidcEndpoint(keycloakUrl, config.realm, "logout"));
+                url.search = new URLSearchParams({ client_id: config.client_id, post_logout_redirect_uri: `${window.location.origin}/login` });
+                window.location.assign(url.toString());
+            },
+        };
         const callback = new URL(window.location.href).searchParams;
         let tokens = readStoredTokens();
 
@@ -143,7 +159,9 @@
         }
 
         if (!tokens?.accessToken) {
-            return beginAuthorization(config, keycloakUrl, redirectUri);
+            if (isAuthPage) return null;
+            window.location.assign('/login');
+            return new Promise(() => {});
         }
 
         const auth = {
@@ -170,14 +188,39 @@
             },
         };
         await auth.updateToken(30);
+        // Claims are inspected only to drive onboarding UI. APIs independently
+        // verify the signature, issuer, audience and tenant before granting access.
+        function hasOrganization(token) {
+            try {
+                const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                return !!JSON.parse(window.atob(part)).organization_id;
+            } catch { return false; }
+        }
+        if (!hasOrganization(auth.token)) {
+            const response = await originalFetch('/api/auth/onboard', {
+                method: 'POST', headers: { Authorization: `Bearer ${auth.token}` },
+            });
+            if (!response.ok) throw new Error('Unable to finish account setup. Verify your email and try again.');
+            const refreshed = await requestTokens(keycloakUrl, config.realm, {
+                grant_type: 'refresh_token', client_id: config.client_id, refresh_token: tokens.refreshToken,
+            });
+            tokens = storeTokens(refreshed, tokens.refreshToken);
+            auth.token = tokens.accessToken;
+            if (!hasOrganization(auth.token)) throw new Error('Account setup is incomplete. Please sign in again.');
+        }
+        if (isAuthPage) window.location.replace('/dashboard');
         return auth;
     }
 
     const authenticationReady = initialiseAuthentication().catch((error) => {
         console.error("CloudGuard authentication could not be initialized:", error);
         document.documentElement.dataset.authError = "true";
-        throw error;
+        window.cloudguardAccountError = error.message;
+        if (isAuthPage) return null;
+        window.location.assign('/login');
+        return new Promise(() => {});
     });
+    window.cloudguardAccountReady = authenticationReady;
 
     window.fetch = async function (input, init) {
         const auth = await authenticationReady;
@@ -235,7 +278,7 @@
     }
 
     function addShell() {
-        if (!document.body || document.querySelector(".cg-shell")) return;
+        if (isAuthPage || !document.body || document.querySelector(".cg-shell")) return;
 
         const page = detectPage();
         const routes = routeMap();

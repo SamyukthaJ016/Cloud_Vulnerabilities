@@ -420,7 +420,11 @@ export class BCDRPlansService {
     return result[0];
   }
 
-  async linkControl(planId: string, controlId: string, userId: string, notes?: string) {
+  async linkControl(planId: string, organizationId: string, controlId: string, userId: string, notes?: string) {
+    await this.findOne(planId, organizationId);
+    if (!await this.prisma.control.findFirst({ where: { id: controlId, organizationId } })) {
+      throw new NotFoundException('Control not found');
+    }
     const result = await this.prisma.$queryRaw<PlanControlRecord[]>`
       INSERT INTO bcdr.plan_controls (plan_id, control_id, mapping_notes, created_by)
       VALUES (${planId}::uuid, ${controlId}::uuid, ${notes || null}, ${userId}::uuid)
@@ -432,7 +436,8 @@ export class BCDRPlansService {
     return result[0];
   }
 
-  async unlinkControl(planId: string, controlId: string) {
+  async unlinkControl(planId: string, organizationId: string, controlId: string) {
+    await this.findOne(planId, organizationId);
     await this.prisma.$executeRaw`
       DELETE FROM bcdr.plan_controls
       WHERE plan_id = ${planId}::uuid AND control_id = ${controlId}::uuid

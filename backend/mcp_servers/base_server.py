@@ -14,6 +14,7 @@ from typing import Dict, List, Any, Optional, Callable
 from datetime import datetime
 from enum import Enum
 from backend.utils.audit_logger import AuditLogger
+from backend.mcp_runtime import current_runtime
 
 logger = logging.getLogger("mcp_server")
 
@@ -350,8 +351,9 @@ class BaseMCPServer(ABC):
 class MCPServerManager:
     """Manages multiple MCP servers"""
     
-    def __init__(self):
-        self.servers: Dict[str, BaseMCPServer] = {}
+    @property
+    def servers(self) -> Dict[str, BaseMCPServer]:
+        return current_runtime().servers
     
     def register_server(self, server: BaseMCPServer) -> None:
         """Register an MCP server"""

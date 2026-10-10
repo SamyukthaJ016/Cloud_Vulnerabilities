@@ -4,5 +4,8 @@
   "private": true,
   "dependencies": {
     "keycloak-js": "26.2.4"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
   }
 }

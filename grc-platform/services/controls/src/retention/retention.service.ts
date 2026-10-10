@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
+import { RetentionPolicy } from '@prisma/client';
 import {
   CreateRetentionPolicyDto,
   UpdateRetentionPolicyDto,
@@ -34,8 +35,6 @@ interface RetentionPolicyRecord {
   updatedAt: Date;
 }
 
-// In-memory store
-const policyStore = new Map<string, RetentionPolicyRecord>();
 
 @Injectable()
 export class RetentionService {
@@ -73,7 +72,7 @@ export class RetentionService {
       policy.nextRunAt = tomorrow;
     }
 
-    policyStore.set(id, policy);
+    await this.prisma.retentionPolicy.create({ data: { id, ...this.policyData(policy) } });
     this.logger.log(`Created retention policy ${id} for ${dto.entityType}`);
 
     return this.toDto(policy);
@@ -84,7 +83,7 @@ export class RetentionService {
     policyId: string,
     dto: UpdateRetentionPolicyDto,
   ): Promise<RetentionPolicyDto> {
-    const policy = policyStore.get(policyId);
+    const policy = await this.loadPolicy(organizationId, policyId);
     if (!policy || policy.organizationId !== organizationId) {
       throw new NotFoundException(`Retention policy ${policyId} not found`);
     }
@@ -109,22 +108,22 @@ export class RetentionService {
       updated.nextRunAt = undefined;
     }
 
-    policyStore.set(policyId, updated);
+    await this.prisma.retentionPolicy.update({ where: { id: policyId, organizationId }, data: this.policyData(updated) });
     return this.toDto(updated);
   }
 
   async deletePolicy(organizationId: string, policyId: string): Promise<void> {
-    const policy = policyStore.get(policyId);
+    const policy = await this.loadPolicy(organizationId, policyId);
     if (!policy || policy.organizationId !== organizationId) {
       throw new NotFoundException(`Retention policy ${policyId} not found`);
     }
 
-    policyStore.delete(policyId);
+    await this.prisma.retentionPolicy.delete({ where: { id: policyId, organizationId } });
     this.logger.log(`Deleted retention policy ${policyId}`);
   }
 
   async getPolicy(organizationId: string, policyId: string): Promise<RetentionPolicyDto> {
-    const policy = policyStore.get(policyId);
+    const policy = await this.loadPolicy(organizationId, policyId);
     if (!policy || policy.organizationId !== organizationId) {
       throw new NotFoundException(`Retention policy ${policyId} not found`);
     }
@@ -140,7 +139,7 @@ export class RetentionService {
       limit: query.limit,
     });
 
-    let policies = Array.from(policyStore.values())
+    let policies = (await this.loadPolicies(organizationId))
       .filter(p => p.organizationId === organizationId);
 
     if (query.entityType) {
@@ -169,7 +168,7 @@ export class RetentionService {
     policyId: string,
     dto: RunRetentionPolicyDto,
   ): Promise<RetentionRunResultDto> {
-    const policy = policyStore.get(policyId);
+    const policy = await this.loadPolicy(organizationId, policyId);
     if (!policy || policy.organizationId !== organizationId) {
       throw new NotFoundException(`Retention policy ${policyId} not found`);
     }
@@ -434,7 +433,7 @@ export class RetentionService {
         policy.nextRunAt = tomorrow;
         policy.updatedAt = new Date();
 
-        policyStore.set(policyId, policy);
+        await this.prisma.retentionPolicy.update({ where: { id: policyId, organizationId }, data: this.policyData(policy) });
       }
 
       this.logger.log(
@@ -466,6 +465,37 @@ export class RetentionService {
         error: error.message,
       };
     }
+  }
+
+  private policyData(policy: RetentionPolicyRecord) {
+    return {
+      organizationId: policy.organizationId, name: policy.name, description: policy.description,
+      entityType: policy.entityType, periodValue: policy.retentionDays, periodUnit: 'days',
+      action: policy.action, status: policy.status, isEnabled: policy.status === RetentionPolicyStatus.ACTIVE,
+      lastRunAt: policy.lastRunAt, nextRunAt: policy.nextRunAt ?? null,
+      recordsAffected: policy.lastRunRecordsProcessed, createdBy: policy.createdBy, updatedAt: policy.updatedAt,
+    };
+  }
+
+  private fromPolicy(row: RetentionPolicy): RetentionPolicyRecord {
+    return {
+      id: row.id, organizationId: row.organizationId, name: row.name || row.entityType,
+      description: row.description ?? undefined, entityType: row.entityType as RetentionEntityType,
+      retentionDays: row.periodValue * (row.periodUnit === 'years' ? 365 : row.periodUnit === 'months' ? 30 : 1),
+      action: row.action as RetentionAction, status: row.status as RetentionPolicyStatus,
+      lastRunAt: row.lastRunAt ?? undefined, nextRunAt: row.nextRunAt ?? undefined,
+      lastRunRecordsProcessed: row.recordsAffected ?? undefined, createdBy: row.createdBy ?? '',
+      createdAt: row.createdAt, updatedAt: row.updatedAt,
+    };
+  }
+
+  private async loadPolicy(organizationId: string, id: string) {
+    const row = await this.prisma.retentionPolicy.findFirst({ where: { id, organizationId } });
+    return row ? this.fromPolicy(row) : undefined;
+  }
+
+  private async loadPolicies(organizationId: string) {
+    return (await this.prisma.retentionPolicy.findMany({ where: { organizationId } })).map(row => this.fromPolicy(row));
   }
 
   private toDto(policy: RetentionPolicyRecord): RetentionPolicyDto {

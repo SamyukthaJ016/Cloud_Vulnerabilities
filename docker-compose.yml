@@ -88,6 +88,7 @@ services:
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/tmp/cloudguard-sandbox-labs}
@@ -122,6 +123,14 @@ services:
 
       # Application
       APP_ENV: development
+      CLOUDGUARD_AUTH_REQUIRED: ${CLOUDGUARD_AUTH_REQUIRED:-false}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-cloudguard-api}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-gigachad-grc}
+      CLOUDGUARD_KEYCLOAK_CLIENT_ID: ${CLOUDGUARD_KEYCLOAK_CLIENT_ID:-cloudguard-frontend}
+      GRC_ONBOARDING_URL: ${GRC_ONBOARDING_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
@@ -228,7 +237,17 @@ services:
         #- security-scanner-backend:latest
     container_name: security-scanner-backend
     environment:
+      CLOUDGUARD_AUTH_REQUIRED: "true"
+      GRC_ONBOARDING_URL: ${GRC_ONBOARDING_URL:-}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-}
+      CLOUDGUARD_KEYCLOAK_CLIENT_ID: ${CLOUDGUARD_KEYCLOAK_CLIENT_ID:-cloudguard-frontend}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-gigachad-grc}
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       REDIS_URL: redis://:redis_password@redis:6379/0
       QUEUE_BACKEND: ${QUEUE_BACKEND:-postgres}
       SCAN_JOB_INLINE_WORKER: ${SCAN_JOB_INLINE_WORKER:-true}
@@ -236,10 +255,11 @@ services:
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/tmp/cloudguard-sandbox-labs}
-      WORKER_AUTH_REQUIRED: ${WORKER_AUTH_REQUIRED:-false}
+      WORKER_AUTH_REQUIRED: "true"
       WORKER_TOKEN: ${WORKER_TOKEN:-}
       WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
@@ -318,6 +338,7 @@ services:
     container_name: scheduled-scanner
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       SCAN_SCHEDULE: ${SCAN_SCHEDULE:-0 2 * * *}

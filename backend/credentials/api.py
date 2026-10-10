@@ -299,10 +299,8 @@ async def save_kubernetes_credential(
         request.user_id = user_id
 
         try:
-            import yaml
-            parsed = yaml.safe_load(request.kubernetes_kubeconfig)
-            if not isinstance(parsed, dict) or "clusters" not in parsed or "users" not in parsed:
-                raise ValueError("kubeconfig must include clusters and users")
+            from backend.kubeconfig_security import validate_kubeconfig
+            parsed = validate_kubeconfig(request.kubernetes_kubeconfig)
             if not request.kubernetes_context:
                 request.kubernetes_context = parsed.get("current-context")
             if not request.kubernetes_cluster_name and parsed.get("clusters"):

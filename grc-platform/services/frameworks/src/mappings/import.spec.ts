@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+import * as ExcelJS from 'exceljs';
+import { parse } from 'csv-parse/sync';
 import * as path from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
@@ -15,6 +17,14 @@ import {
 import { parseMappingCsv, parseMappingXlsx } from './import-parser';
 
 const FIXTURE_DIR = path.join(__dirname, '__fixtures__', 'imports');
+let xlsxFixture: Buffer;
+beforeAll(async () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Mappings');
+  const rows = parse(fs.readFileSync(path.join(FIXTURE_DIR, 'all-good.csv')));
+  sheet.addRows(rows);
+  xlsxFixture = Buffer.from(await workbook.xlsx.writeBuffer());
+});
 
 const ORG_ID = 'org-123';
 const USER_ID = 'user-123';
@@ -31,6 +41,7 @@ const CTL_AC001 = { id: 'ctl-ac001', controlId: 'AC-001' };
 const CTL_AC002 = { id: 'ctl-ac002', controlId: 'AC-002' };
 
 function loadFixture(name: string): Buffer {
+  if (name === "all-good.xlsx") return xlsxFixture;
   return fs.readFileSync(path.join(FIXTURE_DIR, name));
 }
 
@@ -358,7 +369,7 @@ describe('import-parser', () => {
   });
 
   it('parseMappingXlsx reads the first sheet and skips empty rows', async () => {
-    const buf = fs.readFileSync(path.join(FIXTURE_DIR, 'all-good.xlsx'));
+    const buf = loadFixture('all-good.xlsx');
     const rows = await parseMappingXlsx(buf);
     expect(rows.length).toBe(3);
     expect(rows[0].framework_code).toBe('soc2:2017');

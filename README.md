@@ -1,5 +1,7 @@
 # CloudGuard Security Scanner
 
+For the September review fixes and deployment requirements, see [the upgrade notes](docs/project-review-fixes-2026-09-06.md).
+
 A comprehensive, containerized security scanning platform designed to identify vulnerabilities across cloud, Kubernetes, infrastructure-as-code, and application assets. The platform can run on DigitalOcean infrastructure while still scanning AWS, GCP, Kubernetes, and IaC targets when users provide credentials or files.
 
 ## 🚀 Features
@@ -93,7 +95,7 @@ To scan a cloud account, add read-only credentials in the UI. AWS scanning still
 Run the entire stack using Docker Compose:
 
 ```bash
-docker compose up --build
+docker compose --profile dev up --build
 ```
 
 This will start:
@@ -103,7 +105,7 @@ This will start:
 
 ### Access the Dashboard
 Open your browser and navigate to:
-**[http://localhost](http://localhost)**
+**[http://localhost:8000](http://localhost:8000)**
 
 ### Running a Scan
 1. Log in to the dashboard.

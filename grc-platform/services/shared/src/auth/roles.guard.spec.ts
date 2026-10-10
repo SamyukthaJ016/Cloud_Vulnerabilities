@@ -139,17 +139,17 @@ describe('PermissionsGuard', () => {
 
     it('should allow access when user role has required permission', () => {
       const context = createMockContext({ userId: 'user-1', role: 'admin' });
-      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:write']);
+      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:update']);
 
-      // Admin should have controls:write permission
+      // Admin should have controls:update permission
       expect(guard.canActivate(context)).toBe(true);
     });
 
     it('should allow access when user role has all required permissions', () => {
       const context = createMockContext({ userId: 'user-1', role: 'admin' });
       (reflector.getAllAndOverride as jest.Mock).mockReturnValue([
-        'controls:read',
-        'controls:write',
+        'controls:view',
+        'controls:update',
       ]);
 
       expect(guard.canActivate(context)).toBe(true);
@@ -157,15 +157,15 @@ describe('PermissionsGuard', () => {
 
     it('should throw ForbiddenException when user lacks required permission', () => {
       const context = createMockContext({ userId: 'user-1', role: 'viewer' });
-      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:write']);
+      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:update']);
 
-      // Viewer should not have controls:write permission
+      // Viewer should not have controls:update permission
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException when no user in request', () => {
       const context = createMockContext(null);
-      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:read']);
+      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:view']);
 
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
       expect(() => guard.canActivate(context)).toThrow('Authentication required');
@@ -173,7 +173,7 @@ describe('PermissionsGuard', () => {
 
     it('should handle unknown role gracefully', () => {
       const context = createMockContext({ userId: 'user-1', role: 'unknown_role' });
-      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:write']);
+      (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['controls:update']);
 
       // Unknown role should have no permissions
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
@@ -225,8 +225,7 @@ describe('RolesOrPermissionsGuard', () => {
     it('should allow access when user has required role', () => {
       const context = createMockContext({ userId: 'user-1', role: 'admin' });
       (reflector.getAllAndOverride as jest.Mock)
-        .mockReturnValueOnce(['admin']) // roles
-        .mockReturnValueOnce(null); // permissions
+        .mockImplementation((key: string) => key === 'roles' ? ['admin'] : null);
 
       expect(guard.canActivate(context)).toBe(true);
     });
@@ -235,7 +234,7 @@ describe('RolesOrPermissionsGuard', () => {
       const context = createMockContext({ userId: 'user-1', role: 'admin' });
       (reflector.getAllAndOverride as jest.Mock)
         .mockReturnValueOnce(null) // roles
-        .mockReturnValueOnce(['controls:read']); // permissions
+        .mockReturnValueOnce(['controls:view']); // permissions
 
       expect(guard.canActivate(context)).toBe(true);
     });
@@ -252,8 +251,7 @@ describe('RolesOrPermissionsGuard', () => {
     it('should throw ForbiddenException when user has neither role nor permissions', () => {
       const context = createMockContext({ userId: 'user-1', role: 'viewer' });
       (reflector.getAllAndOverride as jest.Mock)
-        .mockReturnValueOnce(['admin']) // roles
-        .mockReturnValueOnce(['controls:write']); // permissions
+        .mockImplementation((key: string) => key === 'roles' ? ['admin'] : ['controls:update']);
 
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
       expect(() => guard.canActivate(context)).toThrow('Access denied. Insufficient permissions.');
@@ -262,8 +260,7 @@ describe('RolesOrPermissionsGuard', () => {
     it('should throw ForbiddenException when no user in request', () => {
       const context = createMockContext(null);
       (reflector.getAllAndOverride as jest.Mock)
-        .mockReturnValueOnce(['admin']) // roles
-        .mockReturnValueOnce(null); // permissions
+        .mockImplementation((key: string) => key === 'roles' ? ['admin'] : null);
 
       expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
       expect(() => guard.canActivate(context)).toThrow('Authentication required');

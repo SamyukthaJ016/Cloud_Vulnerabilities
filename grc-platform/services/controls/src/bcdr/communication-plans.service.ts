@@ -224,7 +224,8 @@ export class CommunicationPlansService {
   }
 
   // Contacts
-  async addContact(planId: string, userId: string, dto: CreateContactDto) {
+  async addContact(planId: string, organizationId: string, userId: string, dto: CreateContactDto) {
+    await this.findOne(planId, organizationId);
     const result = await this.prisma.$queryRaw<CommunicationContactRecord[]>`
       INSERT INTO bcdr.communication_contacts (
         communication_plan_id, name, title, organization_name, contact_type,
@@ -249,10 +250,11 @@ export class CommunicationPlansService {
     return result[0];
   }
 
-  async updateContact(
+  async updateContact(planId: string, organizationId: string,
     contactId: string,
     updates: Partial<CreateContactDto> & { isActive?: boolean }
   ) {
+    await this.findOne(planId, organizationId);
     // SECURITY: Allowed column names for dynamic UPDATE query.
     // Only these hardcoded column names can be included in the query.
     const ALLOWED_COLUMNS = new Set([
@@ -278,8 +280,8 @@ export class CommunicationPlansService {
     ]);
 
     const updateFields: string[] = ['updated_at = NOW()'];
-    const values: (string | number | boolean | null)[] = [contactId];
-    let paramIndex = 2;
+    const values: (string | number | boolean | null)[] = [contactId, planId];
+    let paramIndex = 3;
 
     // Helper to safely add column updates - validates column is in allowed list
     const addUpdate = (
@@ -356,22 +358,24 @@ export class CommunicationPlansService {
     // 2. All values are parameterized via positional parameters ($1, $2, etc.)
     // 3. No user input is interpolated into column names
     const result = await this.prisma.$queryRawUnsafe<CommunicationContactRecord[]>(
-      `UPDATE bcdr.communication_contacts SET ${updateFields.join(', ')} WHERE id = $1::uuid RETURNING *`,
+      `UPDATE bcdr.communication_contacts SET ${updateFields.join(', ')} WHERE id = $1::uuid AND communication_plan_id = $2::uuid RETURNING *`,
       ...values
     );
 
     return result[0];
   }
 
-  async deleteContact(contactId: string) {
+  async deleteContact(planId: string, organizationId: string, contactId: string) {
+    await this.findOne(planId, organizationId);
     await this.prisma.$executeRaw`
-      DELETE FROM bcdr.communication_contacts WHERE id = ${contactId}::uuid
+      DELETE FROM bcdr.communication_contacts WHERE id = ${contactId}::uuid AND communication_plan_id = ${planId}::uuid
     `;
 
     return { success: true };
   }
 
-  async reorderContacts(planId: string, contactIds: string[]) {
+  async reorderContacts(planId: string, organizationId: string, contactIds: string[]) {
+    await this.findOne(planId, organizationId);
     // SECURITY: Limit maximum number of contacts to prevent loop bound injection
     const MAX_CONTACTS = 1000;
     const safeContactIds = contactIds.slice(0, MAX_CONTACTS);

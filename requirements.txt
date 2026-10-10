@@ -35,7 +35,7 @@ google-cloud-resource-manager==1.18.0 # Google Cloud Resource Manager client lib
 # ============================================================================
 # OpenAI / AI Analysis
 # ============================================================================
-openai==1.54.3                 # OpenAI API client for GPT-4 analysis (pinned for compatibility)
+openai==1.55.3                 # OpenAI API client for GPT-4 analysis (pinned for compatibility)
 httpx==0.28.1                  # HTTP client (required by openai, pinned for compatibility)
 httpcore==1.0.9                # Core HTTP client (dependency of httpx)
 h11==0.16.0                    # HTTP/1.1 parser used by HTTP clients and ASGI

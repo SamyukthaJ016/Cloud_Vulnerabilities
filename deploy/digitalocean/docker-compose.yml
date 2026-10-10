@@ -23,6 +23,15 @@ services:
       target: production
     restart: unless-stopped
     environment:
+      CLOUDGUARD_AUTH_REQUIRED: "true"
+      GRC_ONBOARDING_URL: ${GRC_ONBOARDING_URL:-}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-}
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-}
+      KEYCLOAK_JWKS_URL: ${KEYCLOAK_JWKS_URL:-}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-}
+      CLOUDGUARD_KEYCLOAK_CLIENT_ID: ${CLOUDGUARD_KEYCLOAK_CLIENT_ID:-cloudguard-frontend}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-gigachad-grc}
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: ${DATABASE_URL}
       QUEUE_BACKEND: postgres
       SCAN_JOB_INLINE_WORKER: "false"
@@ -30,6 +39,7 @@ services:
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}
@@ -50,7 +60,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_AGENT_MODEL: ${OPENAI_AGENT_MODEL:-}
       SECRET_KEY: ${SECRET_KEY}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://${DOMAIN:-localhost}}
       APP_ENV: production
@@ -90,7 +100,9 @@ services:
     restart: always
     command: ["python", "-m", "backend.scheduler_worker"]
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: ${DATABASE_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       WORKER_TOKEN: ${WORKER_TOKEN}
       SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-do-scheduler-worker-1}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
@@ -121,10 +133,13 @@ services:
     restart: always
     command: ["python", "backend/scripts/sandbox_lab_worker.py"]
     environment:
+      CREDENTIAL_ENCRYPTION_REQUIRED: "true"
       DATABASE_URL: ${DATABASE_URL}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must match the API and workers}
       SANDBOX_LABS_ENABLED: ${SANDBOX_LABS_ENABLED:-true}
       SANDBOX_IAC_DEPLOY: ${SANDBOX_IAC_DEPLOY:-true}
       SANDBOX_AWS_DEPLOY: ${SANDBOX_AWS_DEPLOY:-false}
+      SANDBOX_AWS_ACCOUNT_IDS: ${SANDBOX_AWS_ACCOUNT_IDS:-}
       SANDBOX_GCP_DEPLOY: ${SANDBOX_GCP_DEPLOY:-false}
       SANDBOX_KUBERNETES_DEPLOY: ${SANDBOX_KUBERNETES_DEPLOY:-false}
       SANDBOX_LAB_BASE_DIR: ${SANDBOX_LAB_BASE_DIR:-/app/sandbox-labs}

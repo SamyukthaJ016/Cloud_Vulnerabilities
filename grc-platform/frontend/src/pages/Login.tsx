@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBrandingConfig } from '@/contexts/BrandingContext';
 
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 
 /**
  * SECURITY: Sanitize URL parameters to prevent XSS attacks
@@ -19,10 +20,12 @@ function sanitizeUrlParam(value: string | null): string {
   return purified.substring(0, 200).replace(/[\x00-\x1F\x7F]/g, '');
 }
 
-export default function Login() {
-  const { isAuthenticated, isLoading, login } = useAuth();
+export function AccountEntry({ signup = false }: { signup?: boolean }) {
+  const { isAuthenticated, isLoading, login, loginWithGoogle, register, accessPending, authError, logout } = useAuth();
   const branding = useBrandingConfig();
   const navigate = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +42,14 @@ export default function Login() {
       setError(`${errorParam}: ${errorDesc || 'Unknown error'}`);
     }
   }, [isAuthenticated, navigate]);
+
+  async function begin(action: () => Promise<void>) {
+    setBusy(true);
+    setError(null);
+    try { await action(); }
+    catch { setError('Unable to start sign-in. Please try again.'); }
+    finally { setBusy(false); }
+  }
 
   if (isLoading) {
     return (
@@ -64,26 +75,45 @@ export default function Login() {
         </div>
 
         {/* Error display */}
-        {error && (
+        {(error || authError) && (
           <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p role="alert" className="text-red-600 text-sm">{error || authError}</p>
           </div>
         )}
 
         {/* Login card */}
         <div className="card p-8">
-          <h2 className="text-xl font-semibold text-surface-100 text-center mb-2">Welcome Back</h2>
-          <p className="text-surface-600 text-center mb-8">
-            Sign in to access your compliance dashboard
-          </p>
-
-          <Button onClick={login} className="w-full py-3 text-base" variant="primary">
-            Sign in with SSO
-          </Button>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-surface-500">Powered by Keycloak authentication</p>
-          </div>
+          {accessPending ? (
+            <>
+              <h2 className="text-xl font-semibold text-center mb-3">Finishing your account setup</h2>
+              <p role="status" className="text-surface-600 mb-6">Your organization is being prepared. Please sign in again to refresh your access.</p>
+              <Button fullWidth onClick={() => begin(login)} disabled={busy}>Retry sign-in</Button>
+              <Button fullWidth variant="ghost" className="mt-3" onClick={logout}>Use another account</Button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-semibold text-center mb-2">{signup ? 'Create your account' : 'Welcome back'}</h2>
+              <p className="text-surface-600 text-center mb-6">{signup ? 'Start managing security and compliance in one place.' : 'Sign in to your compliance dashboard.'}</p>
+              <Button fullWidth variant="secondary" disabled={busy} onClick={() => begin(loginWithGoogle)}>
+                {signup ? 'Sign up with Google' : 'Continue with Google'}
+              </Button>
+              <div className="my-5 text-center text-sm text-surface-500">or</div>
+              {signup ? (
+                <form onSubmit={(event) => { event.preventDefault(); void begin(() => register(email)); }}>
+                  <label htmlFor="signup-email" className="block text-sm font-medium mb-2">Email address</label>
+                  <Input id="signup-email" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-md border border-surface-400 bg-white px-3 py-2 text-surface-900 mb-4" />
+                  <Button type="submit" fullWidth disabled={busy}>Continue with email</Button>
+                  <p className="mt-4 text-sm text-surface-600">Next, verify your email and set up your account. Your own organization will be created automatically.</p>
+                </form>
+              ) : (
+                <Button fullWidth disabled={busy} onClick={() => begin(login)}>Sign in with SSO</Button>
+              )}
+              <p className="mt-6 text-center text-sm text-surface-600">
+                {signup ? 'Already have an account? ' : 'New here? '}
+                <Link className="text-brand-700 underline" to={signup ? '/login' : '/signup'}>{signup ? 'Sign in' : 'Create an account'}</Link>
+              </p>
+            </>
+          )}
         </div>
 
         {/* Footer */}
@@ -93,4 +123,8 @@ export default function Login() {
       </div>
     </div>
   );
+}
+
+export default function Login() {
+  return <AccountEntry />;
 }

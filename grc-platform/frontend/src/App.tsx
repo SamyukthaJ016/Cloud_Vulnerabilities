@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Loading from './components/Loading';
 
 // Lazy load pages for code splitting
+const Signup = lazy(() => import('./pages/Signup'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Controls = lazy(() => import('./pages/Controls'));
 const ControlNew = lazy(() => import('./pages/ControlNew'));
@@ -103,15 +104,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
-  // Check if this is an OAuth callback (has code or error in URL)
-  const searchParams = new URLSearchParams(location.search);
-  const hasAuthCallback =
-    searchParams.has('code') || searchParams.has('error') || searchParams.has('session_state');
-
   // Prevent redirect loops
   const isOnLogin = location.pathname === '/login';
 
-  if (isLoading || hasAuthCallback) {
+  if (isLoading) {
     // Still processing auth - show loading
     return <Loading />;
   }
@@ -159,16 +155,12 @@ function RootRedirect() {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
-  // Check for OAuth callback params
-  const searchParams = new URLSearchParams(location.search);
-  const hasAuthCallback = searchParams.has('code') || searchParams.has('session_state');
-
   // Prevent redirect loops by checking current path
   const currentPath = location.pathname;
   const isOnLogin = currentPath === '/login';
   const isOnDashboard = currentPath === '/dashboard';
 
-  if (isLoading || hasAuthCallback) {
+  if (isLoading) {
     return <Loading />;
   }
 
@@ -203,6 +195,7 @@ export default function App() {
     <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/" element={<RootRedirect />} />
         <Route
           element={

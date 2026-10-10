@@ -18,6 +18,8 @@ from backend.mcp_servers.aws_server import create_aws_server
 from backend.mcp_servers.gcp_server import create_gcp_server
 from backend.cloudfox.cloudfox_server import create_cloudfox_server
 from backend.credentials.manager import credential_manager
+from backend.mcp_runtime import isolated_scan, bind_mcp_owner
+from backend.tenant_security import cloudguard_auth_required
 
 logger = logging.getLogger("mcp_scanner")
 
@@ -30,7 +32,6 @@ class MCPSecurityScanner:
     
     def __init__(self):
         self.server_manager = mcp_server_manager
-        self.initialized_servers = set()
     
     async def initialize_provider_servers(self, user_id: str, providers: List[str]) -> Dict[str, Any]:
         """
@@ -39,6 +40,7 @@ class MCPSecurityScanner:
         Returns:
             Dict with initialized servers and credential mapping
         """
+        bind_mcp_owner(user_id)
         logger.info(f"🔧 Initializing MCP servers for user={user_id}, providers={providers}")
         
         results = {
@@ -49,6 +51,8 @@ class MCPSecurityScanner:
         
         for provider in providers:
             try:
+                if provider == "cloudfox" and (cloudguard_auth_required() or user_id != "anonymous"):
+                    raise ValueError("Host-profile CloudFox scanning is available only in local anonymous mode")
                 # Get user's default credential for this provider
                 credential = credential_manager.get_default_credential(user_id, provider)
                 
@@ -108,7 +112,6 @@ class MCPSecurityScanner:
                     self.server_manager.register_server(server)
                     await server.start()
                     
-                    self.initialized_servers.add(provider)
                     results["initialized"].append(provider)
                     logger.info(f"✅ {provider.upper()} MCP server initialized")
                 else:
@@ -186,6 +189,7 @@ class MCPSecurityScanner:
         
         return scan_result
     
+    @isolated_scan
     async def scan_multi_cloud(
         self,
         user_id: str,
@@ -285,6 +289,7 @@ class MCPSecurityScanner:
         
         return scan_results
     
+    @isolated_scan
     async def run_offensive_scan(
         self,
         user_id: str,
@@ -387,7 +392,6 @@ class MCPSecurityScanner:
         """Stop all MCP servers"""
         logger.info("🧹 Cleaning up MCP servers")
         await self.server_manager.stop_all()
-        self.initialized_servers.clear()
 
 
 # Singleton instance

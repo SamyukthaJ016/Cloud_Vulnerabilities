@@ -283,7 +283,8 @@ export class RunbooksService {
   }
 
   // Steps management
-  async addStep(runbookId: string, userId: string, dto: CreateRunbookStepDto) {
+  async addStep(runbookId: string, organizationId: string, userId: string, dto: CreateRunbookStepDto) {
+    await this.findOne(runbookId, organizationId);
     const result = await this.prisma.$queryRaw<any[]>`
       INSERT INTO bcdr.runbook_steps (
         runbook_id, step_number, title, description, instructions,
@@ -314,7 +315,8 @@ export class RunbooksService {
     return result[0];
   }
 
-  async updateStep(runbookId: string, stepNumber: number, updates: Partial<CreateRunbookStepDto>) {
+  async updateStep(runbookId: string, organizationId: string, stepNumber: number, updates: Partial<CreateRunbookStepDto>) {
+    await this.findOne(runbookId, organizationId);
     // SECURITY: Allowed column names for dynamic UPDATE query.
     // Only these hardcoded column names can be included in the query.
     const ALLOWED_COLUMNS = new Set([
@@ -386,7 +388,8 @@ export class RunbooksService {
     return result[0];
   }
 
-  async deleteStep(runbookId: string, stepNumber: number) {
+  async deleteStep(runbookId: string, organizationId: string, stepNumber: number) {
+    await this.findOne(runbookId, organizationId);
     await this.prisma.$executeRaw`
       DELETE FROM bcdr.runbook_steps
       WHERE runbook_id = ${runbookId}::uuid AND step_number = ${stepNumber}
@@ -408,7 +411,8 @@ export class RunbooksService {
     return { success: true };
   }
 
-  async reorderSteps(runbookId: string, stepIds: string[]) {
+  async reorderSteps(runbookId: string, organizationId: string, stepIds: string[]) {
+    await this.findOne(runbookId, organizationId);
     // SECURITY: Limit maximum number of steps to prevent loop bound injection
     const MAX_STEPS = 1000;
     const safeStepIds = stepIds.slice(0, MAX_STEPS);

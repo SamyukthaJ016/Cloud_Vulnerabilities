@@ -179,6 +179,9 @@ export class KeycloakAdminService {
     // Filter to requested roles
     const rolesToAssign = allRoles.filter((r) => roleNames.includes(r.name));
 
+    if (roleNames.some(name => !rolesToAssign.some(role => role.name === name))) {
+      throw new Error('A requested realm role does not exist');
+    }
     if (rolesToAssign.length > 0) {
       await this.request('POST', `/users/${userId}/role-mappings/realm`, rolesToAssign);
     }

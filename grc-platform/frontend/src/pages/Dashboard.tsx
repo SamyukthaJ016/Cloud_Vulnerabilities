@@ -971,7 +971,7 @@ function MeterRow({ label, value, color }: { label: string; value: number; color
     <div>
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="text-surface-500">{label}</span>
-        <span className="font-semibold text-surface-300">{value}%</span>
+        <span className="font-semibold text-surface-700">{value}%</span>
       </div>
       <div className="h-2 rounded-full bg-surface-800">
         <div className="h-2 rounded-full" style={{ width: `${value}%`, background: color }} />

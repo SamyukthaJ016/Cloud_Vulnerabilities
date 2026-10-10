@@ -477,7 +477,8 @@ export class BusinessProcessesService {
     return result[0];
   }
 
-  async removeDependency(processId: string, dependencyId: string) {
+  async removeDependency(processId: string, organizationId: string, dependencyId: string) {
+    await this.findOne(processId, organizationId);
     await this.prisma.$executeRaw`
       DELETE FROM bcdr.process_dependencies
       WHERE dependent_process_id = ${processId}::uuid
@@ -522,6 +523,9 @@ export class BusinessProcessesService {
   // Asset Links
   async linkAsset(processId: string, organizationId: string, userId: string, dto: LinkProcessAssetDto) {
     await this.findOne(processId, organizationId);
+    if (!await this.prisma.asset.findFirst({ where: { id: dto.assetId, organizationId } })) {
+      throw new NotFoundException('Asset not found');
+    }
 
     const result = await this.prisma.$queryRaw<ProcessAssetRecord[]>`
       INSERT INTO bcdr.process_assets (
@@ -538,7 +542,8 @@ export class BusinessProcessesService {
     return result[0];
   }
 
-  async unlinkAsset(processId: string, assetId: string) {
+  async unlinkAsset(processId: string, organizationId: string, assetId: string) {
+    await this.findOne(processId, organizationId);
     await this.prisma.$executeRaw`
       DELETE FROM bcdr.process_assets
       WHERE process_id = ${processId}::uuid AND asset_id = ${assetId}::uuid
@@ -548,7 +553,11 @@ export class BusinessProcessesService {
   }
 
   // Risk Links
-  async linkRisk(processId: string, riskId: string, userId: string, notes?: string) {
+  async linkRisk(processId: string, organizationId: string, riskId: string, userId: string, notes?: string) {
+    await this.findOne(processId, organizationId);
+    if (!await this.prisma.risk.findFirst({ where: { id: riskId, organizationId } })) {
+      throw new NotFoundException('Risk not found');
+    }
     const result = await this.prisma.$queryRaw<BIARiskRecord[]>`
       INSERT INTO bcdr.bia_risks (process_id, risk_id, relationship_notes, created_by)
       VALUES (${processId}::uuid, ${riskId}::uuid, ${notes || null}, ${userId}::uuid)
@@ -560,7 +569,8 @@ export class BusinessProcessesService {
     return result[0];
   }
 
-  async unlinkRisk(processId: string, riskId: string) {
+  async unlinkRisk(processId: string, organizationId: string, riskId: string) {
+    await this.findOne(processId, organizationId);
     await this.prisma.$executeRaw`
       DELETE FROM bcdr.bia_risks
       WHERE process_id = ${processId}::uuid AND risk_id = ${riskId}::uuid

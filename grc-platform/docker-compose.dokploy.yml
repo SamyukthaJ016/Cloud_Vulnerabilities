@@ -215,6 +215,9 @@ services:
       context: .
       dockerfile: services/controls/Dockerfile
     environment:
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-grc-services}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-}
+      KEYCLOAK_ONBOARDING_AUDIENCES: ${KEYCLOAK_ONBOARDING_AUDIENCES:-grc-api,cloudguard-api}
       <<: *api-environment
       PORT: "3001"
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}

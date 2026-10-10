@@ -289,15 +289,31 @@ class AWSMCPServer(BaseMCPServer):
             except:
                 pass
             
+            try:
+                policy_status = self.s3.get_bucket_policy_status(Bucket=bucket_name)
+                if policy_status.get("PolicyStatus", {}).get("IsPublic") is True:
+                    findings.append({
+                        "severity": "CRITICAL",
+                        "issue": "Public S3 Bucket Policy",
+                        "description": f"Bucket {bucket_name} has a public bucket policy. Effective access also depends on account and bucket Block Public Access settings.",
+                        "recommendation": "Remove public principals from the bucket policy and enable Block Public Access.",
+                    })
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") not in {"NoSuchBucketPolicy", "NoSuchBucket"}:
+                    logger.warning(f"Could not inspect S3 policy status for {bucket_name}: {exc}")
+
             # Check encryption
             try:
                 encryption = self.s3.get_bucket_encryption(Bucket=bucket_name)
-            except:
-                findings.append({
-                    "severity": "HIGH",
-                    "issue": "S3 Encryption Disabled",
-                    "description": f"Bucket {bucket_name} does not have default encryption enabled"
-                })
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") == "ServerSideEncryptionConfigurationNotFoundError":
+                    findings.append({
+                        "severity": "HIGH",
+                        "issue": "S3 Encryption Disabled",
+                        "description": f"Bucket {bucket_name} does not have default encryption enabled"
+                    })
+                else:
+                    logger.warning(f"Could not inspect S3 encryption for {bucket_name}: {exc}")
             
             # Check versioning
             try:
@@ -935,4 +951,3 @@ class AWSMCPServer(BaseMCPServer):
 def create_aws_server(config: Dict[str, Any]) -> AWSMCPServer:
     """Factory function to create AWS MCP server"""
     return AWSMCPServer(config)
-

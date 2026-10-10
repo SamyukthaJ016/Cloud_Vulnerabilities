@@ -2,6 +2,8 @@
 
 This folder contains the Keycloak realm export for the GigaChad GRC platform.
 
+For Google sign-in, email registration, and automatic organization creation, follow [the sign-up setup guide](../../docs/google-signup.md).
+
 ## Security Configuration Required
 
 ### Client Secrets (CRITICAL)

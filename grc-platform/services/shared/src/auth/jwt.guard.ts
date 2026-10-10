@@ -20,6 +20,7 @@ const sharedJwtReflector = new Reflector();
 export interface JwtPayload {
   sub: string;
   email?: string;
+  email_verified?: boolean;
   preferred_username?: string;
   given_name?: string;
   family_name?: string;
@@ -135,7 +136,19 @@ export class JwtAuthGuard implements CanActivate {
     return token;
   }
 
-  private async verifyToken(token: string): Promise<JwtPayload> {
+  async verifyRegistrationToken(token: string): Promise<JwtPayload> {
+    const audiences = (process.env.KEYCLOAK_ONBOARDING_AUDIENCES || 'grc-api,cloudguard-api').split(',').map(value => value.trim()).filter(Boolean);
+    const payload = await this.verifyToken(token, audiences);
+    if (!payload.sub || !Number.isFinite(payload.exp) || !Number.isFinite(payload.iat)) {
+      throw new UnauthorizedException('Incomplete access token');
+    }
+    if (this.tokenBlacklistService && payload.jti && await this.tokenBlacklistService.isTokenRevoked(payload.jti)) {
+      throw new UnauthorizedException('Token has been revoked');
+    }
+    return payload;
+  }
+
+  private async verifyToken(token: string, audiences?: string[]): Promise<JwtPayload> {
     const decoded = jwt.decode(token, { complete: true });
     if (!decoded || !decoded.header.kid) {
       throw new Error('Invalid token format');
@@ -148,8 +161,8 @@ export class JwtAuthGuard implements CanActivate {
       algorithms: ['RS256'],
       issuer: this.issuer,
     };
-    if (this.audience) {
-      options.audience = this.audience;
+    if (audiences?.length || this.audience) {
+      options.audience = audiences?.length ? audiences as [string, ...string[]] : this.audience;
     }
     return jwt.verify(token, signingKey, options) as JwtPayload;
   }

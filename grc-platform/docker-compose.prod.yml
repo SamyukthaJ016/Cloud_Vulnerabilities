@@ -391,6 +391,9 @@ services:
     image: grc-controls:${IMAGE_TAG:-latest}
     container_name: grc-controls
     environment:
+      KEYCLOAK_ADMIN_CLIENT_ID: ${KEYCLOAK_ADMIN_CLIENT_ID:-grc-services}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-}
+      KEYCLOAK_ONBOARDING_AUDIENCES: ${KEYCLOAK_ONBOARDING_AUDIENCES:-grc-api,cloudguard-api}
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}

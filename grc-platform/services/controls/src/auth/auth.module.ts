@@ -1,3 +1,4 @@
+import { RegistrationController, RegistrationService } from './registration';
 import { Global, Module } from '@nestjs/common';
 import { JwtAuthGuard, RolesGuard, PermissionsGuard, PRISMA_SERVICE } from '@gigachad-grc/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -17,7 +18,9 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 @Global()
 @Module({
+  controllers: [RegistrationController],
   providers: [
+    RegistrationService,
     // Re-provide PrismaService for guard dependencies
     PrismaService,
     // Keep Prisma available to modules that share this auth module.

@@ -46,6 +46,7 @@ logs/
 
 # Database dumps
 *.sql
+!services/shared/prisma/patches/*.sql
 *.dump
 
 # Terraform

@@ -26,7 +26,11 @@ interface AuthContextType {
   token: string | null;
   /** Epoch ms when the SSO session expires (null if unknown or dev mode) */
   sessionExpiry: number | null;
-  login: () => void;
+  login: () => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  register: (email?: string) => Promise<void>;
+  accessPending: boolean;
+  authError: string | null;
   logout: () => void;
   hasRole: (role: string) => boolean;
   hasPermission: (permission: string) => boolean;
@@ -56,6 +60,8 @@ function getKeycloak(): Keycloak {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accessPending, setAccessPending] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -84,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearLocalSession = useCallback(() => {
+    setAccessPending(false);
     secureStorage.clearAll();
     localStorage.removeItem('userId');
     localStorage.removeItem('organizationId');
@@ -97,24 +104,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadUserProfile = useCallback(async (kc: Keycloak): Promise<boolean> => {
     try {
       const profile = await kc.loadUserProfile();
-      const tokenParsed = kc.tokenParsed as any;
+      let tokenParsed = kc.tokenParsed as any;
+      if (!tokenParsed?.organization_id) {
+        const response = await fetch('/api/auth/onboard', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${kc.token}` },
+        });
+        if (!response.ok) throw new Error('Account setup could not be completed');
+        await kc.updateToken(-1);
+        tokenParsed = kc.tokenParsed as any;
+      }
 
       // Token and profile logged only in development for debugging
       if (import.meta.env.DEV) {
         console.debug('Auth profile loaded for user:', profile.email);
       }
 
-      const role =
-        tokenParsed?.roles?.[0] ||
-        tokenParsed?.realm_access?.roles?.find((r: string) =>
-          ['admin', 'compliance_manager', 'auditor', 'viewer'].includes(r)
-        ) ||
-        'viewer';
+      const roles = tokenParsed?.realm_access?.roles || tokenParsed?.roles || [];
+      const role = ['admin', 'compliance_manager', 'auditor', 'viewer'].find(value => roles.includes(value)) || 'viewer';
 
       const userId = kc.subject || '';
       const organizationId = tokenParsed?.organization_id;
       if (typeof organizationId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/.test(organizationId)) {
-        throw new Error('Keycloak access token is missing a valid organization_id claim');
+        clearLocalSession();
+        setAccessPending(true);
+        return false;
       }
 
       const newUser = {
@@ -124,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         organizationId,
       };
+      setAccessPending(false);
+      setAuthError(null);
       setUser(newUser);
 
       // Set user for error tracking (Sentry)
@@ -145,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error) {
       console.error('Failed to load user profile:', error);
+      setAuthError('Unable to finish account setup. Verify your email and try signing in again.');
       clearLocalSession();
       setIsAuthenticated(false);
       return false;
@@ -240,6 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
       } catch (error) {
         console.error('Keycloak initialization failed:', error);
+        setAuthError('Sign-in is temporarily unavailable. Please try again.');
         initPromise = null;
       } finally {
         setIsLoading(false);
@@ -255,10 +273,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Logging in...');
     }
     // Redirect back to root so Keycloak can process the callback
-    kc.login({
+    return kc.login({
       redirectUri: window.location.origin + '/',
     });
   }, []);
+
+  const loginWithGoogle = useCallback(() => getKeycloak().login({
+    redirectUri: window.location.origin + '/',
+    idpHint: 'google',
+  }), []);
+
+  const register = useCallback((email?: string) => getKeycloak().register({
+    redirectUri: window.location.origin + '/',
+    loginHint: email,
+  }), []);
 
   const logout = useCallback(() => {
     const kc = getKeycloak();
@@ -321,6 +349,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token,
         sessionExpiry,
         login,
+        loginWithGoogle,
+        register,
+        accessPending,
+        authError,
         logout,
         hasRole,
         hasPermission,
@@ -338,7 +370,11 @@ const defaultAuthContext: AuthContextType = {
   user: null,
   token: null,
   sessionExpiry: null,
-  login: () => {},
+  login: async () => {},
+  loginWithGoogle: async () => {},
+  register: async () => {},
+  accessPending: false,
+  authError: null,
   logout: () => {},
   hasRole: () => false,
   hasPermission: () => false,

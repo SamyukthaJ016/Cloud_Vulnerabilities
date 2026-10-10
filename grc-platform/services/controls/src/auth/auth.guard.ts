@@ -18,13 +18,6 @@ interface AuthenticatedUser {
 }
 
 /**
- * Request with authenticated user
- */
-interface AuthenticatedRequest extends Request {
-  user: AuthenticatedUser;
-}
-
-/**
  * Compatibility guard for routes that receive an identity from a preceding
  * verified authentication guard. It never reconstructs a user from request
  * headers, because browser clients can forge those values.

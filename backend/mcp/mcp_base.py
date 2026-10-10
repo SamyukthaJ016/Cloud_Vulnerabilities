@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from backend.mcp_servers.base_server import MCPMessage,mcp_server_manager
 import logging
+from backend.mcp_runtime import current_runtime
 
 logger = logging.getLogger("mcp_base")
 
@@ -194,8 +195,9 @@ class MCPRegistry:
     FastAPI uses this to route scan requests to the correct plugin
     """
     
-    def __init__(self):
-        self._plugins: Dict[str, Any] = {}
+    @property
+    def _plugins(self) -> Dict[str, Any]:
+        return current_runtime().plugins
     
     def register(self, provider: str, plugin: MCPPlugin):
         """Register a cloud provider plugin"""

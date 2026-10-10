@@ -25,16 +25,20 @@ import {
   LinkProcessAssetDto,
 } from './dto/bcdr.dto';
 import { CurrentUser, UserContext } from '@gigachad-grc/shared';
+import { PermissionGuard } from '../auth/permission.guard';
+import { RequirePermission } from '../auth/decorators/require-permission.decorator';
+import { Resource, Action } from '../permissions/dto/permission.dto';
 import { JwtAuthGuard } from '../auth/dev-auth.guard';
 
 @ApiTags('bcdr/processes')
 @ApiBearerAuth()
 @Controller('api/bcdr/processes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class BusinessProcessesController {
   constructor(private readonly processesService: BusinessProcessesService) {}
 
   @Get()
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'List business processes' })
   @ApiResponse({ status: 200, description: 'List of business processes' })
   async findAll(
@@ -45,18 +49,21 @@ export class BusinessProcessesController {
   }
 
   @Get('stats')
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'Get business process statistics' })
   async getStats(@CurrentUser() user: UserContext) {
     return this.processesService.getStats(user.organizationId);
   }
 
   @Get('dependency-graph')
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'Get dependency graph data for visualization' })
   async getDependencyGraph(@CurrentUser() user: UserContext) {
     return this.processesService.getDependencyGraph(user.organizationId);
   }
 
   @Get(':id')
+  @RequirePermission(Resource.BCDR, Action.READ)
   @ApiOperation({ summary: 'Get business process details' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async findOne(
@@ -67,6 +74,7 @@ export class BusinessProcessesController {
   }
 
   @Post()
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Create a business process' })
   @ApiResponse({ status: 201, description: 'Business process created' })
   async create(
@@ -83,6 +91,7 @@ export class BusinessProcessesController {
   }
 
   @Put(':id')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Update a business process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async update(
@@ -101,6 +110,7 @@ export class BusinessProcessesController {
   }
 
   @Delete(':id')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Delete a business process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async delete(
@@ -117,6 +127,7 @@ export class BusinessProcessesController {
   }
 
   @Post(':id/mark-reviewed')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Mark process as reviewed' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async markReviewed(
@@ -128,6 +139,7 @@ export class BusinessProcessesController {
 
   // Dependencies
   @Post(':id/dependencies')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Add a dependency to a process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async addDependency(
@@ -139,18 +151,20 @@ export class BusinessProcessesController {
   }
 
   @Delete(':id/dependencies/:dependencyId')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Remove a dependency from a process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   @ApiParam({ name: 'dependencyId', description: 'Dependency process ID' })
-  async removeDependency(
+  async removeDependency(@CurrentUser() user: UserContext,
     @Param('id') id: string,
     @Param('dependencyId') dependencyId: string,
   ) {
-    return this.processesService.removeDependency(id, dependencyId);
+    return this.processesService.removeDependency(id, user.organizationId, dependencyId);
   }
 
   // Assets
   @Post(':id/assets')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Link an asset to a process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async linkAsset(
@@ -162,18 +176,20 @@ export class BusinessProcessesController {
   }
 
   @Delete(':id/assets/:assetId')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Unlink an asset from a process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   @ApiParam({ name: 'assetId', description: 'Asset ID' })
-  async unlinkAsset(
+  async unlinkAsset(@CurrentUser() user: UserContext,
     @Param('id') id: string,
     @Param('assetId') assetId: string,
   ) {
-    return this.processesService.unlinkAsset(id, assetId);
+    return this.processesService.unlinkAsset(id, user.organizationId, assetId);
   }
 
   // Risks
   @Post(':id/risks')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Link a risk to a process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   async linkRisk(
@@ -181,17 +197,18 @@ export class BusinessProcessesController {
     @CurrentUser() user: UserContext,
     @Body() body: { riskId: string; notes?: string },
   ) {
-    return this.processesService.linkRisk(id, body.riskId, user.userId, body.notes);
+    return this.processesService.linkRisk(id, user.organizationId, body.riskId, user.userId, body.notes);
   }
 
   @Delete(':id/risks/:riskId')
+  @RequirePermission(Resource.BCDR, Action.UPDATE)
   @ApiOperation({ summary: 'Unlink a risk from a process' })
   @ApiParam({ name: 'id', description: 'Business process ID' })
   @ApiParam({ name: 'riskId', description: 'Risk ID' })
-  async unlinkRisk(
+  async unlinkRisk(@CurrentUser() user: UserContext,
     @Param('id') id: string,
     @Param('riskId') riskId: string,
   ) {
-    return this.processesService.unlinkRisk(id, riskId);
+    return this.processesService.unlinkRisk(id, user.organizationId, riskId);
   }
 }
