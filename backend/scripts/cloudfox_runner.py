@@ -8,10 +8,11 @@ from backend.database import store_cloudfox_finding
 logger = logging.getLogger("cloudfox")
 
 
-def run_cloudfox(scan_id: int, profile: str = "default"):
+def run_cloudfox(scan_id: int, profile: str = None):
     """
     Run CloudFox and store findings in database.
     """
+    profile = profile or os.getenv("AWS_PROFILE", "default")
     output_dir = "reports/cloudfox"
     os.makedirs(output_dir, exist_ok=True)
 

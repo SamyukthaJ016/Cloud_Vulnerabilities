@@ -1,2 +1,21 @@
-aws ec2 create-flow-logs ^
- --cli-input-json file: //config/aws/flowlogs.json
+{
+  "ResourceIds": [
+    "vpc-0123456789abcdef0"
+  ],
+  "ResourceType": "VPC",
+  "TrafficType": "ALL",
+  "LogDestinationType": "cloud-watch-logs",
+  "LogGroupName": "cloudguard-vpc-flow-logs",
+  "DeliverLogsPermissionArn": "arn:aws:iam::123456789012:role/flowlogsRole",
+  "TagSpecifications": [
+    {
+      "ResourceType": "vpc-flow-log",
+      "Tags": [
+        {
+          "Key": "Owner",
+          "Value": "cloudvul@iitm"
+        }
+      ]
+    }
+  ]
+}

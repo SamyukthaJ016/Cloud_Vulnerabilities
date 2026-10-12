@@ -5,11 +5,13 @@ Implements: discover_resources, check_config, assess_vulnerabilities
 
 import boto3
 import logging
+import os
 from typing import Dict, List, Any
 from datetime import datetime, timedelta, timezone
 from backend.mcp.mcp_base import MCPPlugin, CloudResource, SecurityFinding, Severity
 
 logger = logging.getLogger("aws_mcp_plugin")
+DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
 
 
 class AWSPlugin(MCPPlugin):
@@ -18,7 +20,7 @@ class AWSPlugin(MCPPlugin):
     def __init__(self, credentials: Dict[str, str]):
         super().__init__(credentials)
 
-        region = credentials.get("region", "us-east-1")
+        region = credentials.get("region", DEFAULT_AWS_REGION)
 
         # ✅ FIX: create ONE boto3 session using user credentials
         self.session = boto3.Session(

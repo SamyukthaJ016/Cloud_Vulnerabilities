@@ -18,7 +18,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field, validator
 from starlette.responses import JSONResponse
 
-from backend.credentials.manager import credential_manager, CloudCredential
+from backend.credentials.manager import credential_manager, CloudCredential, normalize_aws_region
 from backend.credentials import auto_permission
 from backend.tenant_security import request_identity
 
@@ -43,9 +43,13 @@ class AWSCredentialRequest(CredentialBase):
     cloud_provider: str = Field(default="aws")
     aws_access_key_id: str
     aws_secret_access_key: str
-    aws_region: Optional[str] = Field(default="us-east-1")
+    aws_region: Optional[str] = Field(default="ap-south-1")
     aws_role_arn: Optional[str] = None
     aws_session_token: Optional[str] = None
+
+    @validator("aws_region", pre=True, always=True)
+    def normalize_region(cls, value):
+        return normalize_aws_region(value)
 
 
 class OpenAICredentialRequest(CredentialBase):
@@ -157,7 +161,7 @@ async def save_aws_credential(
         )
         
         # Save credential
-        credential_id = credential_manager.save_credential(credential)
+        credential_id, _save_action = credential_manager.save_credential(credential)
         credential.id = credential_id
         
         # Validate in background
@@ -204,7 +208,7 @@ async def save_openai_credential(
             is_default=request.is_default
         )
         
-        credential_id = credential_manager.save_credential(credential)
+        credential_id, _save_action = credential_manager.save_credential(credential)
         credential.id = credential_id
         
         bg_tasks.add_task(
@@ -258,7 +262,7 @@ async def save_gcp_credential(
             is_default=True # Force default for new uploads
         )
         
-        credential_id = credential_manager.save_credential(credential)
+        credential_id, _save_action = credential_manager.save_credential(credential)
         credential.id = credential_id
         
         bg_tasks.add_task(
@@ -318,7 +322,7 @@ async def save_kubernetes_credential(
             is_default=request.is_default
         )
 
-        credential_id = credential_manager.save_credential(credential)
+        credential_id, _save_action = credential_manager.save_credential(credential)
         credential.id = credential_id
 
         bg_tasks.add_task(
@@ -549,7 +553,7 @@ async def get_cloudformation_url(
         template_url = "https://cloudguard-cfn-templates.s3.eu-north-1.amazonaws.com/aws-readonly-role.yaml"
         
         # Master Scanner Account ID (fixed - this is the account where the scanner runs)
-        master_scanner_account_id = "859561299880"
+        master_scanner_account_id = "766363046973"
         
         # Generate unique stack name
         from datetime import datetime
@@ -583,7 +587,7 @@ async def get_cloudformation_url(
                 "🔐 Cross-Account Scanning Setup",
                 "This creates a role in YOUR account that the master scanner can assume",
                 "Click 'Launch CloudFormation Stack' to open AWS Console",
-                "The ScannerAccountId is pre-filled with the master scanner account (859561299880)",
+                "The ScannerAccountId is pre-filled with the master scanner account (766363046973)",
                 "Check the IAM acknowledgment box",
                 "Click 'Create stack'",
                 "Wait for stack creation to complete (~2 minutes)",

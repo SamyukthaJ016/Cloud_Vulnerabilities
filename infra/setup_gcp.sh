@@ -10,6 +10,10 @@ SERVICE_ACCOUNT_NAME="cloudguard-scanner"
 DISPLAY_NAME="CloudGuard Vulnerability Scanner"
 PROJECT_ID=$(gcloud config get-value project)
 KEY_FILE="gcp-service-account.json"
+OWNER_TAG_KEY="Owner"
+OWNER_TAG_VALUE="cloudvul@iitm"
+GCP_OWNER_TAG_VALUE="${GCP_OWNER_TAG_VALUE:-}"
+SA_EMAIL="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 
 # Check if gcloud is installed
 if ! command -v gcloud &> /dev/null; then
@@ -33,7 +37,7 @@ echo "✅ APIs enabled."
 
 # 2. Create Service Account
 echo "👤 Creating Service Account: $SERVICE_ACCOUNT_NAME..."
-if gcloud iam service-accounts describe "$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" --project "$PROJECT_ID" &> /dev/null; then
+if gcloud iam service-accounts describe "$SA_EMAIL" --project "$PROJECT_ID" &> /dev/null; then
     echo "   Service account already exists, skipping creation."
 else
     gcloud iam service-accounts create "$SERVICE_ACCOUNT_NAME" \
@@ -43,9 +47,24 @@ else
     echo "✅ Service account created."
 fi
 
+echo "🏷️ Applying owner tag policy..."
+if [ -n "$GCP_OWNER_TAG_VALUE" ]; then
+    SA_PARENT="//iam.googleapis.com/projects/$PROJECT_ID/serviceAccounts/$SA_EMAIL"
+    if gcloud resource-manager tags bindings create \
+        --tag-value="$GCP_OWNER_TAG_VALUE" \
+        --parent="$SA_PARENT" \
+        --quiet > /dev/null 2>&1; then
+        echo "   - Bound tag '$OWNER_TAG_KEY=$OWNER_TAG_VALUE' via TagValue '$GCP_OWNER_TAG_VALUE'"
+    else
+        echo "   ⚠️ Failed to bind GCP tag value '$GCP_OWNER_TAG_VALUE' to $SA_EMAIL"
+    fi
+else
+    echo "   ⚠️ Skipped GCP owner tag binding."
+    echo "   Set GCP_OWNER_TAG_VALUE to an existing TagValue ID or namespaced name for $OWNER_TAG_KEY=$OWNER_TAG_VALUE."
+fi
+
 # 3. Assign Roles
 echo "🔑 Assigning IAM Roles..."
-SA_EMAIL="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 
 # Viewer (Basic read access)
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \

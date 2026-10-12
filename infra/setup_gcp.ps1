@@ -10,6 +10,9 @@ $ErrorActionPreference = "Stop"
 $SERVICE_ACCOUNT_NAME = "cloudguard-scanner"
 $DISPLAY_NAME = "CloudGuard Vulnerability Scanner"
 $KEY_FILE = "gcp-service-account.json"
+$OWNER_TAG_KEY = "Owner"
+$OWNER_TAG_VALUE = "cloudvul@iitm"
+$GCP_OWNER_TAG_VALUE = $env:GCP_OWNER_TAG_VALUE
 
 Write-Host "Checking gcloud installation..."
 if (-not (Get-Command "gcloud" -ErrorAction SilentlyContinue)) {
@@ -62,6 +65,23 @@ if ($SA_EXISTS) {
         --display-name "$DISPLAY_NAME" `
         --project "$PROJECT_ID"
     Write-Host "Service account created."
+}
+
+Write-Host "Applying owner tag policy..."
+if ($GCP_OWNER_TAG_VALUE) {
+    $SA_PARENT = "//iam.googleapis.com/projects/$PROJECT_ID/serviceAccounts/$SA_EMAIL"
+    try {
+        gcloud resource-manager tags bindings create `
+            --tag-value="$GCP_OWNER_TAG_VALUE" `
+            --parent="$SA_PARENT" `
+            --quiet | Out-Null
+        Write-Host "   - Bound tag '$OWNER_TAG_KEY=$OWNER_TAG_VALUE' via TagValue '$GCP_OWNER_TAG_VALUE'"
+    } catch {
+        Write-Warning "Failed to bind GCP tag value '$GCP_OWNER_TAG_VALUE' to $SA_EMAIL"
+    }
+} else {
+    Write-Warning "Skipped GCP owner tag binding."
+    Write-Host "   Set GCP_OWNER_TAG_VALUE to an existing TagValue ID or namespaced name for $OWNER_TAG_KEY=$OWNER_TAG_VALUE."
 }
 
 # 3. Assign Roles

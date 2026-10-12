@@ -928,6 +928,112 @@
             color: white;
             border-color: rgba(148, 163, 184, 0.4);
         }
+            .subscription-inline {
+            font-size: 0.85rem;
+            color: rgba(176, 228, 204, 0.88);
+        }
+        .btn-subscription {
+            background: linear-gradient(135deg, #091413, #285A48);
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.22);
+        }
+        .btn-subscription:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(9, 20, 19, 0.35);
+        }
+        .subscription-modal-content {
+            max-width: 980px;
+        }
+        .subscription-summary-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        .subscription-summary-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: white;
+        }
+        .subscription-summary-subtitle {
+            color: #B0E4CC;
+            margin-top: 4px;
+        }
+        .subscription-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .billing-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #B0E4CC;
+            border: 1px solid rgba(176, 228, 204, 0.18);
+            background: rgba(176, 228, 204, 0.08);
+        }
+        .billing-plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+        .billing-plan-card {
+            background: rgba(176, 228, 204, 0.06);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(176, 228, 204, 0.14);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .billing-plan-card.current {
+            border-color: rgba(64, 138, 113, 0.5);
+            box-shadow: 0 0 0 1px rgba(64, 138, 113, 0.22);
+        }
+        .billing-plan-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .billing-plan-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: white;
+        }
+        .billing-plan-cycle {
+            color: #B0E4CC;
+            font-size: 0.9rem;
+            text-transform: capitalize;
+        }
+        .billing-plan-price {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #B0E4CC;
+        }
+        .billing-plan-features {
+            margin: 0;
+            padding-left: 18px;
+            color: #B0E4CC;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+        .billing-plan-footer {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .billing-plan-mode {
+            color: rgba(176, 228, 204, 0.82);
+            font-size: 0.82rem;
+        }
     </style>
     <link rel="stylesheet" href="/cloudguard-theme.css">
     <script src="/cloudguard-ui.js" defer></script>
@@ -963,6 +1069,8 @@
                     <button class="btn btn-credentials" onclick="openCredentialsModal()">
                         Manage Credentials
                     </button>
+                    <button class="btn btn-credentials" onclick="openSubscriptionModal()">Subscription</button>
+                    <span id="subscriptionInlineStatus" class="form-description"></span>
                 </div>
 
                 <div class="demo-lab-panel">
@@ -1266,6 +1374,7 @@
         let currentScheduleTab = 'immediate';
         let selectedFrequency = 'daily';
         let allCredentialsMap = {}; // Global map ID -> detail
+        let billingSnapshot = {};
         let sandboxCatalog = [];
         let activeDemoLabId = null;
         let demoPollTimer = null;
@@ -1280,6 +1389,7 @@
 
             // Load recent scans
             await loadRecentScans();
+            await loadBillingStatus();
 
             // Check credentials status
             await checkCredentialsStatus();
@@ -1505,7 +1615,7 @@
                         const isSelected = selectedProviders.includes(provider.id);
 
                         return `
-                            <div class="provider-option ${isSelected ? 'selected' : ''} ${hasCredentials ? 'has-credentials' : ''}" 
+                            <div class="provider-option ${isSelected ? 'selected' : ''} ${hasCredentials ? 'has-credentials' : ''}"
                                 onclick="toggleProvider('${provider.id}')">
                                 <div class="provider-icon ${provider.iconClass}">${provider.icon}</div>
                                 <div class="provider-copy">
@@ -1614,7 +1724,7 @@
                         <div class="scan-details">
                             <div class="scan-provider">Security Scan</div>
                             <div class="scan-time">
-                                ${new Date(scan.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • 
+                                ${new Date(scan.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} •
                                 ${scan.findings} findings
                             </div>
                         </div>
@@ -2310,6 +2420,205 @@
             });
         }
 
+        function formatPlanPrice(amountPaise, billingCycle) {
+            const amount = Number(amountPaise || 0) / 100;
+            const formatted = amount.toLocaleString('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            });
+            return `${formatted} / ${billingCycle === 'yearly' ? 'year' : 'month'}`;
+        }
+
+        function setSubscriptionMessage(message, tone = 'neutral') {
+            const node = document.getElementById('subscriptionActionStatus');
+            if (!node) return;
+            node.textContent = message;
+            node.className = `form-description ${tone === 'neutral' ? '' : `alert alert-${tone}`}`.trim();
+        }
+
+        function renderBillingSummary() {
+            const inlineStatus = document.getElementById('subscriptionInlineStatus');
+            const roleLabel = (billingSnapshot.role || 'free').toUpperCase();
+            const currentPlan = billingSnapshot.current_subscription;
+            const summaryBits = [roleLabel];
+
+            if (currentPlan?.product_name) {
+                summaryBits.push(currentPlan.product_name);
+            } else {
+                summaryBits.push('No active paid plan');
+            }
+            summaryBits.push(`Mode: ${billingSnapshot.mode || 'skeleton'}`);
+
+            if (inlineStatus) {
+                inlineStatus.textContent = summaryBits.join(' • ');
+            }
+
+            const summaryCard = document.getElementById('subscriptionSummaryCard');
+            if (!summaryCard) return;
+
+            const entitledProviders = billingSnapshot.entitled_providers || [];
+            summaryCard.innerHTML = `
+                <div class="subscription-summary-card">
+                    <div>
+                        <div class="subscription-summary-title">Current Access</div>
+                        <div class="subscription-summary-subtitle">
+                            ${escapeHtml(currentPlan?.product_name || 'No active paid plan yet')}
+                        </div>
+                    </div>
+                    <div class="subscription-badges">
+                        <span class="billing-chip">${escapeHtml(roleLabel)}</span>
+                        <span class="billing-chip">${escapeHtml((billingSnapshot.mode || 'skeleton').toUpperCase())}</span>
+                    </div>
+                </div>
+                <div class="credential-details" style="margin-top: 16px;">
+                    <div class="credential-detail">
+                        <span class="detail-label">Billing Email:</span>
+                        <span class="detail-value">${escapeHtml(billingSnapshot.email || 'Not set')}</span>
+                    </div>
+                    <div class="credential-detail">
+                        <span class="detail-label">Enabled Scanners:</span>
+                        <span class="detail-value">${escapeHtml(entitledProviders.length ? entitledProviders.join(', ') : 'None yet')}</span>
+                    </div>
+                </div>
+            `;
+
+            const billingEmail = document.getElementById('billingEmail');
+            if (billingEmail && !billingEmail.value && billingSnapshot.email) {
+                billingEmail.value = billingSnapshot.email;
+            }
+        }
+
+        async function loadBillingStatus() {
+            try {
+                const response = await fetch('/api/billing/subscription');
+                if (!response.ok) {
+                    throw new Error('Failed to load subscription status');
+                }
+
+                billingSnapshot = await response.json();
+                renderBillingSummary();
+                return billingSnapshot;
+            } catch (error) {
+                console.error('Failed to load billing status:', error);
+                const inlineStatus = document.getElementById('subscriptionInlineStatus');
+                if (inlineStatus) {
+                    inlineStatus.textContent = 'Subscription status unavailable right now';
+                }
+                return null;
+            }
+        }
+
+        function renderBillingPlans(plans) {
+            const container = document.getElementById('billingPlansList');
+            if (!container) return;
+
+            if (!plans || plans.length === 0) {
+                container.innerHTML = '<div class="loading">No billing plans configured yet.</div>';
+                return;
+            }
+
+            container.innerHTML = plans.map((plan) => {
+                const features = (plan.features || [])
+                    .map((feature) => `<li>${escapeHtml(feature)}</li>`)
+                    .join('');
+                const currentPlanId = billingSnapshot.current_subscription?.plan_id;
+                const isCurrent = currentPlanId === plan.id;
+                const actionLabel = isCurrent ? 'Current Plan' : 'Choose Plan';
+                const disabledAttr = isCurrent ? 'disabled' : '';
+
+                return `
+                    <div class="billing-plan-card ${isCurrent ? 'current' : ''}">
+                        <div class="billing-plan-header">
+                            <div>
+                                <div class="billing-plan-name">${escapeHtml(plan.product_name)}</div>
+                                <div class="billing-plan-cycle">${escapeHtml(plan.billing_cycle)}</div>
+                            </div>
+                            <span class="billing-chip">${escapeHtml((plan.role || 'member').toUpperCase())}</span>
+                        </div>
+                        <div class="billing-plan-price">${escapeHtml(formatPlanPrice(plan.amount_paise, plan.billing_cycle))}</div>
+                        <ul class="billing-plan-features">
+                            ${features || '<li>CloudGuard subscription module</li>'}
+                        </ul>
+                        <div class="billing-plan-footer">
+                            <span class="billing-plan-mode">${plan.configured ? 'Razorpay plan ID configured' : 'Catalog ready, gateway pending'}</span>
+                            <button class="btn ${isCurrent ? 'btn-secondary' : 'btn-primary'}" ${disabledAttr} onclick="subscribeToPlan('${escapeHtml(plan.id)}')">
+                                ${escapeHtml(actionLabel)}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadBillingPlans() {
+            const container = document.getElementById('billingPlansList');
+            if (container) {
+                container.innerHTML = '<div class="loading">Loading CloudGuard plans...</div>';
+            }
+
+            try {
+                const response = await fetch('/api/billing/plans');
+                if (!response.ok) {
+                    throw new Error('Failed to load billing plans');
+                }
+
+                const payload = await response.json();
+                renderBillingPlans(payload.plans || []);
+                return payload;
+            } catch (error) {
+                console.error('Failed to load billing plans:', error);
+                if (container) {
+                    container.innerHTML = `<div class="loading" style="color:#fca5a5;">${escapeHtml(error.message)}</div>`;
+                }
+                return null;
+            }
+        }
+
+        async function openSubscriptionModal() {
+            document.getElementById('subscriptionModal').style.display = 'flex';
+            setSubscriptionMessage('Pick a plan to connect CloudGuard billing with your scanners.');
+            await Promise.all([loadBillingStatus(), loadBillingPlans()]);
+        }
+
+        function closeSubscriptionModal() {
+            document.getElementById('subscriptionModal').style.display = 'none';
+        }
+
+        async function subscribeToPlan(planId) {
+            const billingEmail = document.getElementById('billingEmail')?.value?.trim();
+            if (!billingEmail) {
+                setSubscriptionMessage('Enter a billing email before choosing a plan.', 'error');
+                return;
+            }
+
+            setSubscriptionMessage('Creating subscription request...', 'warning');
+
+            try {
+                const response = await fetch('/api/billing/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plan_id: planId,
+                        email: billingEmail
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.detail || 'Failed to create subscription');
+                }
+
+                const modeLabel = payload.mode === 'live' ? 'Razorpay-ready' : 'skeleton';
+                setSubscriptionMessage(`${payload.message} (${modeLabel} mode)`, 'success');
+                await loadBillingStatus();
+                await loadBillingPlans();
+            } catch (error) {
+                console.error('Failed to subscribe to plan:', error);
+                setSubscriptionMessage(error.message, 'error');
+            }
+        }
+
         // Credentials Modal Functions (embedded from credentials_modal.html)
         function openCredentialsModal() {
             document.getElementById('credentialsModal').style.display = 'flex';
@@ -2876,6 +3185,38 @@
         window.launchCloudFormationStack = launchCloudFormationStack;
         window.downloadCloudFormationTemplate = downloadCloudFormationTemplate;
     </script>
+
+    <!-- Subscription Modal -->
+    <div id="subscriptionModal" class="modal-overlay" style="display: none;">
+        <div class="credentials-modal-content subscription-modal-content">
+            <div class="modal-header">
+                <h2>CloudGuard Subscription</h2>
+                <button class="close-btn" onclick="closeSubscriptionModal()">×</button>
+            </div>
+
+            <div id="subscriptionSummaryCard" class="form-section">
+                <div class="loading">Loading subscription details...</div>
+            </div>
+
+            <div class="form-section" style="margin-top: 20px;">
+                <h3>Choose a Plan</h3>
+
+
+                <div class="form-group">
+                    <label for="billingEmail">Billing Email</label>
+                    <input type="email" id="billingEmail" placeholder="you@company.com">
+                </div>
+
+                <div id="subscriptionActionStatus" class="form-description">
+                    Pick a plan to connect CloudGuard billing with your scanners.
+                </div>
+
+                <div id="billingPlansList" class="billing-plans-grid">
+                    <div class="loading">Loading CloudGuard plans...</div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Credentials Modal (embedded) -->
     <div id="credentialsModal" class="modal-overlay" style="display: none;">

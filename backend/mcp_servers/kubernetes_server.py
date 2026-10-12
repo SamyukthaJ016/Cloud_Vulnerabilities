@@ -323,6 +323,26 @@ class KubernetesMCPServer(BaseMCPServer):
         resources.append(drift_result["resource"])
         findings.extend(drift_result["findings"])
 
+        if self.config.get("kubeconfig") and self.config.get("extended_checks", True):
+            from backend.mcp_servers.kubernetes_posture_checks import ExtendedKubernetesMCPServer
+
+            extended = ExtendedKubernetesMCPServer({**self.config, "api_client": api_client})
+            extra = await extended._full_scan(account_id=account_id, deep_scan=deep_scan)
+            resource_keys = {(item.get("resource_type"), item.get("name")) for item in resources}
+            for resource in extra.get("resources", []):
+                key = (resource.get("resource_type"), resource.get("name"))
+                if key not in resource_keys:
+                    resources.append(resource)
+                    resource_keys.add(key)
+            finding_keys = {(item.get("issue"), (item.get("resource") or {}).get("name")) for item in findings}
+            for finding in extra.get("findings", []):
+                key = (finding.get("issue"), (finding.get("resource") or {}).get("name"))
+                if key not in finding_keys:
+                    findings.append(finding)
+                    finding_keys.add(key)
+            errors.extend(extra.get("errors", []))
+            cluster_resource["config"]["extended_posture"] = extra.get("summary", {})
+
         if len(resources) == 2 and errors:
             findings.append(self._finding(
                 cluster_resource,

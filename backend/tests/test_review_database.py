@@ -41,6 +41,81 @@ def identity_request(user, tenant):
     return req
 
 
+def test_merged_credential_storage_preserves_encryption_and_owner(api, db):
+    from backend.credentials.manager import CredentialManager, CloudCredential
+    manager = CredentialManager(db_url=os.environ["CLOUDGUARD_TEST_DATABASE_URL"])
+    owner = "credential-user-" + uuid.uuid4().hex
+    credential = CloudCredential(
+        user_id=owner, cloud_provider="aws", credential_name="sandbox",
+        aws_access_key_id="test-key", aws_secret_access_key="test-secret",
+        aws_region="Asia/Kolkata", is_default=True,
+    )
+    credential_id, action = manager.save_credential(credential)
+    assert action == "created" and isinstance(credential_id, int)
+    with db.cursor() as cur:
+        cur.execute(
+            "SELECT aws_secret_access_key,aws_region,is_valid FROM cloud_credentials WHERE id=%s",
+            (credential_id,),
+        )
+        secret, region, valid = cur.fetchone()
+    assert secret.startswith("v1:") and secret != "test-secret"
+    assert region == "ap-south-1" and not valid
+    credential.aws_secret_access_key = "updated-test-secret"
+    assert manager.save_credential(credential) == (credential_id, "updated")
+    restored = manager.resolve_scan_credential(owner, "aws", credential_id)
+    assert restored.aws_secret_access_key == "updated-test-secret"
+    with pytest.raises(ValueError):
+        manager.resolve_scan_credential("foreign-user", "aws", credential_id)
+
+
+def test_dashboard_queries_preserve_scope_and_all_findings(api, db):
+    from backend import database
+    suffix = uuid.uuid4().hex
+    user, tenant = "user-" + suffix, "tenant-" + suffix
+    scan_ids = []
+    with db.cursor() as cur:
+        for provider, owner, organization, count in [
+            ("kubernetes", user, tenant, 25),
+            ("aws", user, tenant, 2),
+            ("gcp", user, "foreign-" + suffix, 3),
+        ]:
+            cur.execute(
+                "INSERT INTO scans(user_id,tenant_id,account_id,cloud,status) VALUES (%s,%s,'test',%s,'completed') RETURNING id",
+                (owner, organization, provider),
+            )
+            scan_id = cur.fetchone()[0]
+            scan_ids.append(scan_id)
+            cur.execute(
+                "INSERT INTO resources(scan_id,cloud,type,name) VALUES (%s,%s,'test','resource') RETURNING id",
+                (scan_id, provider),
+            )
+            resource_id = cur.fetchone()[0]
+            for index in range(count):
+                cur.execute(
+                    "INSERT INTO findings(scan_id,resource_id,severity,description,validated_by) VALUES (%s,%s,'HIGH',%s,'test')",
+                    (scan_id, resource_id, f"Finding {index}"),
+                )
+    request = identity_request(user, tenant)
+    selected = str(scan_ids[0])
+    summary = asyncio.run(api.posture_dashboard(request, scan_ids=selected))
+    assert summary["total_findings"] == 25
+    assert [cloud["provider"] for cloud in summary["clouds"]] == ["kubernetes"]
+    providers = asyncio.run(api.get_provider_breakdown(request, scan_ids=selected))
+    assert providers["status"] == "success"
+    assert [row["provider"] for row in providers["data"]] == ["kubernetes"]
+    first = asyncio.run(api.get_latest_findings(request, limit=20, scan_ids=selected))
+    second = asyncio.run(api.get_latest_findings(request, limit=20, scan_ids=selected, offset=20))
+    assert first["total"] == 25 and first["has_more"]
+    assert len(first["data"]) == 20 and len(second["data"]) == 5
+    assert not second["has_more"]
+    unscoped = asyncio.run(api.get_provider_breakdown(request))
+    assert sorted(row["provider"] for row in unscoped["data"]) == ["aws", "kubernetes"]
+    foreign = asyncio.run(api.get_provider_breakdown(request, scan_ids=str(scan_ids[2])))
+    assert foreign["data"] == []
+    assert database.get_scan_report(scan_ids[2], user, tenant) == []
+    assert len(database.get_scan_report(scan_ids[0], user, tenant)) == 25
+
+
 def test_evidence_collision_and_foreign_job_are_rejected(api, db):
     evidence_id = 'review-' + uuid.uuid4().hex
     request = api.EvidenceIngestionRequest(evidence_id=evidence_id, source_system='test', payload={'owner': 'a'})

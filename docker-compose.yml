@@ -1,6 +1,6 @@
 services:
   # ==========================================================================
-  # PostgreSQL Database
+  # Optional standalone PostgreSQL database
   # ==========================================================================
   postgres:
     image: postgres:15-alpine
@@ -16,7 +16,7 @@ services:
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scanner_user -d scanner_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scanner_user} -d ${POSTGRES_DB:-scanner_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,6 +32,8 @@ services:
         reservations:
           cpus: '1'
           memory: 1G
+    profiles:
+      - standalone-db
 
   # ==========================================================================
   # Redis Cache
@@ -76,7 +78,7 @@ services:
     container_name: security-scanner-backend-dev
     environment:
       # Database
-      DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}}
 
       # Redis
       REDIS_URL: redis://:redis_password@redis:6379/0
@@ -97,7 +99,7 @@ services:
       WORKER_HEARTBEAT_STALE_SECONDS: ${WORKER_HEARTBEAT_STALE_SECONDS:-45}
 
       # Optional AWS scan-target fallback. Prefer adding cloud credentials in the UI.
-      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
+      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-arn:aws:iam::766363046973:role/cloud-vulnerabilities-scanner-role}
       AWS_REGION: ${AWS_REGION:-us-east-1}
 
       # Optional S3-compatible evidence storage, including DigitalOcean Spaces.
@@ -189,12 +191,12 @@ services:
       backend-dev:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}}
       REDIS_URL: redis://:redis_password@redis:6379/0
       WORKER_TOKEN: ${WORKER_TOKEN:-}
       SCHEDULER_WORKER_ID: ${SCHEDULER_WORKER_ID:-local-scheduler-worker-1}
       WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-15}
-      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
+      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-arn:aws:iam::766363046973:role/cloud-vulnerabilities-scanner-role}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-}
       GCP_SERVICE_ACCOUNT_JSON: ${GCP_SERVICE_ACCOUNT_JSON:-/app/config/gcp-service-account.json}
@@ -218,7 +220,12 @@ services:
       - ./config:/app/config:ro
       - ./logs:/app/logs:rw
       - ./db/init:/app/db/init:ro
-
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"from pathlib import Path; import sys; sys.exit(0 if 'backend.scheduler_worker' in Path('/proc/1/cmdline').read_text() else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - security-network
     restart: always
@@ -246,7 +253,7 @@ services:
       CLOUDGUARD_KEYCLOAK_CLIENT_ID: ${CLOUDGUARD_KEYCLOAK_CLIENT_ID:-cloudguard-frontend}
       KEYCLOAK_REALM: ${KEYCLOAK_REALM:-gigachad-grc}
       CREDENTIAL_ENCRYPTION_REQUIRED: "true"
-      DATABASE_URL: postgresql://scanner_user:scanner_pass@postgres:5432/scanner_db
+      DATABASE_URL: ${DOCKER_DATABASE_URL:-postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
       REDIS_URL: redis://:redis_password@redis:6379/0
       QUEUE_BACKEND: ${QUEUE_BACKEND:-postgres}
@@ -339,7 +346,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scanner_user}:${POSTGRES_PASSWORD:-scanner_pass}@postgres:5432/${POSTGRES_DB:-scanner_db}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-}
-      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-}
+      AWS_ASSUME_ROLE_ARN: ${AWS_ASSUME_ROLE_ARN:-arn:aws:iam::766363046973:role/cloud-vulnerabilities-scanner-role}
       AWS_REGION: ${AWS_REGION:-us-east-1}
       SCAN_SCHEDULE: ${SCAN_SCHEDULE:-0 2 * * *}
     volumes:
@@ -383,7 +390,7 @@ services:
     profiles:
       - scanning
     entrypoint: ["cloudfox"]
-    command: ["aws", "-p", "default", "all-checks"]
+    command: ["sh", "-lc", "cloudfox aws -p ${AWS_PROFILE:-default} all-checks"]
 
   # ==========================================================================
   # Prometheus (Metrics)

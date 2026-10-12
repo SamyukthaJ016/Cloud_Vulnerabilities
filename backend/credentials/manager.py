@@ -22,7 +22,78 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+from backend.kubeconfig_security import validate_kubeconfig
+
 logger = logging.getLogger("credential_manager")
+
+DEFAULT_AWS_REGION = os.getenv("DEFAULT_AWS_REGION", "ap-south-1")
+AWS_REGION_ALIASES = {
+    "asia/kolkata": "ap-south-1",
+    "ist": "ap-south-1",
+}
+
+LIST_SERIALIZED_CREDENTIAL_FIELDS = (
+    "iac_enabled_tools",
+    "container_enabled_tools",
+    "container_sbom_tools",
+)
+
+
+def normalize_aws_region(region: Optional[str]) -> str:
+    raw = (region or "").strip()
+    if not raw:
+        return DEFAULT_AWS_REGION
+
+    return AWS_REGION_ALIASES.get(raw.lower(), raw)
+
+
+def build_aws_exec_env(credential: Optional["CloudCredential"]) -> Dict[str, str]:
+    if not credential:
+        return {}
+
+    exec_env = {
+        "AWS_ACCESS_KEY_ID": credential.aws_access_key_id or "",
+        "AWS_SECRET_ACCESS_KEY": credential.aws_secret_access_key or "",
+        "AWS_SESSION_TOKEN": credential.aws_session_token or "",
+        "AWS_REGION": normalize_aws_region(credential.aws_region),
+        "AWS_DEFAULT_REGION": normalize_aws_region(credential.aws_region),
+    }
+    return {key: value for key, value in exec_env.items() if value}
+
+
+def serialize_string_list(values: Optional[Any]) -> Optional[str]:
+    if values is None:
+        return None
+    if isinstance(values, str):
+        raw = values.strip()
+        return raw if raw else json.dumps([])
+
+    normalized = []
+    for value in values:
+        text = str(value).strip()
+        if text:
+            normalized.append(text)
+    return json.dumps(normalized)
+
+
+def deserialize_string_list(raw_value: Optional[Any]) -> List[str]:
+    if raw_value is None:
+        return []
+    if isinstance(raw_value, list):
+        return [str(item).strip() for item in raw_value if str(item).strip()]
+
+    text = str(raw_value).strip()
+    if not text:
+        return []
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return [segment.strip() for segment in text.split(",") if segment.strip()]
 
 
 @dataclass
@@ -34,7 +105,7 @@ class CloudCredential:
     id: Optional[int] = None 
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
-    aws_region: Optional[str] = "us-east-1"
+    aws_region: Optional[str] = DEFAULT_AWS_REGION
     aws_role_arn: Optional[str] = None
     aws_session_token: Optional[str] = None
 
@@ -53,8 +124,16 @@ class CloudCredential:
     kubernetes_context: Optional[str] = None
     kubernetes_cluster_name: Optional[str] = None
 
+    iac_target_path: Optional[str] = None
+    iac_enabled_tools: Optional[List[str]] = None
+
+    container_image_target: Optional[str] = None
+    container_path_target: Optional[str] = None
+    container_enabled_tools: Optional[List[str]] = None
+    container_sbom_tools: Optional[List[str]] = None
+
     is_default: bool = False
-    is_valid: bool = True
+    is_valid: bool = False
 
 
 
@@ -115,6 +194,30 @@ class CredentialManager:
     def _get_connection(self):
         """Get database connection"""
         return psycopg2.connect(self.db_url)
+
+    def _get_sso_user_profile(self, cur, user_id: str) -> Tuple[Optional[str], Optional[str]]:
+        """Resolve a matching SSO user when CloudGuard shares the SSO database."""
+        cur.execute(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'User'
+            )
+            """
+        )
+        if not cur.fetchone()[0]:
+            return None, None
+
+        cur.execute(
+            'SELECT email, name FROM "User" WHERE id = %s',
+            (user_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None, None
+
+        return row[0], row[1]
     
     def ensure_user(self, user_id: str, email: Optional[str] = None, name: Optional[str] = None) -> str:
         """Ensure user exists, create if not"""
@@ -122,23 +225,22 @@ class CredentialManager:
         cur = conn.cursor()
         
         try:
-            # Check if user exists
+            sso_email, sso_name = self._get_sso_user_profile(cur, user_id)
+            resolved_email = email or sso_email or f"{user_id}@cloudguard.local"
+            resolved_name = name or sso_name or user_id
+
             cur.execute(
-                "SELECT user_id FROM user_profiles WHERE user_id = %s",
-                (user_id,)
+                """
+                INSERT INTO user_profiles (user_id, email, name, last_login, is_active)
+                VALUES (%s, %s, %s, NOW(), TRUE)
+                ON CONFLICT (user_id) DO UPDATE
+                SET email = COALESCE(EXCLUDED.email, user_profiles.email),
+                    name = COALESCE(EXCLUDED.name, user_profiles.name),
+                    last_login = NOW(),
+                    is_active = TRUE
+                """,
+                (user_id, resolved_email, resolved_name)
             )
-            
-            if not cur.fetchone():
-                # Create user
-                cur.execute(
-                    """
-                    INSERT INTO user_profiles (user_id, email, name)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (user_id) DO UPDATE
-                    SET last_login = NOW()
-                    """,
-                    (user_id, email or f"{user_id}@cloudguard.local", name or user_id)
-                )
             
             conn.commit()
             return user_id
@@ -147,10 +249,45 @@ class CredentialManager:
             cur.close()
             conn.close()
 
-    def save_credential(self, credential: CloudCredential) -> int:
+    def _build_generated_credential_name(self, credential: CloudCredential) -> str:
+        """Generate a readable credential name when the client leaves it blank."""
+        timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        provider = (credential.cloud_provider or "credential").strip().lower()
+
+        if provider == "aws":
+            descriptor = normalize_aws_region(credential.aws_region)
+        elif provider == "gcp":
+            descriptor = (credential.gcp_project_id or "project").strip()
+        elif provider == "kubernetes":
+            descriptor = (
+                credential.kubernetes_cluster_name
+                or credential.kubernetes_context
+                or "cluster"
+            ).strip()
+        elif provider == "iac":
+            descriptor = (credential.iac_target_path or "iac-profile").strip()
+        elif provider == "container":
+            descriptor = (
+                credential.container_image_target
+                or credential.container_path_target
+                or "container-target"
+            ).strip()
+        elif provider == "openai":
+            descriptor = (credential.openai_org_id or "api").strip()
+        elif provider == "azure":
+            descriptor = (credential.azure_subscription_id or "subscription").strip()
+        else:
+            descriptor = "credential"
+
+        normalized_descriptor = "-".join(
+            chunk for chunk in descriptor.replace("/", "-").replace(" ", "-").split("-") if chunk
+        ) or "credential"
+        return f"{provider}-{normalized_descriptor}-{timestamp}"
+
+    def save_credential(self, credential: CloudCredential) -> Tuple[int, str]:
         """
         Save encrypted credential to database
-        Returns credential ID
+        Returns credential ID and whether the row was created or updated.
         """
         conn = self._get_connection()
         cur = conn.cursor()
@@ -158,6 +295,35 @@ class CredentialManager:
         try:
         # Ensure user exists
             self.ensure_user(credential.user_id)
+            credential.aws_region = normalize_aws_region(credential.aws_region)
+            credential.iac_target_path = (credential.iac_target_path or "").strip() or None
+            credential.iac_enabled_tools = (
+                deserialize_string_list(credential.iac_enabled_tools)
+                if credential.cloud_provider == "iac" or credential.iac_enabled_tools is not None
+                else None
+            )
+            credential.container_image_target = (credential.container_image_target or "").strip() or None
+            credential.container_path_target = (credential.container_path_target or "").strip() or None
+            credential.container_enabled_tools = (
+                deserialize_string_list(credential.container_enabled_tools)
+                if credential.cloud_provider == "container" or credential.container_enabled_tools is not None
+                else None
+            )
+            credential.container_sbom_tools = (
+                deserialize_string_list(credential.container_sbom_tools)
+                if credential.cloud_provider == "container" or credential.container_sbom_tools is not None
+                else None
+            )
+            credential.credential_name = (
+                (credential.credential_name or "").strip()
+                or self._build_generated_credential_name(credential)
+            )
+
+            # New or updated credentials should remain pending until validation completes.
+            credential.is_valid = False
+
+            if credential.cloud_provider == "kubernetes" and credential.kubernetes_kubeconfig:
+                validate_kubeconfig(credential.kubernetes_kubeconfig)
         
         # Encrypt sensitive fields
             encrypted_credential = asdict(credential)
@@ -177,6 +343,9 @@ class CredentialManager:
                 encrypted_credential['azure_client_secret'] = self.encrypt(credential.azure_client_secret)
             if credential.kubernetes_kubeconfig:
                 encrypted_credential['kubernetes_kubeconfig'] = self.encrypt(credential.kubernetes_kubeconfig)
+            for field in LIST_SERIALIZED_CREDENTIAL_FIELDS:
+                if field in encrypted_credential:
+                    encrypted_credential[field] = serialize_string_list(encrypted_credential.get(field))
         
         # Check if credential already exists
             cur.execute(
@@ -189,10 +358,12 @@ class CredentialManager:
         
             existing = cur.fetchone()
             credential_id = None
+            save_action = "created"
         
             if existing:
             # Update existing credential
                 credential_id = existing[0]
+                save_action = "updated"
                 update_fields = []
                 update_values = []
             
@@ -231,6 +402,8 @@ class CredentialManager:
             
                 cur.execute(insert_query, values)
                 credential_id = cur.fetchone()[0]
+
+            credential.id = credential_id
         
         # If this is default, unset other defaults for this provider and user
             if credential.is_default:
@@ -256,7 +429,7 @@ class CredentialManager:
                 )
         
             
-            return credential_id
+            return credential_id, save_action
         
         except Exception as e:
             conn.rollback()
@@ -409,6 +582,14 @@ class CredentialManager:
                 kubernetes_context=credential_dict.get("kubernetes_context"),
                 kubernetes_cluster_name=credential_dict.get("kubernetes_cluster_name"),
 
+                iac_target_path=credential_dict.get("iac_target_path"),
+                iac_enabled_tools=credential_dict.get("iac_enabled_tools"),
+
+                container_image_target=credential_dict.get("container_image_target"),
+                container_path_target=credential_dict.get("container_path_target"),
+                container_enabled_tools=credential_dict.get("container_enabled_tools"),
+                container_sbom_tools=credential_dict.get("container_sbom_tools"),
+
                 is_default=credential_dict["is_default"],
                 is_valid=credential_dict["is_valid"],
             )
@@ -440,12 +621,15 @@ class CredentialManager:
                         aws_region, gcp_project_id, openai_org_id,
                         azure_tenant_id, azure_subscription_id,
                         kubernetes_context, kubernetes_cluster_name,
+                        iac_target_path, iac_enabled_tools,
+                        container_image_target, container_path_target,
+                        container_enabled_tools, container_sbom_tools,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
                     FROM cloud_credentials 
                     WHERE user_id = %s AND cloud_provider = %s
-                    ORDER BY is_default DESC, last_used DESC NULLS LAST
+                    ORDER BY is_default DESC, updated_at DESC NULLS LAST, last_used DESC NULLS LAST
                     """,
                     (user_id, provider)
                 )
@@ -457,18 +641,26 @@ class CredentialManager:
                         aws_region, gcp_project_id, openai_org_id,
                         azure_tenant_id, azure_subscription_id,
                         kubernetes_context, kubernetes_cluster_name,
+                        iac_target_path, iac_enabled_tools,
+                        container_image_target, container_path_target,
+                        container_enabled_tools, container_sbom_tools,
                         is_default, is_valid, validation_status,
                         validation_message, last_used, created_at,
                         updated_at, last_validated
                     FROM cloud_credentials 
                     WHERE user_id = %s
-                    ORDER BY cloud_provider, is_default DESC, last_used DESC NULLS LAST
+                    ORDER BY cloud_provider, is_default DESC, updated_at DESC NULLS LAST, last_used DESC NULLS LAST
                     """,
                     (user_id,)
                 )
         
             rows = cur.fetchall()
-            return [dict(row) for row in rows]
+            credentials = [dict(row) for row in rows]
+            for credential in credentials:
+                credential["aws_region"] = normalize_aws_region(credential.get("aws_region"))
+                for field in LIST_SERIALIZED_CREDENTIAL_FIELDS:
+                    credential[field] = deserialize_string_list(credential.get(field))
+            return credentials
         
         except Exception as e:
             logger.error(f"Failed to get user credentials: {e}")
@@ -513,6 +705,63 @@ class CredentialManager:
     def get_credential_by_id(self, user_id: str, credential_id: int) -> Optional[CloudCredential]:
         """Get a specific credential by ID"""
         return self.get_credentials(credential_id, user_id)
+
+    def set_default_credential(self, credential_id: int, user_id: str) -> bool:
+        """Set a credential as the default for its provider"""
+        conn = self._get_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        try:
+            cur.execute(
+                """
+                SELECT id, cloud_provider
+                FROM cloud_credentials
+                WHERE id = %s AND user_id = %s
+                """,
+                (credential_id, user_id)
+            )
+
+            credential = cur.fetchone()
+            if not credential:
+                return False
+
+            provider = credential["cloud_provider"]
+
+            cur.execute(
+                """
+                UPDATE cloud_credentials
+                SET is_default = FALSE
+                WHERE user_id = %s AND cloud_provider = %s
+                """,
+                (user_id, provider)
+            )
+
+            cur.execute(
+                """
+                UPDATE cloud_credentials
+                SET is_default = TRUE, last_used = NOW(), updated_at = NOW()
+                WHERE id = %s AND user_id = %s
+                """,
+                (credential_id, user_id)
+            )
+
+            conn.commit()
+            self._log_audit(
+                credential_id,
+                user_id,
+                "set_default",
+                {"provider": provider}
+            )
+            return True
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Failed to set default credential: {e}")
+            raise
+
+        finally:
+            cur.close()
+            conn.close()
     
     def delete_credential(self, credential_id: int, user_id: str) -> bool:
         """Delete a credential"""
@@ -590,6 +839,10 @@ class CredentialManager:
                 validation_result = self._validate_azure_credential(credential)
             elif credential.cloud_provider == 'kubernetes':
                 validation_result = self._validate_kubernetes_credential(credential)
+            elif credential.cloud_provider == 'iac':
+                validation_result = self._validate_iac_credential(credential)
+            elif credential.cloud_provider == 'container':
+                validation_result = self._validate_container_credential(credential)
             else:
                 validation_result['message'] = f'Unknown provider: {credential.cloud_provider}'
             
@@ -621,7 +874,7 @@ class CredentialManager:
                 aws_access_key_id=credential.aws_access_key_id,
                 aws_secret_access_key=credential.aws_secret_access_key,
                 aws_session_token=credential.aws_session_token,
-                region_name=credential.aws_region or 'us-east-1'
+                region_name=normalize_aws_region(credential.aws_region)
             )
             
             # Test STS to get caller identity
@@ -822,6 +1075,74 @@ class CredentialManager:
                 'message': f'Kubernetes validation failed: {str(e)}',
                 'details': {}
             }
+    def _validate_iac_credential(self, credential: CloudCredential) -> Dict[str, Any]:
+        """Validate IaC scan target configuration."""
+        enabled_tools = deserialize_string_list(credential.iac_enabled_tools)
+
+        if not enabled_tools:
+            return {
+                'valid': False,
+                'message': 'Select at least one IaC scanning tool',
+                'details': {}
+            }
+
+        if not credential.iac_target_path:
+            return {
+                'valid': True,
+                'message': 'IaC scan profile saved. Upload a folder for immediate scans, or add a worker-local path for scheduled scans.',
+                'details': {
+                    'target_path': None,
+                    'enabled_tools': enabled_tools,
+                    'mode': 'upload-first',
+                }
+            }
+
+        return {
+            'valid': True,
+            'message': 'IaC scan configuration validated successfully',
+            'details': {
+                'target_path': credential.iac_target_path,
+                'enabled_tools': enabled_tools,
+                'mode': 'worker-path',
+            }
+        }
+
+    def _validate_container_credential(self, credential: CloudCredential) -> Dict[str, Any]:
+        """Validate container scan target configuration."""
+        enabled_tools = deserialize_string_list(credential.container_enabled_tools)
+        sbom_tools = deserialize_string_list(credential.container_sbom_tools)
+
+        if not credential.container_image_target and not credential.container_path_target:
+            return {
+                'valid': False,
+                'message': 'Provide a container image or local container path',
+                'details': {}
+            }
+
+        if not enabled_tools:
+            return {
+                'valid': False,
+                'message': 'Select at least one container scanning tool',
+                'details': {}
+            }
+
+        if not sbom_tools:
+            return {
+                'valid': False,
+                'message': 'Select at least one SBOM tool for container scanning',
+                'details': {}
+            }
+
+        return {
+            'valid': True,
+            'message': 'Container scan configuration validated successfully',
+            'details': {
+                'image_target': credential.container_image_target,
+                'path_target': credential.container_path_target,
+                'enabled_tools': enabled_tools,
+                'sbom_tools': sbom_tools,
+            }
+        }
     
     def _update_validation_status(self, credential_id: Optional[int], user_id: str, 
                                  is_valid: bool, message: str) -> None:

@@ -148,6 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_scans_status ON scans (status);
 CREATE INDEX IF NOT EXISTS idx_scans_started_at_desc ON scans (started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scans_credential_id ON scans (aws_credential_id);
 CREATE INDEX IF NOT EXISTS idx_scans_tenant_user_started ON scans (tenant_id, user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_scans_user_id ON scans (user_id);
 
 
 -- ===================================================

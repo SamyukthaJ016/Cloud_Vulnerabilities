@@ -11,9 +11,10 @@ DROP CONSTRAINT IF EXISTS valid_cloud_provider;
 
 ALTER TABLE cloud_credentials
 ADD CONSTRAINT valid_cloud_provider
-CHECK (cloud_provider IN ('aws','gcp','openai','azure','kubernetes','iac'));
+CHECK (cloud_provider IN ('aws','gcp','openai','azure','kubernetes','iac','container'));
 
-CREATE OR REPLACE VIEW v_user_credential_summary AS
+DROP VIEW IF EXISTS v_user_credential_summary;
+CREATE VIEW v_user_credential_summary AS
 SELECT
     u.user_id,
     u.email,

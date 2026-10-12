@@ -102,7 +102,7 @@ class CloudFoxScanner:
     
     async def scan_aws_account(
         self,
-        profile: str = "default",
+        profile: str = None,
         region: str = "us-east-1",
         checks: List[str] = None
     ) -> Dict[str, Any]:
@@ -123,6 +123,7 @@ class CloudFoxScanner:
                 "install_guide": "go install github.com/BishopFox/cloudfox@latest"
             }
         
+        profile = profile or os.getenv("AWS_PROFILE", "default")
         logger.info(f"Starting CloudFox scan (profile={profile}, region={region})...")
         
         # Create temporary directory for results
@@ -455,7 +456,7 @@ cloudfox_scanner = CloudFoxScanner()
 
 # Quick check functions for specific vulnerabilities
 
-async def check_for_secrets(profile: str = "default") -> List[CloudFoxFinding]:
+async def check_for_secrets(profile: str = None) -> List[CloudFoxFinding]:
     """Quick check for exposed secrets"""
     if not cloudfox_scanner.available:
         return []
@@ -468,7 +469,7 @@ async def check_for_secrets(profile: str = "default") -> List[CloudFoxFinding]:
     return result.get("findings", [])
 
 
-async def check_for_admin_principals(profile: str = "default") -> List[CloudFoxFinding]:
+async def check_for_admin_principals(profile: str = None) -> List[CloudFoxFinding]:
     """Quick check for admin principals"""
     if not cloudfox_scanner.available:
         return []
@@ -481,7 +482,7 @@ async def check_for_admin_principals(profile: str = "default") -> List[CloudFoxF
     return result.get("findings", [])
 
 
-async def check_exposed_endpoints(profile: str = "default") -> List[CloudFoxFinding]:
+async def check_exposed_endpoints(profile: str = None) -> List[CloudFoxFinding]:
     """Quick check for exposed endpoints"""
     if not cloudfox_scanner.available:
         return []
@@ -494,7 +495,7 @@ async def check_exposed_endpoints(profile: str = "default") -> List[CloudFoxFind
     return result.get("findings", [])
 
 
-async def full_offensive_scan(profile: str = "default") -> Dict[str, Any]:
+async def full_offensive_scan(profile: str = None) -> Dict[str, Any]:
     """
     Run a complete offensive security scan with CloudFox
     

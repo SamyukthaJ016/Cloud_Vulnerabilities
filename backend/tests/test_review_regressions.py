@@ -200,6 +200,80 @@ def test_raw_mcp_dispatch_is_retired(api):
     assert error.value.status_code == 410
 
 
+def test_legacy_scan_route_uses_current_queue(api, monkeypatch):
+    enqueue = AsyncMock(return_value={"job_id": "job-current", "status": "queued"})
+    monkeypatch.setattr(api, "enqueue_scan_job", enqueue)
+    request = api.MultiCloudScanRequest(providers=["aws"])
+    browser_request = object()
+    tasks = api.BackgroundTasks()
+    result = asyncio.run(api.multi_cloud_scan(request, browser_request, tasks))
+    assert result["job_id"] == "job-current"
+    enqueue.assert_awaited_once_with(request, browser_request, tasks)
+
+
+def test_scan_request_only_accepts_current_four_scanners(api):
+    from pydantic import ValidationError
+    assert api.MultiCloudScanRequest(providers=["aws", "gcp", "kubernetes", "iac"])
+    for legacy in ["azure", "container", "cloudfox"]:
+        with pytest.raises(ValidationError):
+            api.MultiCloudScanRequest(providers=[legacy])
+
+
+def test_retired_token_exchange_and_global_grc_sync(api):
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(api.auth_sso_exchange(api.SsoExchangeRequest(token="old-token"), None))
+    assert error.value.status_code == 410
+    with pytest.raises(HTTPException) as error:
+        asyncio.run(api.api_grc_sync())
+    assert error.value.status_code == 410
+    result = asyncio.run(api._maybe_sync_grc_after_scans([7]))
+    assert result == {
+        "status": "connector_pending",
+        "scan_ids": [7],
+        "message": "Findings are available to tenant-specific GRC connectors.",
+    }
+
+
+def test_queue_retains_subscription_enforcement(api, monkeypatch):
+    monkeypatch.setattr(api, "billing_enforcement_enabled", lambda: True)
+    access = {"allowed": False}
+    decision = MagicMock(return_value=access)
+    connection = MagicMock(side_effect=AssertionError("Denied jobs must not reach the database"))
+    monkeypatch.setattr(api, "get_provider_access_decision", decision)
+    monkeypatch.setattr(api, "get_conn", connection)
+    with pytest.raises(HTTPException) as error:
+        api.create_scan_job("verified-user", "tenant-a", api.MultiCloudScanRequest(providers=["aws"]))
+    assert error.value.status_code == 402
+    decision.assert_called_once_with("verified-user", ["aws"])
+    connection.assert_not_called()
+
+
+def test_billing_and_auth_status_use_verified_identity(api, monkeypatch):
+    from backend import billing_api
+    from backend.tenant_security import RequestIdentity
+    from starlette.requests import Request
+    identity = RequestIdentity(user_id="verified-user", tenant_id="tenant-a", email="user@example.com")
+    request = Request({"type": "http", "headers": [(b"x-user-id", b"foreign-user")]})
+    request.state.identity = identity
+    assert billing_api.get_user_id(request) == "verified-user"
+    result = asyncio.run(api.auth_status(request))
+    assert result["auth_mode"] == "keycloak"
+    assert result["user"] == {"id": "verified-user", "tenant_id": "tenant-a"}
+
+
+def test_extended_kubernetes_checks_use_safe_loader():
+    from backend.mcp_servers.kubernetes_posture_checks import ExtendedKubernetesMCPServer
+    unsafe = kubeconfig()
+    unsafe["users"][0]["user"]["exec"] = {"command": "never-execute"}
+    with pytest.raises(ValueError, match="forbidden"):
+        ExtendedKubernetesMCPServer({"kubeconfig": yaml.safe_dump(unsafe)})
+    from backend.mcp_servers.kubernetes_server import build_kubernetes_api_client
+    client = build_kubernetes_api_client(yaml.safe_dump(kubeconfig()))
+    server = ExtendedKubernetesMCPServer({"api_client": client})
+    assert server.api_client is client
+    client.close()
+
+
 @pytest.mark.parametrize('attempts,expected', [(1, 'queued'), (3, 'dead_letter')])
 def test_provider_errors_enter_retry_policy(api, monkeypatch, attempts, expected):
     job = dict(job_id='job-test', providers=['aws'], account_ids={}, deep_scan=False,
