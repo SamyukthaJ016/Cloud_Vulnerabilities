@@ -813,6 +813,12 @@
             </div>
         </div>
 
+        <p id="dashboard-scope" style="color: #94a3b8; margin-bottom: 16px;">Loading scan scope...</p>
+        <div class="action-buttons" style="margin-bottom: 20px;">
+            <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">Latest completed scans</button>
+            <button class="btn btn-secondary" onclick="window.location.href='/dashboard?scope=all'">All scan history</button>
+        </div>
+
         <!-- Stats Overview -->
         <div class="stats-grid">
             <div class="stat-card">
@@ -824,7 +830,7 @@
             </div>
 
             <div class="stat-card">
-                <div class="stat-label">Vulnerabilities Found</div>
+                <div class="stat-label">Security Findings</div>
                 <div class="stat-value" id="total-findings">--</div>
                 <div class="stat-trend">
                     <span id="critical-count">Loading...</span>
@@ -853,7 +859,7 @@
             <div class="chart-container">
                 <div class="chart-header">
                     <div class="chart-title">Security Trend Over Time</div>
-                    <div class="chart-subtitle">Vulnerabilities found in the last 30 days</div>
+                    <div class="chart-subtitle">Historical finding observations in the last 30 days</div>
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="trendChart"></canvas>
@@ -885,6 +891,8 @@
                     <button class="severity-filter" onclick="filterVulnerabilities('critical')">Critical</button>
                     <button class="severity-filter" onclick="filterVulnerabilities('high')">High</button>
                     <button class="severity-filter" onclick="filterVulnerabilities('medium')">Medium</button>
+                    <button class="severity-filter" onclick="filterVulnerabilities('low')">Low</button>
+                    <button class="severity-filter" onclick="filterVulnerabilities('info')">Info</button>
                 </div>
             </div>
 
@@ -1226,7 +1234,17 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 scanIds = (result.lab?.scan_ids || []).join(',');
                 if (!scanIds) throw new Error('This demo has no completed scan results yet.');
             }
-            if (!scanIds) return '';
+            if (!scanIds) {
+                if (params.has('scanIds') || params.has('scans') || params.has('scan_id')) throw new Error('Invalid scan selection');
+                if (params.get('scope') === 'all') return '';
+                const response = await request('/api/dashboard-scope');
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success' || !Array.isArray(result.scan_ids)) {
+                    throw new Error('Could not load latest completed scans');
+                }
+                // A clean or empty snapshot must never fall back to historical findings.
+                scanIds = result.scan_ids.length ? result.scan_ids.join(',') : '0';
+            }
             if (!/^\d+(,\d+)*$/.test(scanIds)) throw new Error('Invalid scan selection');
             return `?scan_ids=${encodeURIComponent(scanIds)}`;
         }
@@ -1253,6 +1271,13 @@ gcloud compute instances delete-access-config ${resourceName} \\
             try {
                 console.log('Loading dashboard data...');
                 const filter = await resolveDashboardScope(window.location.search);
+                const params = new URLSearchParams(window.location.search);
+                const selectedRun = params.has('labId') || params.has('scanIds') || params.has('scans') || params.has('scan_id');
+                document.getElementById('dashboard-scope').textContent = selectedRun
+                    ? 'Selected scan results. Findings include vulnerabilities, configuration issues, and informational checks.'
+                    : params.get('scope') === 'all'
+                        ? 'All scan history. Totals include repeated observations across scans and are not a current vulnerability count.'
+                        : 'Latest completed scan per provider. Results may cover different accounts and scan dates. Findings include vulnerabilities, configuration issues, and informational checks.';
 
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
@@ -1280,13 +1305,13 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 document.getElementById('total-findings').textContent =
                     summary.total_findings || 0;
                 document.getElementById('security-score').textContent =
-                    Math.round(summary.security_score || 100);
-                document.getElementById('critical-count').innerHTML =
-                    `${summary.total_findings || 0} total vulnerabilities`;
+                    Math.round(summary.security_score ?? 100);
+                document.getElementById('critical-count').textContent =
+                    `${findings.filter(f => f.severity?.toUpperCase() === 'CRITICAL').length} critical · ${findings.filter(f => f.severity?.toUpperCase() === 'INFO').length} informational`;
                 document.getElementById('active-tools').textContent =
                     Object.keys(summary.vulnerability_tools_available || {}).length;
 
-                await loadTrendChart(filter);
+                await loadTrendChart(selectedRun ? filter : '');
                 await loadCloudChart(providers.data || []);
                 await loadCloudProviders(providers.data || []);
 
@@ -1383,7 +1408,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                         labels: labels,
                         datasets: [
                             {
-                                label: 'Vulnerabilities',
+                                label: 'Finding observations',
                                 data: chartData.map(d => d.findings || 0),
                                 borderColor: '#f97316',
                                 backgroundColor: 'rgba(249, 115, 22, 0.1)',
@@ -1502,7 +1527,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                             borderSkipped: false
                         },
                         {
-                            label: 'Vulnerabilities',
+                            label: 'Security findings',
                             data: findings,
                             backgroundColor: backgroundColors.map(c => c.replace('0.8', '0.4')),
                             borderRadius: 6,
@@ -1605,17 +1630,17 @@ gcloud compute instances delete-access-config ${resourceName} \\
                                 <div class="metric-value" style="color: ${provider.findings > 0 ? '#ef4444' : '#10b981'}">
                                     ${provider.findings || 0}
                                 </div>
-                                <div class="metric-label">Vulnerabilities</div>
+                                <div class="metric-label">Security Findings</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-value">
-                                    ${provider.resources ? Math.round((provider.findings || 0) / provider.resources * 100) : 0}%
+                                    ${provider.resources ? ((provider.findings || 0) / provider.resources).toFixed(1) : 0}
                                 </div>
-                                <div class="metric-label">Risk Ratio</div>
+                                <div class="metric-label">Findings / Resource</div>
                             </div>
                             <div class="metric">
                                 <div class="metric-value">
-                                    ${provider.security_score || 'N/A'}
+                                    ${provider.security_score ?? 'N/A'}
                                 </div>
                                 <div class="metric-label">Security Score</div>
                             </div>
@@ -1632,8 +1657,8 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 container.innerHTML = `
                     <div class="no-data">
                         <div class="no-data-icon">🎉</div>
-                        <h3>No vulnerabilities found</h3>
-                        <p>Your cloud environment is secure!</p>
+                        <h3>No security findings in this view</h3>
+                        <p>Review scan history and scan coverage before assessing your environment.</p>
                     </div>`;
                 return;
             }
@@ -1651,7 +1676,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                         <h3 style="margin-bottom: 16px; color: #f1f5f9; font-size: 1.1rem;">
                             ☁️ ${cloud} Cloud
                             <span style="color: #94a3b8; font-size: 0.9rem; margin-left: 12px;">
-                                ${vulns.length} vulnerabilities found
+                                ${vulns.length} security findings
                             </span>
                         </h3>
                         
@@ -1666,7 +1691,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                                 <div class="vulnerability-card ${severity}">
                                     <div class="vuln-header">
                                         <div class="vuln-title">
-                                            ${v.description?.substring(0, 100) || 'Unknown vulnerability'}
+                                            ${v.description?.substring(0, 100) || 'Unknown finding'}
                                             ${v.description?.length > 100 ? '...' : ''}
                                         </div>
                                         <div class="severity-badge ${severity}">

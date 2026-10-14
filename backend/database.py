@@ -250,6 +250,29 @@ def get_scan_report(scan_id, user_id, tenant_id):
         cur.close()
 
 
+def get_latest_dashboard_scans(user_id, tenant_id):
+    """Return one completed snapshot per provider, including clean scans."""
+    conn = ensure_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT id, cloud, account_id, started_at
+            FROM (
+                SELECT id, cloud, account_id, started_at,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY cloud ORDER BY started_at DESC, id DESC
+                       ) AS position
+                FROM scans
+                WHERE user_id = %s AND tenant_id = %s AND status = 'completed'
+            ) snapshots
+            WHERE position = 1
+            ORDER BY cloud
+        """, (user_id, tenant_id))
+        return cur.fetchall()
+    finally:
+        cur.close()
+
+
 def get_multi_cloud_summary(user_id, tenant_id, scan_ids=None):
     conn = ensure_connection()
     cur = conn.cursor()

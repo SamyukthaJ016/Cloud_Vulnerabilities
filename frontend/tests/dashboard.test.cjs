@@ -26,11 +26,21 @@ test('pending and inaccessible labs never fall back to all scans', async () => {
 });
 
 test('unscoped dashboard ignores previous session selection; scan links remain supported', async () => {
-    assert.equal(await context.resolveDashboardScope(''), '');
+    assert.equal(await context.resolveDashboardScope('', async url => {
+        assert.equal(url, '/api/dashboard-scope');
+        return response({ status: 'success', scan_ids: [21, 22] });
+    }), '?scan_ids=21%2C22');
+    assert.equal(await context.resolveDashboardScope('?scope=all'), '');
     assert.equal(await context.resolveDashboardScope('?scanIds=21,22'), '?scan_ids=21%2C22');
     assert.equal(await context.resolveDashboardScope('?scan_id=22'), '?scan_ids=22');
     await assert.rejects(context.resolveDashboardScope('?scanIds=invalid'), /Invalid scan/);
     assert.equal(html.includes("sessionStorage.getItem('last_scan_ids')"), false);
+});
+
+test('no completed scans and scope failures never expose historical totals', async () => {
+    assert.equal(await context.resolveDashboardScope('', async () => response({ status: 'success', scan_ids: [] })), '?scan_ids=0');
+    await assert.rejects(context.resolveDashboardScope('', async () => response({ status: 'error' }, false)), /Could not load latest/);
+    await assert.rejects(context.resolveDashboardScope('?scanIds='), /Invalid scan/);
 });
 
 test('all pages are retrieved with the same run scope, including more than 20 findings', async () => {

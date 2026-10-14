@@ -57,6 +57,7 @@ from backend.database import (
     store_vulnerability,
     get_scan_report,
     get_multi_cloud_summary,
+    get_latest_dashboard_scans,
     get_conn,
 )
 from backend.ai.multi_agent_analyzer import get_multi_agent_analyzer
@@ -5952,6 +5953,23 @@ async def posture_dashboard(req: Request, scan_ids: Optional[str] = None):
 
     dashboard["security_score"] = round(score, 2)
     return dashboard
+
+
+@app.get("/api/dashboard-scope")
+async def get_dashboard_scope(req: Request):
+    """Pin all dashboard requests to the same latest completed snapshots."""
+    user_id = get_user_id(req)
+    tenant_id = _request_tenant_id(req, user_id=user_id)
+    scans = get_latest_dashboard_scans(user_id, tenant_id)
+    return {
+        "status": "success",
+        "scan_ids": [row[0] for row in scans],
+        "scans": [
+            {"id": scan_id, "provider": cloud, "account_id": account_id,
+             "started_at": started_at.isoformat() if started_at else None}
+            for scan_id, cloud, account_id, started_at in scans
+        ],
+    }
 
 # Dashboard API endpoints
 @app.get("/api/severity-breakdown")
