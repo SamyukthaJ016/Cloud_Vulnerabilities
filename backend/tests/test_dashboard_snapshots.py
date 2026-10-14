@@ -38,7 +38,7 @@ def snapshot_db(monkeypatch):
         cur.execute("""
             CREATE TEMP TABLE scans (
                 id INT PRIMARY KEY, cloud TEXT, account_id TEXT, user_id TEXT,
-                tenant_id TEXT, status TEXT, started_at TIMESTAMP
+                tenant_id TEXT, status TEXT, started_at TIMESTAMP, completed_at TIMESTAMP
             );
             CREATE TEMP TABLE resources (id INT PRIMARY KEY, scan_id INT, cloud TEXT, public BOOL);
             CREATE TEMP TABLE findings (id INT PRIMARY KEY, scan_id INT, resource_id INT);
@@ -53,7 +53,7 @@ def snapshot_db(monkeypatch):
             (7, 'aws', 'a', 'u', 't', 'running', '2026-10-14'),
             (8, 'aws', 'a', 'foreign', 't', 'completed', '2026-10-14'),
         ]
-        cur.executemany('INSERT INTO scans VALUES (%s,%s,%s,%s,%s,%s,%s)', scans)
+        cur.executemany('INSERT INTO scans (id,cloud,account_id,user_id,tenant_id,status,started_at) VALUES (%s,%s,%s,%s,%s,%s,%s)', scans)
         cur.executemany('INSERT INTO resources VALUES (%s,%s,%s,false)', [(s[0], s[0], s[1]) for s in scans])
         finding_id = 0
         for scan_id, count in [(1, 3), (2, 0), (3, 2), (4, 1), (5, 4), (6, 10), (7, 2), (8, 10)]:
@@ -64,12 +64,12 @@ def snapshot_db(monkeypatch):
     conn.close()
 
 
-def test_completed_clean_scans_replace_old_findings_and_exclude_other_owners(snapshot_db):
+def test_only_last_completed_scan_is_selected_across_all_providers(snapshot_db):
     snapshots = database.get_latest_dashboard_scans('u', 't')
-    assert [row[0] for row in snapshots] == [2, 4]
-    current = database.get_multi_cloud_summary('u', 't', scan_ids='2,4')
+    assert [row[0] for row in snapshots] == [4]
+    current = database.get_multi_cloud_summary('u', 't', scan_ids='4')
     assert sum(row[2] for row in current) == 1
-    assert sum(row[1] for row in current) == 2
+    assert sum(row[1] for row in current) == 1
     history = database.get_multi_cloud_summary('u', 't')
     assert sum(row[2] for row in history) == 12
     assert database.get_latest_dashboard_scans('missing', 't') == []
@@ -78,5 +78,17 @@ def test_completed_clean_scans_replace_old_findings_and_exclude_other_owners(sna
 
 def test_timestamp_ties_choose_the_newer_id(snapshot_db):
     with snapshot_db.cursor() as cur:
-        cur.execute("INSERT INTO scans VALUES (9,'aws','a','u','t','completed','2026-10-13')")
-    assert [row[0] for row in database.get_latest_dashboard_scans('u', 't')] == [9, 4]
+        cur.execute("INSERT INTO scans VALUES (9,'aws','a','u','t','completed','2026-10-13',NULL)")
+    assert [row[0] for row in database.get_latest_dashboard_scans('u', 't')] == [9]
+
+
+def test_last_completion_wins_and_a_clean_scan_does_not_restore_history(snapshot_db):
+    with snapshot_db.cursor() as cur:
+        cur.execute("""INSERT INTO scans VALUES
+            (9,'aws','a','u','t','completed','2026-10-12','2026-10-15'),
+            (10,'kubernetes','cluster','u','t','completed','2026-10-14','2026-10-14')""")
+        cur.execute("INSERT INTO resources VALUES (9,9,'aws',false)")
+    assert [row[0] for row in database.get_latest_dashboard_scans('u', 't')] == [9]
+    current = database.get_multi_cloud_summary('u', 't', scan_ids='9')
+    assert sum(row[2] for row in current) == 0
+    assert sum(row[1] for row in current) == 1

@@ -28,9 +28,9 @@ test('pending and inaccessible labs never fall back to all scans', async () => {
 test('unscoped dashboard ignores previous session selection; scan links remain supported', async () => {
     assert.equal(await context.resolveDashboardScope('', async url => {
         assert.equal(url, '/api/dashboard-scope');
-        return response({ status: 'success', scan_ids: [21, 22] });
-    }), '?scan_ids=21%2C22');
-    assert.equal(await context.resolveDashboardScope('?scope=all'), '');
+        return response({ status: 'success', scan_ids: [22] });
+    }), '?scan_ids=22');
+    assert.equal(await context.resolveDashboardScope('?scope=all', async () => response({ status: 'success', scan_ids: [22] })), '?scan_ids=22');
     assert.equal(await context.resolveDashboardScope('?scanIds=21,22'), '?scan_ids=21%2C22');
     assert.equal(await context.resolveDashboardScope('?scan_id=22'), '?scan_ids=22');
     await assert.rejects(context.resolveDashboardScope('?scanIds=invalid'), /Invalid scan/);
@@ -39,8 +39,19 @@ test('unscoped dashboard ignores previous session selection; scan links remain s
 
 test('no completed scans and scope failures never expose historical totals', async () => {
     assert.equal(await context.resolveDashboardScope('', async () => response({ status: 'success', scan_ids: [] })), '?scan_ids=0');
-    await assert.rejects(context.resolveDashboardScope('', async () => response({ status: 'error' }, false)), /Could not load latest/);
+    await assert.rejects(context.resolveDashboardScope('', async () => response({ status: 'error' }, false)), /Could not load the latest/);
     await assert.rejects(context.resolveDashboardScope('?scanIds='), /Invalid scan/);
+});
+
+test('severity chart counts only the selected scan findings without requesting history', () => {
+    let config;
+    const chartContext = vm.createContext({
+        document: { getElementById: () => ({}) },
+        Chart: function (_canvas, options) { config = options; },
+    });
+    vm.runInContext('let severityChart;\n' + html.slice(html.indexOf('function loadSeverityChart'), html.indexOf('async function loadCloudChart')), chartContext);
+    chartContext.loadSeverityChart([{severity:'CRITICAL'}, {severity:'HIGH'}, {severity:'high'}, {severity:'INFO'}]);
+    assert.deepEqual(Array.from(config.data.datasets[0].data), [1, 2, 0, 0, 1]);
 });
 
 test('all pages are retrieved with the same run scope, including more than 20 findings', async () => {

@@ -5957,7 +5957,7 @@ async def posture_dashboard(req: Request, scan_ids: Optional[str] = None):
 
 @app.get("/api/dashboard-scope")
 async def get_dashboard_scope(req: Request):
-    """Pin all dashboard requests to the same latest completed snapshots."""
+    """Pin all dashboard requests to the single latest completed scan."""
     user_id = get_user_id(req)
     tenant_id = _request_tenant_id(req, user_id=user_id)
     scans = get_latest_dashboard_scans(user_id, tenant_id)

@@ -814,10 +814,6 @@
         </div>
 
         <p id="dashboard-scope" style="color: #94a3b8; margin-bottom: 16px;">Loading scan scope...</p>
-        <div class="action-buttons" style="margin-bottom: 20px;">
-            <button class="btn btn-secondary" onclick="window.location.href='/dashboard'">Latest completed scans</button>
-            <button class="btn btn-secondary" onclick="window.location.href='/dashboard?scope=all'">All scan history</button>
-        </div>
 
         <!-- Stats Overview -->
         <div class="stats-grid">
@@ -825,7 +821,7 @@
                 <div class="stat-label">Total Resources</div>
                 <div class="stat-value" id="total-resources">--</div>
                 <div class="stat-trend">
-                    <span>Across all clouds</span>
+                    <span>In this scan</span>
                 </div>
             </div>
 
@@ -858,11 +854,11 @@
         <div class="charts-section">
             <div class="chart-container">
                 <div class="chart-header">
-                    <div class="chart-title">Security Trend Over Time</div>
-                    <div class="chart-subtitle">Historical finding observations in the last 30 days</div>
+                    <div class="chart-title">Findings by Severity</div>
+                    <div class="chart-subtitle">Security findings in this scan</div>
                 </div>
                 <div class="chart-wrapper">
-                    <canvas id="trendChart"></canvas>
+                    <canvas id="severityChart"></canvas>
                 </div>
             </div>
 
@@ -934,7 +930,7 @@
 
     <script>
         // Global variables
-        let trendChart, cloudChart;
+        let severityChart, cloudChart;
         let currentFilter = 'all';
         let scanInProgress = false;
 
@@ -1236,11 +1232,10 @@ gcloud compute instances delete-access-config ${resourceName} \\
             }
             if (!scanIds) {
                 if (params.has('scanIds') || params.has('scans') || params.has('scan_id')) throw new Error('Invalid scan selection');
-                if (params.get('scope') === 'all') return '';
                 const response = await request('/api/dashboard-scope');
                 const result = await response.json();
                 if (!response.ok || result.status !== 'success' || !Array.isArray(result.scan_ids)) {
-                    throw new Error('Could not load latest completed scans');
+                    throw new Error('Could not load the latest completed scan');
                 }
                 // A clean or empty snapshot must never fall back to historical findings.
                 scanIds = result.scan_ids.length ? result.scan_ids.join(',') : '0';
@@ -1275,9 +1270,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 const selectedRun = params.has('labId') || params.has('scanIds') || params.has('scans') || params.has('scan_id');
                 document.getElementById('dashboard-scope').textContent = selectedRun
                     ? 'Selected scan results. Findings include vulnerabilities, configuration issues, and informational checks.'
-                    : params.get('scope') === 'all'
-                        ? 'All scan history. Totals include repeated observations across scans and are not a current vulnerability count.'
-                        : 'Latest completed scan per provider. Results may cover different accounts and scan dates. Findings include vulnerabilities, configuration issues, and informational checks.';
+                    : 'Latest completed scan. Previous scans are available in History. Findings include vulnerabilities, configuration issues, and informational checks.';
 
                 document.getElementById('total-resources').textContent = '...';
                 document.getElementById('total-findings').textContent = '...';
@@ -1311,7 +1304,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 document.getElementById('active-tools').textContent =
                     Object.keys(summary.vulnerability_tools_available || {}).length;
 
-                await loadTrendChart(selectedRun ? filter : '');
+                loadSeverityChart(findings);
                 await loadCloudChart(providers.data || []);
                 await loadCloudProviders(providers.data || []);
 
@@ -1379,112 +1372,32 @@ gcloud compute instances delete-access-config ${resourceName} \\
             }
         }
 
-        async function loadTrendChart(filter = '') {
-            try {
-                const response = await fetch(`/api/scan-history${filter}${filter ? '&' : '?'}days=30`);
-                const data = await response.json();
-
-                const ctx = document.getElementById('trendChart');
-                if (!ctx) return;
-
-                if (trendChart) {
-                    trendChart.destroy();
-                }
-
-                const chartData = data.data || [];
-                if (chartData.length === 0) {
-                    showNoData(ctx, 'No scan history available');
-                    return;
-                }
-
-                const labels = chartData.map(d => {
-                    const date = new Date(d.date);
-                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                });
-
-                trendChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Finding observations',
-                                data: chartData.map(d => d.findings || 0),
-                                borderColor: '#f97316',
-                                backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                                tension: 0.4,
-                                fill: true,
-                                borderWidth: 2,
-                                pointRadius: 3,
-                                pointHoverRadius: 6
-                            },
-                            {
-                                label: 'Critical Issues',
-                                data: chartData.map(d => d.critical || 0),
-                                borderColor: '#ef4444',
-                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                                tension: 0.4,
-                                fill: true,
-                                borderWidth: 2,
-                                pointRadius: 3,
-                                pointHoverRadius: 6
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    color: '#94a3b8',
-                                    padding: 20,
-                                    font: { size: 12 }
-                                }
-                            },
-                            tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                titleColor: '#f1f5f9',
-                                bodyColor: '#cbd5e1',
-                                borderColor: '#475569',
-                                borderWidth: 1,
-                                padding: 12,
-                                displayColors: true
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(148, 163, 184, 0.1)',
-                                    drawBorder: false
-                                },
-                                ticks: {
-                                    color: '#94a3b8',
-                                    padding: 8
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    color: 'rgba(148, 163, 184, 0.05)',
-                                    drawBorder: false
-                                },
-                                ticks: {
-                                    color: '#94a3b8',
-                                    maxRotation: 45,
-                                    padding: 8
-                                }
-                            }
-                        }
+        function loadSeverityChart(findings) {
+            const ctx = document.getElementById('severityChart');
+            if (!ctx) return;
+            if (severityChart) severityChart.destroy();
+            const labels = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
+            severityChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Security findings',
+                        data: labels.map(severity => findings.filter(f => (f.severity || 'MEDIUM').toUpperCase() === severity).length),
+                        backgroundColor: ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#94a3b8'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8' } },
+                        x: { ticks: { color: '#94a3b8' } }
                     }
-                });
-
-            } catch (error) {
-                console.error('Failed to load trend chart:', error);
-                const ctx = document.getElementById('trendChart');
-                showNoData(ctx, 'Failed to load trend data');
-            }
+                }
+            });
         }
 
         async function loadCloudChart(providers) {
