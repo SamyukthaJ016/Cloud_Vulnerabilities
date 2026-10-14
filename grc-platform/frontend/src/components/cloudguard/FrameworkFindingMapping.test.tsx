@@ -56,7 +56,14 @@ const controls: CloudGuardControl[] = [
       {
         control_id: 'SCANNER-1',
         title: 'Unpatched dependency',
-        resource: 'host-a',
+        resource: {
+          name: 'host-a',
+          provider: 'aws',
+          region: 'ap-south-1',
+          resource_type: 'ec2',
+          config: { secret: 'private-resource-configuration' },
+          is_public: false,
+        },
         severity: 'high',
       },
       { control_id: 'SCANNER-1', title: 'Unusual result', resource: 'host-b', severity: 'high' },
@@ -96,6 +103,8 @@ describe('framework finding mapping', () => {
     expect(frameworkCatalogApi.detail).not.toHaveBeenCalled();
     await user.selectOptions(screen.getByLabelText('Compliance framework'), 'iso27001-2022');
     await screen.findByRole('button', { name: 'Select A.8.8 for Unpatched dependency' });
+    expect(screen.getByText('host-a · aws · ap-south-1 · ec2')).toBeInTheDocument();
+    expect(screen.queryByText(/private-resource-configuration/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('Requirement for Unpatched dependency')).toHaveValue('');
     expect(screen.getByText(/No suggestion. Review the catalog/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Official reference: ISO' })).toHaveAttribute(
@@ -187,6 +196,8 @@ describe('framework finding mapping', () => {
       expect(content).toContain('Unmapped');
       expect(content).toContain('https://www.iso.org/standard/27001');
       expect(content).toContain('2026-10-12T10:00:00Z');
+      expect(content).toContain('host-a · aws · ap-south-1 · ec2');
+      expect(content).not.toContain('private-resource-configuration');
       expect(revokeUrl).toHaveBeenCalledWith('blob:test');
     } finally {
       click.mockRestore();

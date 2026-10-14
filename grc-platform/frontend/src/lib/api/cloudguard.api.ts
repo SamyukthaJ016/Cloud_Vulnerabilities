@@ -7,7 +7,7 @@ export interface CloudGuardFinding {
   severity: CloudGuardSeverity;
   title: string;
   recommendation?: string | null;
-  resource?: string | null;
+  resource?: string | Record<string, unknown> | null;
 }
 
 export interface CloudGuardControl {

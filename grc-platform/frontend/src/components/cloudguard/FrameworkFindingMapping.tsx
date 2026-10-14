@@ -7,6 +7,7 @@ import { frameworkCatalogApi, CatalogFrameworkDetail } from '@/lib/api/framework
 import type { CloudGuardControl } from '@/lib/api/cloudguard.api';
 import {
   findingMappingKey,
+  findingResourceLabel,
   flattenMappingRequirements,
   frameworkSources,
   mappingCsvCell,
@@ -210,7 +211,7 @@ function MappingDraft({
       );
       return [
         finding.title,
-        finding.resource,
+        findingResourceLabel(finding.resource),
         finding.severity,
         control.control_id,
         framework.name,
@@ -282,7 +283,7 @@ function MappingDraft({
                         </p>
                         {finding.resource && (
                           <p className="mt-1 break-all text-xs text-surface-500">
-                            {finding.resource}
+                            {findingResourceLabel(finding.resource)}
                           </p>
                         )}
                       </td>

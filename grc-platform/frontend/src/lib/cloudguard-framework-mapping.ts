@@ -188,6 +188,20 @@ export function suggestFindingRequirements(
     .map(({ reference, title, reason }) => ({ reference, title, reason }));
 }
 
+export function findingResourceLabel(resource: CloudGuardFinding['resource']): string {
+  if (typeof resource === 'string') return resource;
+  if (!resource || typeof resource !== 'object') return '';
+  // Scanner resource objects can include private configuration. Display and
+  // export identifiers only; never stringify the raw configuration.
+  const identifier = [resource.name, resource.resource_id, resource.id, resource.arn].find(
+    (value) => typeof value === 'string' && value.trim()
+  );
+  const values = [identifier, resource.provider, resource.region, resource.resource_type].filter(
+    (value): value is string => typeof value === 'string' && Boolean(value.trim())
+  );
+  return [...new Set(values)].join(' · ') || 'Resource details unavailable';
+}
+
 export function findingMappingKey(control: CloudGuardControl, finding: CloudGuardFinding): string {
   // Connector exposes samples without a durable finding ID. Keys are only for
   // this review draft, never used as persisted scanner finding identities.
@@ -195,7 +209,7 @@ export function findingMappingKey(control: CloudGuardControl, finding: CloudGuar
     control.control_id,
     finding.control_id,
     finding.title,
-    finding.resource || '',
+    findingResourceLabel(finding.resource),
     finding.severity,
     finding.recommendation || '',
   ]);

@@ -3,6 +3,7 @@ import iso27001 from '../../../services/controls/src/frameworks/catalog/iso27001
 import nistCsf from '../../../services/controls/src/frameworks/catalog/nist-csf-2.json';
 import {
   findingMappingKey,
+  findingResourceLabel,
   flattenMappingRequirements,
   frameworkSources,
   mappingCsvCell,
@@ -66,6 +67,24 @@ describe('finding-to-framework suggestions', () => {
     const control = { control_id: 'control' } as CloudGuardControl;
     expect(findingMappingKey(control, { ...finding, resource: 'host-a' })).not.toBe(
       findingMappingKey(control, { ...finding, resource: 'host-b' })
+    );
+  });
+
+  it('labels structured scanner resources without exposing their configuration', () => {
+    const resource = {
+      name: 'bucket-a',
+      provider: 'aws',
+      region: 'ap-south-1',
+      resource_type: 's3',
+      config: { secret: 'must-not-display' },
+      is_public: true,
+    };
+    expect(findingResourceLabel(resource)).toBe('bucket-a · aws · ap-south-1 · s3');
+    expect(findingResourceLabel({ config: resource.config })).toBe('Resource details unavailable');
+    const control = { control_id: 'control' } as CloudGuardControl;
+    expect(findingMappingKey(control, { ...finding, resource })).not.toContain('must-not-display');
+    expect(findingMappingKey(control, { ...finding, resource })).not.toBe(
+      findingMappingKey(control, { ...finding, resource: { ...resource, name: 'bucket-b' } })
     );
   });
 
