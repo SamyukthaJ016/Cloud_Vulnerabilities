@@ -1,4 +1,4 @@
-"""The History HTML shell must load before browser-authenticated API requests."""
+"""Navigation HTML shells must load before browser-authenticated API requests."""
 
 import ast
 import asyncio
@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import HTMLResponse, JSONResponse
 
 
-def test_history_shell_loads_while_scan_data_remains_protected():
+def test_navigation_shells_load_while_scan_and_schedule_data_remain_protected():
     source = ast.parse((Path(__file__).resolve().parents[1] / 'main.py').read_text())
     middleware = next(node for node in source.body if isinstance(node, ast.ClassDef) and node.name == 'CloudGuardIdentityMiddleware')
 
@@ -30,16 +30,22 @@ def test_history_shell_loads_while_scan_data_remains_protected():
     app = FastAPI()
     app.add_middleware(namespace['CloudGuardIdentityMiddleware'])
 
-    @app.get('/history')
-    async def history():
-        return HTMLResponse('<html>Scan History</html>')
+    async def page():
+        return HTMLResponse('<html>CloudGuard</html>')
+
+    paths = ['/history', '/scheduled_scans', '/schedules']
+    for path in paths:
+        app.get(path)(page)
 
     async def check():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
-            response = await client.get('/history')
-            assert response.status_code == 200
-            assert 'text/html' in response.headers['content-type']
-            for path in ['/api/scans', '/api/latest-findings', '/api/dashboard-scope', '/posture/dashboard']:
-                assert (await client.get(path)).status_code == 401
+            for path in paths:
+                response = await client.get(path)
+                assert response.status_code == 200, path
+                assert 'text/html' in response.headers['content-type']
+            for path in ['/api/scans', '/api/latest-findings', '/api/dashboard-scope', '/posture/dashboard', '/api/schedules', '/api/schedules/1']:
+                assert (await client.get(path)).status_code == 401, path
+            for method, path in [('POST', '/scan/schedule'), ('POST', '/api/schedules/1/run'), ('PUT', '/api/schedules/1'), ('DELETE', '/api/schedules/1')]:
+                assert (await client.request(method, path)).status_code == 401, path
 
     asyncio.run(check())

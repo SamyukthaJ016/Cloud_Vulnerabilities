@@ -138,7 +138,7 @@ class CloudGuardIdentityMiddleware(BaseHTTPMiddleware):
     credentials inside their handlers. They never inherit browser identity.
     """
 
-    _public_paths = {"/health", "/api/auth/config", "/history"}
+    _public_paths = {"/health", "/api/auth/config", "/history", "/scheduled_scans", "/schedules"}
     _machine_routes = (
         "/api/connectors/",
         "/api/workers/",
