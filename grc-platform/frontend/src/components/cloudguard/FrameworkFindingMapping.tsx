@@ -39,11 +39,11 @@ export default function FrameworkFindingMapping({ controls, generatedAt }: Props
         <div>
           <h2
             id="framework-finding-mapping-heading"
-            className="text-lg font-semibold text-surface-100"
+            className="text-lg font-semibold text-surface-900"
           >
             Map Vulnerabilities to a Framework
           </h2>
-          <p className="mt-1 max-w-3xl text-sm text-surface-500">
+          <p className="mt-1 max-w-3xl text-sm text-surface-600">
             Choose a framework, review suggested requirements, and select the requirement that
             applies to each finding.
           </p>
@@ -51,7 +51,7 @@ export default function FrameworkFindingMapping({ controls, generatedAt }: Props
         <div className="w-full md:max-w-sm">
           <label
             htmlFor="finding-framework"
-            className="mb-1 block text-sm font-medium text-surface-200"
+            className="mb-1 block text-sm font-medium text-surface-900"
           >
             Compliance framework
           </label>
@@ -81,17 +81,17 @@ export default function FrameworkFindingMapping({ controls, generatedAt }: Props
         </div>
       )}
       {catalogQuery.isPending && (
-        <p className="mt-4 text-sm text-surface-500" role="status">
+        <p className="mt-4 text-sm text-surface-600" role="status">
           Loading frameworks…
         </p>
       )}
       {!catalogQuery.isPending && !catalogQuery.isError && !catalogQuery.data?.length && (
-        <p className="mt-4 text-sm text-surface-500">No framework catalogs are available.</p>
+        <p className="mt-4 text-sm text-surface-600">No framework catalogs are available.</p>
       )}
 
       {selectedFramework && (
-        <div className="mt-4 rounded-lg border border-surface-800 bg-surface-950 p-4 text-sm text-surface-500">
-          <p className="font-medium text-surface-200">
+        <div className="mt-4 rounded-lg border border-surface-200 bg-surface-50 p-4 text-sm text-surface-600">
+          <p className="font-medium text-surface-900">
             {selectedFramework.name} · Catalog version {selectedFramework.version}
           </p>
           {source ? (
@@ -100,7 +100,7 @@ export default function FrameworkFindingMapping({ controls, generatedAt }: Props
                 href={source.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-block text-brand-400 underline"
+                className="mt-1 inline-block text-brand-600 underline"
               >
                 Official reference: {source.publisher}
               </a>
@@ -116,7 +116,7 @@ export default function FrameworkFindingMapping({ controls, generatedAt }: Props
           {!selectedFramework.isActivated && (
             <p className="mt-2">
               Preview catalog.{' '}
-              <Link to="/framework-library" className="text-brand-400 underline">
+              <Link to="/framework-library" className="text-brand-600 underline">
                 Activate it in the Framework Library
               </Link>{' '}
               to use it in your compliance program.
@@ -126,7 +126,7 @@ export default function FrameworkFindingMapping({ controls, generatedAt }: Props
       )}
 
       {frameworkId && detailQuery.isPending && (
-        <p className="mt-4 text-sm text-surface-500" role="status">
+        <p className="mt-4 text-sm text-surface-600" role="status">
           Loading requirements…
         </p>
       )}
@@ -238,23 +238,23 @@ function MappingDraft({
 
   return (
     <div className="mt-4">
-      <p className="text-sm text-surface-500">
+      <p className="text-sm text-surface-600">
         Suggestions match finding topics to the selected catalog. They are not publisher-approved
         mappings or a compliance assessment. Selections form a review draft and do not change
         compliance scores or saved control mappings.
       </p>
-      <p className="mt-2 text-xs text-surface-500">
+      <p className="mt-2 text-xs text-surface-600">
         The connector provides sample findings, so this list may not include every vulnerability.
         Draft selections last until you change framework or leave this page.
       </p>
       {!rows.length ? (
-        <p className="py-8 text-center text-sm text-surface-500">
+        <p className="py-8 text-center text-sm text-surface-600">
           No live finding samples are available to map. Run a scanner job and refresh the connector.
         </p>
       ) : (
         <>
           <div className="my-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-surface-200">
+            <p className="text-sm text-surface-900">
               {rows.length} finding samples · {suggestedCount} with suggestions · {selectedCount}{' '}
               selected
             </p>
@@ -262,27 +262,27 @@ function MappingDraft({
               Export mapping draft
             </Button>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-surface-800">
-            <table className="min-w-full divide-y divide-surface-800 text-sm">
-              <thead className="bg-surface-800/70 text-left text-xs uppercase text-surface-500">
+          <div className="overflow-x-auto rounded-lg border border-surface-200">
+            <table className="min-w-full divide-y divide-surface-200 text-sm">
+              <thead className="bg-surface-100 text-left text-xs uppercase text-surface-600">
                 <tr>
                   <th className="px-4 py-3">Finding</th>
                   <th className="px-4 py-3">Suggested requirements</th>
                   <th className="px-4 py-3">Selected requirement</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-800">
+              <tbody className="divide-y divide-surface-200">
                 {rows
                   .slice(currentPage * 10, currentPage * 10 + 10)
                   .map(({ key, control, finding, suggestions }) => (
                     <tr key={key}>
                       <td className="max-w-sm px-4 py-4 align-top">
-                        <p className="font-medium text-surface-100">{finding.title}</p>
-                        <p className="mt-1 text-xs text-surface-500">
+                        <p className="font-medium text-surface-900">{finding.title}</p>
+                        <p className="mt-1 text-xs text-surface-600">
                           {finding.severity} · {control.control_id}
                         </p>
                         {finding.resource && (
-                          <p className="mt-1 break-all text-xs text-surface-500">
+                          <p className="mt-1 break-all text-xs text-surface-600">
                             {findingResourceLabel(finding.resource)}
                           </p>
                         )}
@@ -299,16 +299,16 @@ function MappingDraft({
                                     [key]: suggestion.reference,
                                   }))
                                 }
-                                className="text-left text-brand-400 underline"
+                                className="text-left text-brand-600 underline"
                                 aria-label={`Select ${suggestion.reference} for ${finding.title}`}
                               >
                                 {suggestion.reference} — {suggestion.title}
                               </button>
-                              <p className="mt-1 text-xs text-surface-500">{suggestion.reason}</p>
+                              <p className="mt-1 text-xs text-surface-600">{suggestion.reason}</p>
                             </div>
                           ))
                         ) : (
-                          <p className="text-surface-500">
+                          <p className="text-surface-600">
                             No suggestion. Review the catalog and select a requirement manually, or
                             leave unmapped.
                           </p>
@@ -332,9 +332,9 @@ function MappingDraft({
                             </option>
                           ))}
                         </SelectNative>
-                        <p className="mt-2 text-xs text-amber-600">Review required</p>
+                        <p className="mt-2 text-xs text-amber-700">Review required</p>
                         {selections[key] && (
-                          <p className="mt-2 text-xs text-surface-500">
+                          <p className="mt-2 text-xs text-surface-600">
                             {
                               requirements.find(
                                 (requirement) => requirement.reference === selections[key]
@@ -349,7 +349,7 @@ function MappingDraft({
             </table>
           </div>
           {pageCount > 1 && (
-            <div className="mt-3 flex items-center justify-end gap-3 text-sm text-surface-500">
+            <div className="mt-3 flex items-center justify-end gap-3 text-sm text-surface-600">
               <Button
                 type="button"
                 variant="secondary"
