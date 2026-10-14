@@ -181,10 +181,12 @@ export default function CollectorConfigModal({
 
   // Create/Update mutation
   const saveMutation = useMutation({
-    mutationFn: (data: any) =>
-      isEditing
-        ? collectorsApi.update(controlId, implementationId, collector.id, data)
-        : collectorsApi.create(controlId, implementationId, data),
+    mutationFn: async (data: any) => {
+      const response = isEditing
+        ? await collectorsApi.update(controlId, implementationId, collector.id, data)
+        : await collectorsApi.create(controlId, implementationId, data);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collectors', controlId, implementationId] });
       toast.success(isEditing ? 'Collector updated' : 'Collector created');
