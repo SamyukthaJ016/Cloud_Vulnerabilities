@@ -417,12 +417,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      {/* Onboarding Banner - Shows when organization is empty */}
-      <OnboardingBanner />
-      {/* Demo Mode Banner - Shows when demo data is active */}
-      <DemoModeBanner />
-      {/* First-run Onboarding Wizard */}
-      <OnboardingWizard />
       <PostureMeters
         summary={dashboardData?.summary}
         policies={dashboardData?.policyStats}
@@ -461,6 +455,10 @@ export default function Dashboard() {
         </div>
       )}
       <CloudGuardOverview />
+      {/* Setup guidance follows the current program status, including on first visit. */}
+      <DemoModeBanner />
+      <OnboardingBanner />
+      <OnboardingWizard />
       {/* Alert Banner - Only show if there are action items and widget is enabled */}
       {config.widgets.alertBanner && actionItems > 0 && (
         <div className="bg-amber-50 dark:bg-yellow-500/10 border border-amber-300 dark:border-yellow-500/30 rounded-lg p-4">
