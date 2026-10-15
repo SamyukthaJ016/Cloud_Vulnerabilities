@@ -24,6 +24,9 @@ import {
 import clsx from 'clsx';
 import { Button } from '@/components/ui/Button';
 import FrameworkFindingMapping from '@/components/cloudguard/FrameworkFindingMapping';
+import LatestScanFindings from '@/components/cloudguard/LatestScanFindings';
+import ImportScan from '@/components/cloudguard/ImportScan';
+import { latestScanControls } from '@/lib/cloudguard-latest-scan';
 import {
   cloudGuardApi,
   CloudGuardControl,
@@ -214,7 +217,7 @@ export default function CloudGuardConnector() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Metric label="Compliance" value={`${Math.round(compliance?.score || 0)}%`} />
             <Metric label="Evidence" value={String(compliance?.counts.evidence_artifacts || 0)} />
-            <Metric label="Open Risks" value={String(compliance?.counts.findings || 0)} />
+            <Metric label="Latest Scan Findings" value={dashboardQuery.isError ? '—' : String(dashboard?.latest_scan?.finding_count ?? '—')} />
             <Metric label="Sources" value={String(connectorCount)} />
           </div>
         </div>
@@ -255,6 +258,9 @@ export default function CloudGuardConnector() {
           </div>
         </section>
       )}
+
+      <ImportScan scan={dashboardQuery.isError ? undefined : dashboard?.latest_scan} />
+      <LatestScanFindings scan={dashboardQuery.isError ? undefined : dashboard?.latest_scan} />
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="card p-5">
@@ -356,7 +362,7 @@ export default function CloudGuardConnector() {
       </section>
 
       <FrameworkFindingMapping
-        controls={dashboardQuery.isError ? [] : compliance?.controls || []}
+        controls={dashboardQuery.isError ? [] : latestScanControls(dashboard?.latest_scan)}
         generatedAt={dashboardQuery.isError ? undefined : compliance?.generated_at}
       />
 

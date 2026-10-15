@@ -60,6 +60,7 @@ from backend.database import (
     get_latest_dashboard_scans,
     get_conn,
 )
+from backend.grc_snapshot import latest_scan_snapshot
 from backend.ai.multi_agent_analyzer import get_multi_agent_analyzer
 from backend.ai.persistent_memory import memory_system
 from backend.ai.agentic_orchestrator import get_agentic_orchestrator
@@ -5061,6 +5062,7 @@ async def get_grc_connector_dashboard(req: Request, framework: str = "all", evid
         "status": "ok",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "tenant_id": connector.tenant_id,
+        "latest_scan": latest_scan_snapshot(connector.user_id, connector.tenant_id),
         "compliance": build_compliance_summary(connector.user_id, connector.tenant_id, framework=framework),
         "evidence": list_evidence_artifacts(connector.user_id, connector.tenant_id, limit=evidence_limit),
         "workers": list_scanner_worker_statuses(),

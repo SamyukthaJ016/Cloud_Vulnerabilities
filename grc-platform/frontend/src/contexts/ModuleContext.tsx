@@ -47,7 +47,7 @@ export const MODULE_DEFINITIONS: Record<ModuleId, ModuleDefinition> = {
     description: 'Controls, Frameworks, Evidence collection, and Compliance Calendar',
     envVar: 'VITE_ENABLE_COMPLIANCE_MODULE',
     defaultEnabled: true,
-    routes: ['/controls', '/frameworks', '/framework-library', '/evidence', '/calendar'],
+    routes: ['/controls', '/cloudguard-grc', '/frameworks', '/framework-library', '/evidence', '/calendar'],
     navSections: ['Compliance'],
   },
   data: {

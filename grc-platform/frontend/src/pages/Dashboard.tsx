@@ -17,8 +17,6 @@ import {
   ChevronDownIcon,
   Squares2X2Icon,
   PlusIcon,
-  CloudIcon,
-  CpuChipIcon,
 } from '@heroicons/react/24/outline';
 import { LazyRechartsWrapper } from '@/components/charts/LazyCharts';
 import clsx from 'clsx';
@@ -34,6 +32,7 @@ import { ActionItemsWidget } from '@/components/ActionItemsWidget';
 import { VendorReviewsDueWidget } from '@/components/vendor/VendorReviewsDueWidget';
 import { TrustAnalystQueueWidget } from '@/components/trust/TrustAnalystQueueWidget';
 import { MappingCoverageWidget } from '@/components/widgets/MappingCoverageWidget';
+import CloudGuardOverview from '@/components/cloudguard/CloudGuardOverview';
 
 // Dashboard widget configuration
 interface DashboardConfig {
@@ -425,44 +424,7 @@ export default function Dashboard() {
       <DemoModeBanner />
       {/* First-run Onboarding Wizard */}
       <OnboardingWizard />
-      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_1.15fr]">
-        <LiveMeterCard
-          title="MSME Compliance Score"
-          value={Math.max(safeSummary.complianceScore?.overall || 64, 64)}
-          tone="compliance"
-          subtitle="Mapped from CloudGuard evidence, manual uploads, controls, and MCP scanner output"
-        />
-        <LiveMeterCard
-          title="Business Risk Score"
-          value={Math.min(
-            92,
-            Math.max(58, Math.round((risksData?.total || 0) * 3 + actionItems * 4 + 58))
-          )}
-          tone="risk"
-          subtitle="Calculated from severity, business impact, audit status, and open remediation"
-        />
-        <div className="card p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-surface-100">Connector Pipeline</h2>
-              <p className="text-sm text-surface-500">CloudGuard and Ishan MCP scanner evidence flow into GRC.</p>
-            </div>
-            <CpuChipIcon className="h-6 w-6 text-brand-400" />
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <PipelineMiniCard icon={CloudIcon} label="CloudGuard" value="Connected" />
-            <PipelineMiniCard icon={CpuChipIcon} label="Local MCP" value="stdio ready" />
-            <PipelineMiniCard icon={FolderOpenIcon} label="Evidence" value="Normalizing" />
-            <PipelineMiniCard icon={ShieldCheckIcon} label="MSME" value="Mapped" />
-          </div>
-          <Link
-            to="/cloudguard-grc"
-            className="mt-4 inline-flex items-center text-sm font-medium text-brand-400 hover:text-brand-300"
-          >
-            Open CloudGuard GRC connector <ChevronRightIcon className="ml-1 h-4 w-4" />
-          </Link>
-        </div>
-      </section>
+      <CloudGuardOverview />
       {/* Top Stats Row - 4 distinct KPIs */}
       {config.widgets.statsRow && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -886,119 +848,6 @@ const StatCard = memo(function StatCard({
 
   return linkTo ? <Link to={linkTo}>{content}</Link> : content;
 });
-
-function LiveMeterCard({
-  title,
-  value,
-  tone,
-  subtitle,
-}: {
-  title: string;
-  value: number;
-  tone: 'compliance' | 'risk';
-  subtitle: string;
-}) {
-  const clamped = Math.max(0, Math.min(100, value));
-  const color =
-    tone === 'risk'
-      ? clamped >= 75
-        ? '#fb7185'
-        : clamped >= 55
-          ? '#facc15'
-          : '#4ade80'
-      : clamped >= 75
-        ? '#4ade80'
-        : clamped >= 55
-          ? '#facc15'
-          : '#fb7185';
-  const label =
-    tone === 'risk'
-      ? clamped >= 75
-        ? 'High'
-        : clamped >= 55
-          ? 'Medium'
-          : 'Low'
-      : clamped >= 75
-        ? 'Good'
-        : clamped >= 55
-          ? 'Needs Review'
-          : 'Weak';
-
-  return (
-    <div className="card p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-surface-100">{title}</h2>
-          <p className="mt-1 text-sm text-surface-500">{subtitle}</p>
-        </div>
-        <span className="rounded-full bg-brand-500/15 px-2.5 py-1 text-xs font-semibold text-brand-300">
-          Live
-        </span>
-      </div>
-      <div className="mt-5 flex items-center gap-5">
-        <div className="relative h-32 w-32 shrink-0">
-          <svg className="h-32 w-32 -rotate-90" viewBox="0 0 120 120" role="img">
-            <circle cx="60" cy="60" r="48" fill="none" stroke="#1f2937" strokeWidth="12" />
-            <circle
-              cx="60"
-              cy="60"
-              r="48"
-              fill="none"
-              stroke={color}
-              strokeWidth="12"
-              strokeLinecap="round"
-              strokeDasharray={`${(clamped / 100) * 301.59} 301.59`}
-              className="transition-all duration-700"
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-bold text-surface-100">{clamped}%</span>
-            <span className="text-xs text-surface-500">{label}</span>
-          </div>
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <MeterRow label="CloudGuard" value={tone === 'risk' ? 76 : 69} color="#2dd4bf" />
-          <MeterRow label="Ishan MCP" value={tone === 'risk' ? 58 : 63} color="#60a5fa" />
-          <MeterRow label="Manual Evidence" value={tone === 'risk' ? 41 : 74} color="#a78bfa" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MeterRow({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="text-surface-500">{label}</span>
-        <span className="font-semibold text-surface-300">{value}%</span>
-      </div>
-      <div className="h-2 rounded-full bg-surface-800">
-        <div className="h-2 rounded-full" style={{ width: `${value}%`, background: color }} />
-      </div>
-    </div>
-  );
-}
-
-function PipelineMiniCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-lg border border-surface-800 bg-surface-950 p-3">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-brand-400" />
-        <span className="text-sm font-medium text-surface-200">{label}</span>
-      </div>
-      <p className="mt-2 text-xs text-surface-500">{value}</p>
-    </div>
-  );
-}
 
 interface VendorRiskSummaryProps {
   data?: {

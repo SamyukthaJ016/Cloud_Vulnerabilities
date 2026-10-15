@@ -36,6 +36,7 @@ export interface CloudGuardWorker {
 export interface CloudGuardDashboardResponse {
   status: string;
   generated_at: string;
+  latest_scan?: CloudGuardScanSnapshot | null;
   compliance: {
     status: string;
     generated_at: string;
@@ -76,9 +77,42 @@ export interface CloudGuardDashboardResponse {
   };
 }
 
+export interface CloudGuardScanSnapshot {
+  id: number;
+  provider: string;
+  account_id: string;
+  started_at: string | null;
+  resource_count: number;
+  finding_count: number;
+  severity_counts: Record<CloudGuardSeverity, number>;
+  findings: Array<CloudGuardFinding & {
+    id: number;
+    description: string;
+    resource_type: string;
+    provider: string;
+    tool: string | null;
+    timestamp: string | null;
+  }>;
+}
+
 export const cloudGuardApi = {
+  importLatest: async (scanId: number) => {
+    const response = await api.post<CloudGuardImportResult>('/api/cloudguard/import', { scanId });
+    return response.data;
+  },
   dashboard: async () => {
     const response = await api.get<CloudGuardDashboardResponse>('/api/cloudguard/dashboard');
     return response.data;
   },
 };
+
+export interface CloudGuardImportResult {
+  scanId: number;
+  evidenceId: string;
+  evidenceCreated: boolean;
+  createdRisks: number;
+  existingRisks: number;
+  deletedRisksSkipped: number;
+  informationalFindings: number;
+  risks: Array<{ id: string; riskId: string }>;
+}
