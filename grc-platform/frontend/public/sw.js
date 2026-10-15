@@ -4,9 +4,9 @@
  * Provides offline caching and improved performance
  */
 
-const CACHE_NAME = 'gigachad-grc-v1';
-const STATIC_CACHE = 'gigachad-static-v1';
-const API_CACHE = 'gigachad-api-v1';
+const CACHE_NAME = 'gigachad-grc-v2';
+const STATIC_CACHE = 'gigachad-static-v2';
+const API_CACHE = 'gigachad-api-v2';
 
 // Static assets to cache on install
 const STATIC_ASSETS = ['/', '/index.html', '/manifest.json', '/logo.png', '/silent-check-sso.html'];
@@ -66,19 +66,40 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets with cache-first strategy
-  event.respondWith(handleStaticRequest(request));
+  // HTML must come from the current deployment: old shells reference removed chunks.
+  if (request.mode === 'navigate' || url.pathname.endsWith('.html')) {
+    event.respondWith(handleNavigationRequest(request));
+    return;
+  }
+
+  // Fingerprinted static assets can be served from cache.
+  event.respondWith(handleStaticRequest(request, event));
 });
 
+async function handleNavigationRequest(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) await cache.put(request, response.clone()).catch(() => {});
+    return response;
+  } catch {
+    return (await cache.match(request)) || (await cache.match('/index.html')) ||
+      new Response('GRC is offline. Reconnect and refresh to continue.', {
+        status: 503, headers: { 'Content-Type': 'text/plain' },
+      });
+  }
+}
+
 // Cache-first for static assets
-async function handleStaticRequest(request) {
+async function handleStaticRequest(request, event) {
   const cache = await caches.open(STATIC_CACHE);
   const cachedResponse = await cache.match(request);
 
   if (cachedResponse) {
-    // Return cached response immediately
-    // Fetch fresh version in background
-    fetchAndCache(request, cache);
+    // Keep non-fingerprinted assets fresh, and keep the worker alive for that update.
+    if (!new URL(request.url).pathname.startsWith('/static/')) {
+      event.waitUntil(fetchAndCache(request, cache));
+    }
     return cachedResponse;
   }
 
@@ -126,7 +147,7 @@ async function fetchAndCache(request, cache) {
     const response = await fetch(request);
 
     if (response.ok) {
-      cache.put(request, response.clone());
+      await cache.put(request, response.clone()).catch(() => {});
     }
 
     return response;
