@@ -785,8 +785,8 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="/cloudguard-theme.css">
-    <script src="/cloudguard-ui.js" defer></script>
+    <link rel="stylesheet" href="/cloudguard-theme.css?v=20261015-green">
+    <script src="/cloudguard-ui.js?v=20261015-green" defer></script>
 </head>
 
 <body>
@@ -794,7 +794,7 @@
         <!-- Header -->
         <div class="header">
             <div class="logo">
-                CloudGuard Security
+                <div><p class="cg-eyebrow">SCANNER WORKSPACE</p><h1 class="cg-page-title">Security overview</h1></div>
                 <div class="status-indicator">
                     <span class="live-badge">● LIVE</span>
                     <span id="last-updated">Loading...</span>
@@ -1264,6 +1264,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
             if (dashboardLoading) return;
             dashboardLoading = true;
             try {
+                window.CloudGuardMeters?.state('loading');
                 console.log('Loading dashboard data...');
                 const filter = await resolveDashboardScope(window.location.search);
                 const params = new URLSearchParams(window.location.search);
@@ -1304,6 +1305,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 document.getElementById('active-tools').textContent =
                     Object.keys(summary.vulnerability_tools_available || {}).length;
 
+                window.CloudGuardMeters?.update(summary, findings, selectedRun ? 'Selected scan results · All meters use this selection' : 'Latest completed scan · Earlier scans are in History');
                 loadSeverityChart(findings);
                 await loadCloudChart(providers.data || []);
                 await loadCloudProviders(providers.data || []);
@@ -1314,6 +1316,7 @@ gcloud compute instances delete-access-config ${resourceName} \\
                 console.log('Dashboard loaded successfully');
 
             } catch (error) {
+                window.CloudGuardMeters?.state('error');
                 console.error('Dashboard load failed:', error);
                 document.getElementById('vulnerability-list').replaceChildren();
                 document.getElementById('cloud-providers').replaceChildren();

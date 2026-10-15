@@ -1,3 +1,99 @@
+/* CloudGuard scan meters: derived only from one pinned, completed scan. */
+(function () {
+    function model(summary, findings) {
+        if (!summary || !Array.isArray(findings) || !Number.isInteger(summary.total_resources) || summary.total_resources < 0 || !Number.isInteger(summary.total_findings) || summary.total_findings !== findings.length || !Number.isInteger(summary.public_resources) || summary.public_resources < 0 || summary.public_resources > summary.total_resources) throw new Error('Incomplete scan snapshot');
+        const resources = summary.total_resources;
+        const total = findings.length;
+        const priority = findings.filter(f => ['CRITICAL', 'HIGH'].includes(String(f.severity || '').toUpperCase())).length;
+        const measured = resources > 0;
+        return [
+            { title: 'Scan posture estimate', value: measured && Number.isFinite(summary.security_score) ? Math.round(Math.max(0, Math.min(100, summary.security_score))) : null, detail: `${resources} resources · ${total} findings`, direction: 'Higher is better', tone: 'mint' },
+            { title: 'Critical & high findings', value: measured ? (total ? Math.round(priority / total * 100) : 0) : null, detail: `${priority} of ${total} findings need priority review`, direction: 'Lower is better', tone: priority ? 'amber' : 'mint' },
+            { title: 'Public resource exposure', value: measured ? Math.round(summary.public_resources / resources * 100) : null, detail: `${summary.public_resources} of ${resources} resources flagged public`, direction: 'Lower is better', tone: summary.public_resources ? 'amber' : 'lime' },
+        ];
+    }
+
+    async function latestSnapshot(request = window.fetch) {
+        const scopeRes = await request('/api/dashboard-scope');
+        const scope = await scopeRes.json();
+        if (!scopeRes.ok || scope.status !== 'success' || !Array.isArray(scope.scan_ids) || scope.scan_ids.length > 1 || scope.scan_ids.some(id => !Number.isInteger(id) || id < 1)) throw new Error('Could not load the latest scan');
+        if (!scope.scan_ids.length) return null;
+        const filter = `?scan_ids=${scope.scan_ids[0]}`;
+        const summaryRes = await request(`/posture/dashboard${filter}`);
+        const summary = await summaryRes.json();
+        if (!summaryRes.ok) throw new Error('Could not load the scan summary');
+        const findings = [];
+        let more = true;
+        while (more) {
+            const response = await request(`/api/latest-findings${filter}&limit=200&offset=${findings.length}`);
+            const page = await response.json();
+            if (!response.ok || page.status !== 'success' || !Array.isArray(page.data) || (page.has_more && !page.data.length)) throw new Error('Could not load complete scan findings');
+            findings.push(...page.data);
+            more = page.has_more === true;
+        }
+        model(summary, findings); // Reject partial or inconsistent responses.
+        return { summary, findings, scanId: scope.scan_ids[0] };
+    }
+
+    function mount(anchor) {
+        if (!anchor || document.getElementById('cg-scan-meters')) return;
+        const section = document.createElement('section');
+        section.id = 'cg-scan-meters';
+        section.className = 'cg-meter-panel';
+        section.setAttribute('aria-label', 'Latest scan security meters');
+        section.innerHTML = `<div class="cg-meter-heading"><div><p class="cg-eyebrow">SCAN INTELLIGENCE</p><h2>Latest scan, at a glance</h2><p id="cg-meter-scope" class="cg-meter-scope">Loading the completed scan…</p></div><a class="cg-text-link" href="${window.location.pathname.endsWith('.html') ? '/dashboard.html' : '/dashboard'}">Explore findings ↗</a></div><div class="cg-meter-grid">${[0, 1, 2].map(() => `<article class="cg-meter-card"><h3></h3><div class="cg-gauge"><svg viewBox="0 0 200 176" aria-hidden="true"><circle cx="100" cy="100" r="70" fill="none" stroke="#263b2d" stroke-width="11" stroke-linecap="round" stroke-dasharray="329.87 439.82" transform="rotate(135 100 100)"/><circle class="cg-gauge-arc" cx="100" cy="100" r="70" fill="none" stroke-width="11" stroke-linecap="round" stroke-dasharray="0 439.82" transform="rotate(135 100 100)"/><text x="100" y="104" text-anchor="middle" class="cg-gauge-value">—</text><text x="100" y="126" text-anchor="middle" class="cg-gauge-direction">LOADING</text></svg></div><p class="cg-meter-detail">Checking scan data…</p></article>`).join('')}</div><p class="cg-meter-note">Posture estimate = 100 − (findings ÷ resources × 100), with a minimum of 0. Scanner output requires review; it is not a compliance assessment.</p>`;
+        anchor.before(section);
+        state('loading');
+    }
+
+    function state(status) {
+        const root = document.getElementById('cg-scan-meters');
+        if (!root) return;
+        root.setAttribute('aria-busy', status === 'loading' ? 'true' : 'false');
+        const titles = ['Scan posture estimate', 'Critical & high findings', 'Public resource exposure'];
+        root.querySelectorAll('.cg-meter-card').forEach((card, index) => {
+            card.querySelector('h3').textContent = titles[index];
+            const gauge = card.querySelector('.cg-gauge');
+            ['role', 'aria-label', 'aria-valuenow', 'aria-valuemin', 'aria-valuemax', 'aria-valuetext'].forEach(name => gauge.removeAttribute(name));
+            card.querySelector('.cg-gauge-value').textContent = status === 'loading' ? '—' : status === 'empty' ? 'No data' : 'Unavailable';
+            card.querySelector('.cg-gauge-direction').textContent = status === 'loading' ? 'LOADING' : status === 'empty' ? 'AWAITING SCAN' : 'TRY AGAIN';
+            card.querySelector('.cg-gauge-arc').setAttribute('stroke-dasharray', '0 439.82');
+            card.querySelector('.cg-gauge-arc').style.opacity = '0';
+            card.querySelector('.cg-meter-detail').textContent = status === 'empty' ? 'Run a scan to establish your baseline.' : status === 'loading' ? 'Checking scan data…' : 'Scan data could not be loaded.';
+        });
+        document.getElementById('cg-meter-scope').textContent = status === 'empty' ? 'No completed scan is available.' : status === 'loading' ? 'Loading the completed scan…' : 'Data unavailable. Open the dashboard to retry.';
+    }
+
+    function update(summary, findings, scope) {
+        const root = document.getElementById('cg-scan-meters');
+        if (!root) return;
+        const values = model(summary, findings);
+        if (!summary.total_resources) { state('empty'); return; }
+        root.setAttribute('aria-busy', 'false');
+        document.getElementById('cg-meter-scope').textContent = scope;
+        root.querySelectorAll('.cg-meter-card').forEach((card, index) => {
+            const meter = values[index];
+            card.querySelector('h3').textContent = meter.title;
+            card.querySelector('.cg-gauge-value').textContent = meter.value === null ? 'No data' : `${meter.value}%`;
+            card.querySelector('.cg-gauge-direction').textContent = meter.direction.toUpperCase();
+            card.querySelector('.cg-meter-detail').textContent = meter.detail;
+            const gauge = card.querySelector('.cg-gauge');
+            if (meter.value !== null) {
+                gauge.setAttribute('role', 'meter');
+                gauge.setAttribute('aria-label', meter.title);
+                gauge.setAttribute('aria-valuemin', '0'); gauge.setAttribute('aria-valuemax', '100');
+                gauge.setAttribute('aria-valuenow', String(meter.value));
+                gauge.setAttribute('aria-valuetext', `${meter.value}%. ${meter.detail}. ${meter.direction}.`);
+            }
+            const arc = card.querySelector('.cg-gauge-arc');
+            arc.setAttribute('stroke', meter.tone === 'amber' ? '#fbbf24' : meter.tone === 'lime' ? '#a3e635' : '#6ee7b7');
+            arc.setAttribute('stroke-dasharray', `${329.87 * (meter.value || 0) / 100} 439.82`);
+            arc.style.opacity = meter.value ? '1' : '0';
+        });
+    }
+    window.CloudGuardMeters = { model, latestSnapshot, mount, update, state };
+})();
+/* End scan meters. */
 (function () {
     const originalFetch = window.fetch.bind(window);
     const OIDC_STATE_KEY = "cloudguard.oidc.state";
@@ -260,12 +356,12 @@
                     <span class="cg-mark">CG</span>
                     <span class="cg-brand-copy">
                         <span class="cg-brand-name">CloudGuard</span>
-                        <span class="cg-brand-subtitle">Multi-cloud security console</span>
+                        <span class="cg-brand-subtitle">Scanner workspace</span>
                     </span>
                 </a>
                 <nav class="cg-nav" aria-label="Primary navigation">
                     ${nav.map(([key, label]) => `
-                        <a class="cg-nav-link ${page === key ? "active" : ""}" href="${routes[key]}">${label}</a>
+                        <a class="cg-nav-link ${page === key ? "active" : ""}" href="${routes[key]}" ${page === key ? 'aria-current="page"' : ''} ${key === 'grc' ? 'title="Open the separate GRC platform"' : ''}>${label}</a>
                     `).join("")}
                 </nav>
                 <div class="cg-actions">
@@ -274,6 +370,15 @@
             </div>
         `;
         document.body.prepend(shell);
+        if (page === 'home' || page === 'dashboard') {
+            window.CloudGuardMeters.mount(document.querySelector(page === 'home' ? '.content-grid' : '.stats-grid'));
+            if (page === 'home') {
+                window.CloudGuardMeters.latestSnapshot().then(snapshot => {
+                    if (!snapshot) { window.CloudGuardMeters.state('empty'); return; }
+                    window.CloudGuardMeters.update(snapshot.summary, snapshot.findings, `Latest completed scan #${snapshot.scanId} · Earlier scans are in History`);
+                }).catch(() => window.CloudGuardMeters.state('error'));
+            }
+        }
     }
 
     if (document.readyState === "loading") {

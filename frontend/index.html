@@ -929,26 +929,31 @@
             border-color: rgba(148, 163, 184, 0.4);
         }
     </style>
-    <link rel="stylesheet" href="/cloudguard-theme.css">
-    <script src="/cloudguard-ui.js" defer></script>
+    <link rel="stylesheet" href="/cloudguard-theme.css?v=20261015-green">
+    <script src="/cloudguard-ui.js?v=20261015-green" defer></script>
 </head>
 
 <body>
     <div class="container">
         <!-- Header -->
-        <div class="header">
-            <div class="logo cg-hero-mark">CG</div>
-            <h1 class="title">CloudGuard Security Scanner</h1>
-            <p class="subtitle">
-                AI-powered multi-cloud security scanning with real-time vulnerability detection.
-                Protect your AWS, GCP, Kubernetes, and infrastructure-as-code environments.
-            </p>
+        <div class="header cg-scan-hero">
+            <div class="cg-hero-copy">
+                <p class="cg-eyebrow">CLOUDGUARD · SCANNER WORKSPACE</p>
+                <h1 class="title">Cloud security,<br><span>in focus.</span></h1>
+                <p class="subtitle">Scan your environment, prioritize findings, and move evidence into your GRC workflow.</p>
+                <div class="cg-hero-links"><a class="cg-primary-link" href="#scan-configuration">Configure a scan ↓</a><a class="cg-text-link" href="/dashboard">Open security dashboard ↗</a></div>
+            </div>
+            <div class="cg-workflow" aria-label="Security workflow">
+                <a href="#scan-configuration"><span>01</span><div><strong>Scan your environment</strong><p>Cloud, Kubernetes, and infrastructure as code</p></div><b aria-hidden="true">↗</b></a>
+                <a href="/dashboard"><span>02</span><div><strong>Review what matters</strong><p>Latest findings, severity, and remediation</p></div><b aria-hidden="true">↗</b></a>
+                <a href="/grc"><span>03</span><div><strong>Connect to GRC</strong><p>Evidence, risks, and compliance workflows</p></div><b aria-hidden="true">↗</b></a>
+            </div>
         </div>
 
         <!-- Main Content -->
         <div class="content-grid">
             <!-- Left Panel: Scan Configuration -->
-            <div class="scan-panel">
+            <div class="scan-panel" id="scan-configuration">
                 <h2 class="panel-title">Configure Your Scan</h2>
                 <p class="panel-subtitle">
                     Select cloud, Kubernetes, and IaC scan targets, then configure your security assessment.
