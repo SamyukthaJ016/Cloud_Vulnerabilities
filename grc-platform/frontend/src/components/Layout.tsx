@@ -5,6 +5,7 @@ import { useBrandingConfig } from '@/contexts/BrandingContext';
 import { useModules } from '@/contexts/ModuleContext';
 import {
   HomeIcon,
+  XMarkIcon,
   ShieldCheckIcon,
   DocumentTextIcon,
   FolderIcon,
@@ -244,6 +245,7 @@ function NavSectionComponent({ section }: { section: NavSection }) {
     <div className="space-y-1">
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         className={clsx(
           'flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300',
           hasActiveItem
@@ -353,7 +355,7 @@ export default function Layout() {
         role="navigation"
         aria-label="Main navigation"
         className={clsx(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-surface-900 border-r border-surface-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0',
+          'grc-sidebar fixed inset-y-0 left-0 z-50 w-64 bg-surface-900 border-r border-surface-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -361,11 +363,30 @@ export default function Layout() {
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-5 border-b border-surface-800">
             <img src={branding.logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
-            <span className="text-lg font-semibold text-surface-100">{branding.platformName}</span>
+            <div className="min-w-0">
+              <span className="block truncate text-base font-semibold tracking-tight text-surface-100">
+                {branding.platformName}
+              </span>
+              <span className="text-[10px] uppercase tracking-[0.16em] text-brand-400">
+                Compliance workspace
+              </span>
+            </div>
+            <button
+              aria-label="Close navigation"
+              onClick={() => setSidebarOpen(false)}
+              className="ml-auto rounded-md p-1 text-surface-400 hover:text-surface-100 lg:hidden"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
+          <nav
+            className="flex-1 px-3 py-4 space-y-2 overflow-y-auto"
+            onClick={(event) => {
+              if ((event.target as Element).closest('a')) setSidebarOpen(false);
+            }}
+          >
             {/* Dashboard - Top Level */}
             <NavLink
               to="/dashboard"
@@ -451,11 +472,13 @@ export default function Layout() {
         <header
           role="banner"
           aria-label="Site header"
-          className="sticky top-0 z-[60] bg-surface-900/80 backdrop-blur-sm border-b border-surface-800"
+          className="sticky top-0 z-30 bg-surface-900/80 backdrop-blur-sm border-b border-surface-800"
         >
           <div className="flex items-center justify-between gap-4 px-4 py-3 lg:px-6">
             <div className="flex items-center gap-2">
               <button
+                aria-label="Open navigation"
+                aria-expanded={sidebarOpen}
                 className="lg:hidden p-2 -ml-2 text-surface-600 hover:text-surface-100"
                 onClick={() => setSidebarOpen(true)}
               >
@@ -500,7 +523,12 @@ export default function Layout() {
         </header>
 
         {/* Page content */}
-        <main id="main-content" role="main" aria-label="Main content" className="p-4 lg:p-6">
+        <main
+          id="main-content"
+          role="main"
+          aria-label="Main content"
+          className="mx-auto max-w-[1680px] p-4 lg:p-7"
+        >
           <Outlet />
         </main>
       </div>

@@ -33,6 +33,7 @@ import { VendorReviewsDueWidget } from '@/components/vendor/VendorReviewsDueWidg
 import { TrustAnalystQueueWidget } from '@/components/trust/TrustAnalystQueueWidget';
 import { MappingCoverageWidget } from '@/components/widgets/MappingCoverageWidget';
 import CloudGuardOverview from '@/components/cloudguard/CloudGuardOverview';
+import PostureMeters from '@/components/dashboard/PostureMeters';
 
 // Dashboard widget configuration
 interface DashboardConfig {
@@ -149,14 +150,7 @@ export default function Dashboard() {
     error: dashboardError,
   } = useQuery({
     queryKey: ['dashboard-full'],
-    queryFn: () =>
-      dashboardApi
-        .getFull()
-        .then((res) => res.data)
-        .catch((error) => {
-          console.error('Failed to load dashboard:', error);
-          return null;
-        }),
+    queryFn: () => dashboardApi.getFull().then((res) => res.data),
     staleTime: 5 * 60 * 1000, // 5 minute cache - matches backend
     retry: 1,
     refetchOnWindowFocus: false,
@@ -280,18 +274,23 @@ export default function Dashboard() {
           <div className="flex-1">
             <p className="text-sm font-medium text-yellow-600">Some data failed to load</p>
             <p className="text-sm text-yellow-700/80 mt-1">
-              The dashboard is showing partial data. Some widgets may be empty or show default
-              values.
+              Compliance records could not be refreshed. Meters are unavailable until the data
+              loads. Please try again shortly.
             </p>
           </div>
         </div>
       )}
       {/* Header with Dashboard Selector and Configuration */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="dashboard-heading flex flex-wrap items-center justify-between gap-5">
+        <div className="flex flex-wrap items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-surface-100">Dashboard</h1>
-            <p className="text-surface-600 mt-1">Your compliance overview at a glance</p>
+            <p className="dashboard-eyebrow mb-2">GOVERNANCE · RISK · COMPLIANCE</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-surface-100 sm:text-3xl">
+              Dashboard
+            </h1>
+            <p className="text-sm text-surface-400 mt-2">
+              Track your controls, review evidence, and keep your program moving.
+            </p>
           </div>
           {/* Dashboard Selector Dropdown */}
           <div className="relative">
@@ -301,7 +300,7 @@ export default function Dashboard() {
               variant="ghost"
             >
               <Squares2X2Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">Switch Dashboard</span>
+              <span>Switch Dashboard</span>
               <ChevronDownIcon className="w-4 h-4" />
             </Button>
             {showDashboardSelector && (
@@ -424,39 +423,44 @@ export default function Dashboard() {
       <DemoModeBanner />
       {/* First-run Onboarding Wizard */}
       <OnboardingWizard />
-      <CloudGuardOverview />
+      <PostureMeters
+        summary={dashboardData?.summary}
+        policies={dashboardData?.policyStats}
+        unavailable={!!dashboardError || !dashboardData}
+      />
       {/* Top Stats Row - 4 distinct KPIs */}
       {config.widgets.statsRow && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Compliance Score"
-            value={`${safeSummary.complianceScore?.overall || 0}%`}
+            value={dashboardData?.summary ? `${safeSummary.complianceScore?.overall || 0}%` : '—'}
             icon={ShieldCheckIcon}
             color="brand"
           />
           <StatCard
             title="Total Controls"
-            value={safeSummary.controls?.total || 0}
+            value={dashboardData?.summary ? safeSummary.controls?.total || 0 : '—'}
             icon={CheckCircleIcon}
             color="green"
             linkTo="/controls"
           />
           <StatCard
             title="Total Policies"
-            value={policyStats?.total || 0}
+            value={dashboardData?.policyStats ? policyStats.total : '—'}
             icon={DocumentTextIcon}
-            color="blue"
+            color="brand"
             linkTo="/policies"
           />
           <StatCard
             title="Evidence Items"
-            value={safeSummary.evidence?.total || 0}
+            value={dashboardData?.summary ? safeSummary.evidence?.total || 0 : '—'}
             icon={FolderOpenIcon}
-            color="purple"
+            color="brand"
             linkTo="/evidence"
           />
         </div>
       )}
+      <CloudGuardOverview />
       {/* Alert Banner - Only show if there are action items and widget is enabled */}
       {config.widgets.alertBanner && actionItems > 0 && (
         <div className="bg-amber-50 dark:bg-yellow-500/10 border border-amber-300 dark:border-yellow-500/30 rounded-lg p-4">
@@ -506,20 +510,21 @@ export default function Dashboard() {
                           <XAxis
                             type="number"
                             domain={[0, 100]}
-                            stroke="#71717a"
+                            stroke="#95a99b"
                             tickFormatter={(v: number) => `${v}%`}
                           />
                           <YAxis
                             type="category"
                             dataKey="name"
-                            stroke="#71717a"
+                            stroke="#95a99b"
                             width={90}
-                            tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                            tick={{ fill: '#a1b5a7', fontSize: 11 }}
                           />
                           <Tooltip
                             contentStyle={{
-                              backgroundColor: '#27272a',
-                              border: '1px solid #3f3f46',
+                              backgroundColor: '#101714',
+                              color: '#f1f7f3',
+                              border: '1px solid #344b3b',
                               borderRadius: '8px',
                             }}
                             formatter={(value: number) => [`${value}%`, 'Readiness']}
@@ -585,8 +590,9 @@ export default function Dashboard() {
                         </Pie>
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#27272a',
-                            border: '1px solid #3f3f46',
+                            backgroundColor: '#101714',
+                            color: '#f1f7f3',
+                            border: '1px solid #344b3b',
                             borderRadius: '8px',
                           }}
                         />
@@ -724,8 +730,9 @@ export default function Dashboard() {
                         </Pie>
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: '#27272a',
-                            border: '1px solid #3f3f46',
+                            backgroundColor: '#101714',
+                            color: '#f1f7f3',
+                            border: '1px solid #344b3b',
                             borderRadius: '8px',
                           }}
                         />

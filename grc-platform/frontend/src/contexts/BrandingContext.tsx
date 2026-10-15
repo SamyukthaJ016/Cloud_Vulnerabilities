@@ -11,7 +11,7 @@ const DEFAULT_BRANDING: BrandingConfig = {
   platformName: 'GigaChad GRC',
   logoUrl: '/logo.png',
   faviconUrl: '/logo.png',
-  primaryColor: '#6366f1', // Brand indigo
+  primaryColor: '#059669', // Emerald
 };
 
 interface BrandingContextType {

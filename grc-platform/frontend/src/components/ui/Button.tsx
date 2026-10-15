@@ -33,7 +33,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // the merged class string. Forcing with ! pins the color.
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-600 !text-white shadow-sm hover:bg-brand-500 active:bg-brand-700 focus-visible:ring-brand-500 disabled:hover:bg-brand-600',
+    'bg-brand-600 !text-white shadow-sm hover:bg-brand-700 active:bg-brand-800 focus-visible:ring-brand-500 disabled:hover:bg-brand-600',
   secondary:
     'bg-surface-200 !text-surface-900 border border-surface-400 hover:bg-surface-300 focus-visible:ring-brand-500',
   outline:

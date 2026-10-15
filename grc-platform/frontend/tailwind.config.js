@@ -1,3 +1,48 @@
+// Property-specific surface aliases keep older light-style primitives and dark-style
+// pages on the same dark theme without changing status colors or chart values.
+const canvas = '#080c0b';
+const panel = '#101714';
+const raised = '#18231d';
+const text = {
+  50: '#f1f7f3',
+  100: '#f1f7f3',
+  200: '#dce8df',
+  300: '#becfc3',
+  400: '#a1b5a7',
+  500: '#95a99b',
+  600: '#a1b5a7',
+  700: '#becfc3',
+  800: '#dce8df',
+  900: '#f1f7f3',
+  950: '#f1f7f3',
+};
+const backgrounds = {
+  50: canvas,
+  100: raised,
+  200: '#1d2c23',
+  300: '#2a3d30',
+  400: '#49614f',
+  500: '#55715e',
+  600: '#344c3b',
+  700: '#23352a',
+  800: raised,
+  900: panel,
+  950: canvas,
+};
+const borders = {
+  50: '#223328',
+  100: '#223328',
+  200: '#26392c',
+  300: '#344b3b',
+  400: '#49614f',
+  500: '#55715e',
+  600: '#49614f',
+  700: '#344b3b',
+  800: '#223328',
+  900: '#1b2b21',
+  950: '#17251c',
+};
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
@@ -5,8 +50,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Brand: emerald, kept for "compliance/passing" semantic.
-        // On light bg, prefer brand-600 / brand-700 for text and chips.
+        // Emerald actions and mint accents against a charcoal canvas.
         brand: {
           50: '#ecfdf5',
           100: '#d1fae5',
@@ -14,53 +58,72 @@ export default {
           300: '#6ee7b7',
           400: '#34d399',
           500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
+          600: '#047857',
+          700: '#065f46',
+          800: '#064e3b',
           900: '#064e3b',
           950: '#022c22',
         },
-        // Accent: warm terracotta. Use for emphasis, not for status.
-        // Prefer accent-600 / accent-700 for text on light bg.
         accent: {
-          50: '#fdf4f0',
-          100: '#fbe7df',
-          200: '#f6cab9',
-          300: '#efa78d',
-          400: '#e58266',
-          500: '#d97757',
-          600: '#c25e3c',
-          700: '#a14a2e',
-          800: '#823c28',
-          900: '#6a3322',
-          950: '#3a1a11',
+          50: '#f3fce7',
+          100: '#e3f8c5',
+          200: '#c9ef9a',
+          300: '#afe56f',
+          400: '#a3e635',
+          500: '#84cc16',
+          600: '#65a30d',
+          700: '#4d7c0f',
+          800: '#3f6212',
+          900: '#365314',
+          950: '#1a2e05',
         },
-        // Surface: warm cream → warm ink (light-mode native).
-        // surface-50  = canvas / page bg
-        // surface-100 = subtle hover surfaces
-        // surface-200 = light borders, dividers
-        // surface-300 = stronger borders
-        // surface-400 = placeholder text
-        // surface-500 = secondary muted text
-        // surface-600 = body muted text
-        // surface-700 = body text
-        // surface-800 = strong body text
-        // surface-900 = primary text (warm near-black)
-        // surface-950 = ink, deepest emphasis
         surface: {
-          50: '#fcfcfb',
-          100: '#f5f4f1',
-          200: '#e8e7e2',
-          300: '#cfcec8',
-          400: '#8a8884',
-          500: '#5e5d5a',
-          600: '#454441',
-          700: '#2f2e2c',
-          800: '#1f1e1c',
-          900: '#14130f',
-          950: '#0a0908',
+          50: '#f1f7f3',
+          100: '#e8f1eb',
+          200: '#dce8df',
+          300: '#becfc3',
+          400: '#a1b5a7',
+          500: '#758d7d',
+          600: '#49614f',
+          700: '#23352a',
+          800: raised,
+          900: panel,
+          950: canvas,
+        },
+        background: 'rgb(var(--background) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        muted: {
+          DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
+          foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
         },
       },
+      backgroundColor: {
+        surface: backgrounds,
+        // Existing primitives use bg-white for their card/input surface.
+        white: panel,
+        gray: { 50: canvas, 100: raised, 200: '#1d2c23', 300: '#2a3d30' },
+        brand: { 50: '#0d271c', 100: '#113525' },
+        emerald: { 50: '#0d271c', 100: '#113525' },
+        green: { 50: '#102719', 100: '#15371f' },
+        amber: { 50: '#2c2511', 100: '#382d14' },
+        red: { 50: '#2d1719', 100: '#3e2024' },
+        blue: { 50: '#14232e', 100: '#1b2e3f' },
+        purple: { 50: '#221b31', 100: '#302440' },
+      },
+      textColor: {
+        surface: text,
+        gray: text,
+        brand: { 600: '#34d399', 700: '#6ee7b7', 800: '#a7f3d0', 900: '#d1fae5' },
+        emerald: { 600: '#34d399', 700: '#6ee7b7', 800: '#a7f3d0' },
+        green: { 600: '#4ade80', 700: '#86efac', 800: '#bbf7d0' },
+        amber: { 600: '#fbbf24', 700: '#fcd34d', 800: '#fde68a' },
+        yellow: { 600: '#facc15', 700: '#fde047', 800: '#fef08a' },
+        red: { 600: '#f87171', 700: '#fca5a5', 800: '#fecaca' },
+        blue: { 600: '#60a5fa', 700: '#93c5fd', 800: '#bfdbfe' },
+        purple: { 600: '#c084fc', 700: '#d8b4fe', 800: '#e9d5ff' },
+      },
+      borderColor: { surface: borders },
+      divideColor: { surface: borders },
       fontFamily: {
         sans: ['Inter var', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
@@ -85,10 +148,10 @@ export default {
         xl: '1rem',
       },
       boxShadow: {
-        lift: '0 1px 2px 0 rgb(30 25 20 / 0.06), 0 0 0 1px rgb(30 25 20 / 0.04)',
-        'lift-hover': '0 4px 12px -2px rgb(30 25 20 / 0.1), 0 0 0 1px rgb(30 25 20 / 0.06)',
+        lift: '0 8px 24px -16px rgb(0 0 0 / 0.8)',
+        'lift-hover': '0 12px 28px -16px rgb(0 0 0 / 0.9)',
         'glow-brand': '0 0 0 1px rgb(5 150 105 / 0.4), 0 0 24px -8px rgb(5 150 105 / 0.3)',
-        'glow-accent': '0 0 0 1px rgb(217 119 87 / 0.4), 0 0 24px -8px rgb(217 119 87 / 0.3)',
+        'glow-accent': '0 0 0 1px rgb(163 230 53 / 0.4), 0 0 24px -8px rgb(163 230 53 / 0.2)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
